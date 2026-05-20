@@ -88,6 +88,21 @@ const loadInitialData = async () => {
     });
 };
 
+const deleteMeasurement = (id) => {
+    const tx = db.transaction("measurements", "readwrite");
+    const store = tx.objectStore("measurements");
+    const request = store.delete(id);
+
+    request.onsuccess = () => {
+        appState.measurements = appState.measurements.filter(m => m.id !== id);
+        updateUI();
+    };
+
+    request.onerror = (e) => {
+        console.error("Errore durante l'eliminazione della misurazione:", e);
+    };
+};
+
 const saveParams = (params) => {
     const tx = db.transaction("parameters", "readwrite");
     const store = tx.objectStore("parameters");
@@ -609,10 +624,21 @@ const updateUI = () => {
             <td style="max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${m.notes || ''}">
                 ${m.notes || '-'}
             </td>
+            <td>
+                <button class="btn-standard btn-danger btn-delete-row" data-id="${m.id}" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;">Elimina</button>
+            </td>
         `;
         if (m.is_new_blood) row.style.backgroundColor = 'rgba(155, 89, 182, 0.1)';
 
         tbody.appendChild(row);
+    });
+
+    // Add event listeners to delete buttons
+    document.querySelectorAll('.btn-delete-row').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const id = Number(e.target.getAttribute('data-id'));
+            deleteMeasurement(id);
+        });
     });
 
     updateCharts();
