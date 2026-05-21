@@ -8,7 +8,8 @@ const ALPHA = 1e-6; // Learning rate for gradient descent
 const DEFAULT_PARAMS = {
     theta1: 0.30, // Resa Alimentazione
     theta2: 1.05, // Crescita Neanidi
-    mortalityRate: 1.5 // Mortalità Mensile (%)
+    mortalityRate: 1.5, // Mortalità Mensile (%)
+    manualCalibrations: {} // Calibrazioni manuali del censimento
 };
 const HEALTH_THRESHOLD_WARNING = 90;
 const HEALTH_THRESHOLD_ALERT = 75;
@@ -70,6 +71,11 @@ const loadInitialData = async () => {
     paramReq.onsuccess = () => {
         if (paramReq.result) {
             appState.params = paramReq.result;
+            // Ensure manualCalibrations exists for backward compatibility
+            if (!appState.params.manualCalibrations) {
+                appState.params.manualCalibrations = {};
+                saveParams(appState.params);
+            }
         } else {
             // Save defaults
             saveParams(appState.params);
@@ -417,21 +423,33 @@ const updateUI = () => {
         document.getElementById('fcrValue').innerText = "--";
     }
 
-    // Census calculation (based on mass distribution approximation) using LATEST REAL weight
-    const w = latest.total_weight;
+    // Census calculation (Dynamic D.U.B.I.A. Logic with Manual Calibrations)
+    const pesoTotaleBilancia = latest.total_weight;
     
-    // Approximated mass distribution
-    const pesoAdulti = w * 0.35;
-    const pesoNeanidi = w * 0.65;
+    // 1. Calcoli la massa del dato certo inserito dall'utente
+    let pesoCerto = 0;
+    const calibs = appState.params.manualCalibrations || {};
+    if (calibs.FEMALE) pesoCerto += calibs.FEMALE * MASS.FEMALE;
+    if (calibs.MALE) pesoCerto += calibs.MALE * MASS.MALE;
+    if (calibs.SUBADULT) pesoCerto += calibs.SUBADULT * MASS.SUBADULT;
+    if (calibs.MEDIUM) pesoCerto += calibs.MEDIUM * MASS.MEDIUM;
+    if (calibs.SMALL) pesoCerto += calibs.SMALL * MASS.SMALL;
+    if (calibs.BABY) pesoCerto += calibs.BABY * MASS.BABY;
 
-    let fCount = Math.round((pesoAdulti * 0.77) / 2.5);
-    let mCount = Math.round((pesoAdulti * 0.23) / 1.5);
-    let medCount = Math.round((pesoNeanidi * 0.70) / 0.8);
-    let bCount = Math.round((pesoNeanidi * 0.30) / 0.1);
+    // 2. Esegui il CROP della biomassa
+    const biomassaResidua = Math.max(0, pesoTotaleBilancia - pesoCerto);
 
-    // Set other categories to zero based on mathematical formula
-    let saCount = 0;
-    let smCount = 0;
+    // 3. Distribuisci il resto tra le categorie
+    const pesoAdultiRimanenti = biomassaResidua * 0.35;
+    const pesoNeanidiRimanenti = biomassaResidua * 0.65;
+
+    // 4. Generi il nuovo inventario
+    let fCount = calibs.FEMALE !== undefined ? calibs.FEMALE : Math.round((pesoAdultiRimanenti * 0.77) / MASS.FEMALE);
+    let mCount = calibs.MALE !== undefined ? calibs.MALE : Math.round((pesoAdultiRimanenti * 0.23) / MASS.MALE);
+    let saCount = calibs.SUBADULT !== undefined ? calibs.SUBADULT : 0;
+    let medCount = calibs.MEDIUM !== undefined ? calibs.MEDIUM : Math.round((pesoNeanidiRimanenti * 0.70) / MASS.MEDIUM);
+    let smCount = calibs.SMALL !== undefined ? calibs.SMALL : 0;
+    let bCount = calibs.BABY !== undefined ? calibs.BABY : Math.round((pesoNeanidiRimanenti * 0.30) / MASS.BABY);
 
     let totalCount = fCount + mCount + saCount + medCount + smCount + bCount;
 
@@ -1081,8 +1099,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Calibration logic
     const calibModal = document.getElementById('calibrationModal');
     const btnCalibrate = document.getElementById('btnCalibrate');
+    const btnResetCalib = document.getElementById('btnResetCalib');
     const btnCancelCalib = document.getElementById('btnCancelCalib');
     const calibForm = document.getElementById('calibrationForm');
+
+    if (btnResetCalib) {
+        btnResetCalib.addEventListener('click', () => {
+            appState.params.manualCalibrations = {};
+            saveParams(appState.params);
+            updateUI();
+            showNotification("Calibrazioni Resettate", "Tutti i dati certi sono stati rimossi. La demografia tornerà al calcolo puramente teorico.", "success");
+        });
+    }
 
     if (btnCalibrate) {
         btnCalibrate.addEventListener('click', () => {
@@ -1121,6 +1149,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 newAdultRatio = Math.min(0.9, Math.max(0.1, newAdultRatio));
             }
 
+            // Update manual calibrations
+            if (!appState.params.manualCalibrations) {
+                appState.params.manualCalibrations = {};
+            }
+            appState.params.manualCalibrations[category] = count;
+
             // Apply a slight bump to theta2 to simulate learning from manual intervention
             appState.params.theta2 = appState.params.theta2 * 1.05;
             saveParams(appState.params);
@@ -1138,7 +1172,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             calibModal.classList.remove('active');
             calibForm.reset();
-            showNotification("Calibrazione Applicata", "I parametri demografici sono stati aggiornati.", "success");
+            showNotification("Calibrazione Applicata", "I parametri demografici sono stati aggiornati con il dato certo.", "success");
         });
     }
 
