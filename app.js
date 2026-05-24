@@ -208,13 +208,12 @@ const saveMeasurement = async (measurement) => {
 // --- ML ENGINE (D.U.B.I.A.) ---
 
 const calculatePrediction = (lastWeight, foodAmount, adultRatio, delta_g, params, harvestAmount = 0) => {
-    const pesoNeanidiIniziale = lastWeight * 0.65;
-    const tempoProporzionale = delta_g / 30;
-
-    let w_pred = lastWeight +
-                 (foodAmount * params.theta1) +
-                 (pesoNeanidiIniziale * params.theta2 * tempoProporzionale);
-
+    // W_pred = W_curr + (theta1 * C_t) + (theta2 * W_curr * (1 - A_t) * (delta_g / 30))
+    let w_pred = lastWeight + (params.theta1 * foodAmount) + (params.theta2 * (lastWeight * (1 - adultRatio)) * (delta_g / 30));
+    // Applica Mortalità Fisiologica (proporzionale ai giorni delta_g rispetto a 30)
+    let mortalityRate = params.mortalityRate || 1.5;
+    let mortalityFactor = (mortalityRate / 100) * (delta_g / 30);
+    w_pred = w_pred * (1 - mortalityFactor);
     // Sottrai prelievo
     w_pred -= harvestAmount;
     return Math.max(0, w_pred);
@@ -1499,3 +1498,8 @@ const showNotification = (title, message, type = "success") => {
         if(notif.parentElement) notif.remove();
     }, 5000);
 };
+
+// --- TESTING EXPORTS ---
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { calculatePrediction };
+}
