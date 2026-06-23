@@ -534,12 +534,20 @@ const App = {
       const isDone = it.done === today;
       const ds = it.done ? Math.round((Date.now()-new Date(it.done))/86400000) : null;
       const ov = ds !== null && ds > it.max;
+      
+      let statusText = '-';
+      if (isDone) {
+        statusText = '✓ Fatto oggi';
+      } else if (ds !== null) {
+        statusText = `${ds}gg fa${ov ? ' ⚠️' : ''}`;
+      }
+
       return `
-        <div class="cl-item ${isDone?'done':''}" onclick="App._toggleCl('${encId}','${it.id}')">
-          <div class="cl-check ${isDone?'on'}">${isDone?'✓':''}</div>
+        <div class="cl-item ${isDone ? 'done' : ''}" onclick="App._toggleCl('${encId}','${it.id}')">
+          <div class="cl-check ${isDone ? 'on' : ''}">${isDone ? '✓' : ''}</div>
           <div style="flex:1;">
             <div class="cl-text fs-sm">${it.name}</div>
-            <div class="fs-xs ${ov?'cl-overdue':'text-muted'}">${isDone?'✓ Fatto oggi':ds!==null?`${ds}gg fa${ov?' ⚠️':''}`:'-'}</div>
+            <div class="fs-xs ${ov ? 'cl-overdue' : 'text-muted'}">${statusText}</div>
           </div>
           <span class="fs-xs text-muted">ogni ${it.max}gg</span>
         </div>`;
