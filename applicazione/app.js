@@ -4724,6 +4724,7 @@ const ClimateModule = (() => {
     let _tempSpark   = null;     // Istanza sparkline temperatura
     let _humSpark    = null;     // Istanza sparkline umidità
     let _currentRange = '7d';   // Range selezionato
+    let _currentDevice = 'all'; // Sensore selezionato
     let _initialized  = false;  // Evita doppie init
     let _refreshTimer = null;   // Timer auto-refresh
     const REFRESH_MS  = 5 * 60 * 1000; // 5 minuti (= TTL cache GAS)

@@ -634,9 +634,14 @@
 
         <!-- ── HEADER SEZIONE ──────────────────────────────────── -->
         <div class="clima-header-bar">
-            <div>
-                <h2 class="clima-section-title">🌡️ Monitoraggio Climatico</h2>
-                <p class="subtitle-text" style="margin-bottom:0;">Temperatura e Umidità in tempo reale</p>
+            <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                <div>
+                    <h2 class="clima-section-title">🌡️ Monitoraggio Climatico</h2>
+                    <p class="subtitle-text" style="margin-bottom:0;">Temperatura e Umidità in tempo reale</p>
+                </div>
+                <select id="climaDeviceSelector" class="form-select" style="width: auto; background-color: var(--surface-color); color: var(--text-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.5rem; font-size: 0.9rem;">
+                    <option value="all">Tutti i Terrari</option>
+                </select>
             </div>
             <div class="clima-status-group">
                 <div class="clima-live-badge" id="climaLiveBadge">
