@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ============================================================================
  *  D.U.B.I.A. — /api/ingest (Vercel Serverless Function)
  *
@@ -19,7 +19,7 @@
  */
 
 // URL Google Apps Script — aggiornare dopo ogni re-deploy GAS.
-const GAS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzmrROPiLBIWt9qDsno9BKb_fWvPcmmH2xtp5UAHg4anQGOdd03U5IP6QjDnpsiB04NNA/exec';
+const GAS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzgWLeWQRhkFFVo3mLi2pyQQOhWIZsGx7x8a3yjxI6pOhyhMt-YlDbiTjc1ruwk3bzr3A/exec';
 
 const MAX_RETRIES       = 3;
 const RETRY_BASE_DELAY  = 1000; // ms
