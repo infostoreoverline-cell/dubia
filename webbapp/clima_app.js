@@ -11,7 +11,7 @@ const ClimaApp = {
     chartInstance: null,
     // Per ora, simuliamo l'URL del backend:
     // backendUrl: 'https://TUO-PROGETTO.vercel.app/api'
-    backendUrl: null, 
+    backendUrl: 'https://dubia-xl.vercel.app/api',
   },
 
   // Per il test UI, generiamo dati mock se non abbiamo un backend configurato.

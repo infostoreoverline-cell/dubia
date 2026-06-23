@@ -40,7 +40,7 @@
 // ─── §2  CONFIGURAZIONE ───────────────────────────────────────────────────────
 static const char WIFI_SSID[] PROGMEM = "ASUS";
 static const char WIFI_PASS[] PROGMEM = "24no1998";
-static const char HTTP_EP[]   PROGMEM = "https://TUO-PROGETTO.vercel.app/api/ingest"; // DA CAMBIARE con il link Vercel
+static const char HTTP_EP[]   PROGMEM = "https://dubia-xl.vercel.app/api/ingest"; // DA CAMBIARE con il link Vercel
 static const char DATA_FILE[] PROGMEM = "/dati.txt";
 
 static constexpr uint8_t  PIN_SDA           = 14;    // D5 — SDA su scheda AITEXM ESP8266+OLED
