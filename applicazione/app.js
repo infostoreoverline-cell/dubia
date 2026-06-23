@@ -1775,8 +1775,7 @@ const updateUI = () => {
     if (globalWeightData.source === 'colonies') {
         // Bottom-up: usa il peso somma delle colonie come base per tutti i calcoli
         _updateUIWithWeight(globalWeightData.weight);
-    } else {
-        if (appState.measurements.length === 0) return;
+    } else if (appState.measurements.length > 0) {
         _updateUIWithWeight(appState.measurements[appState.measurements.length - 1].total_weight);
     }
 
