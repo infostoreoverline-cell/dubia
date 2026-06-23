@@ -23,13 +23,11 @@ var SPREADSHEET_ID = '135VLAsiFTJtOHVJS1vglgX09XJbR7IQyR6HMixD8hQM';
 
 // ── Nomi dei fogli ─────────────────────────────────────────────
 var SHEET_NAMES = {
-  TIMELINE:       'Timeline',
-  COLONIE:        'Colonie',
-  CLIENTI:        'Clienti',
-  CESSIONI:       'Cessioni',
-  LETTURE:        'Letture',
-  CONFIG_SENSORI: 'Config_Sensori',
-  CONFIG_TERRARI: 'Config_Terrari'
+  TIMELINE:        'Timeline',
+  COLONIE:         'Colonie',
+  CLIENTI:         'Clienti',
+  CESSIONI:        'Cessioni',
+  TERMOIGROMETRI:  'Termoigrometri'
 };
 
 // ── Schema Rigido ──────────────────────────────────────────────
@@ -91,50 +89,36 @@ var SCHEMAS = {
     'note',
     'is_deleted'
   ],
-  Letture: [
+  // ── Termoigrometri: dati ambientali ESP8266/SHT40 ──────────────
+  // Ogni riga = una lettura singola (un ciclo = 60 letture/ora).
+  // timestamp: ISO 8601 generato lato server GAS (non dipende dall'orologio ESP).
+  // device_id: MAC address dell'ESP che ha inviato il batch.
+  // temperature: float in °C (t10 / 10.0)
+  // humidity:    float in % RH (h10 / 10.0)
+  Termoigrometri: [
     'timestamp',
-    'sensor_id',
+    'device_id',
     'temperature',
-    'humidity',
-    'terrario_id'
-  ],
-  Config_Sensori: [
-    'id',
-    'name',
-    'terrario_id',
-    'is_deleted'
-  ],
-  Config_Terrari: [
-    'id',
-    'name',
-    'temp_min',
-    'temp_max',
-    'hum_min',
-    'hum_max',
-    'is_deleted'
+    'humidity'
   ]
 };
 
 // ── Routing valido per doPost ──────────────────────────────────
 // Mappa event_type → azione. Se non è in questa lista → errore.
 var VALID_EVENT_TYPES = {
-  'pesata':                 'timeline',
-  'cibo':                   'timeline',
-  'prelievo':               'timeline',
-  'calibrazione':           'timeline',
-  'nuovo_sangue':           'timeline',
-  'transfer':               'timeline',   // Trasferimento biomassa tra colonie (tracciabilità)
-  'colonia_sync':           'entity_upsert',
-  'colonia_delete':         'entity_delete',
-  'cliente_sync':           'entity_upsert',
-  'cliente_delete':         'entity_delete',
-  'cessione_sync':          'entity_upsert',
-  'cessione_delete':        'entity_delete',
-  'config_sensori_sync':    'entity_upsert',
-  'config_sensori_delete':  'entity_delete',
-  'config_terrari_sync':    'entity_upsert',
-  'config_terrari_delete':  'entity_delete',
-  'sensor_batch':           'sensor_batch'
+  'pesata':               'timeline',
+  'cibo':                 'timeline',
+  'prelievo':             'timeline',
+  'calibrazione':         'timeline',
+  'nuovo_sangue':         'timeline',
+  'transfer':             'timeline',   // Trasferimento biomassa tra colonie (tracciabilità)
+  'colonia_sync':         'entity_upsert',
+  'colonia_delete':       'entity_delete',
+  'cliente_sync':         'entity_upsert',
+  'cliente_delete':       'entity_delete',
+  'cessione_sync':        'entity_upsert',
+  'cessione_delete':      'entity_delete',
+  'termoigrometro_data':  'termoigrometro'  // Batch letture T/U da ESP8266
 };
 
 // ── Cache Config ───────────────────────────────────────────────
@@ -546,7 +530,9 @@ function initAllSheets() {
   for (var i = 0; i < names.length; i++) {
     ensureHeaders(ss, SHEET_NAMES[names[i]]);
   }
-  debugLog('initAllSheets', 'Tutti i fogli inizializzati.');
+  // Il foglio Termoigrometri viene aggiunto automaticamente grazie
+  // all'entry in SHEET_NAMES + SCHEMAS. initAllSheets() è sufficiente.
+  debugLog('initAllSheets', 'Tutti i fogli inizializzati (incluso Termoigrometri).');
 }
 
 
@@ -766,8 +752,6 @@ function doPost(e) {
       if (eventType === 'colonia_delete')  targetSheetName = SHEET_NAMES.COLONIE;
       if (eventType === 'cliente_delete')  targetSheetName = SHEET_NAMES.CLIENTI;
       if (eventType === 'cessione_delete') targetSheetName = SHEET_NAMES.CESSIONI;
-      if (eventType === 'config_sensori_delete') targetSheetName = SHEET_NAMES.CONFIG_SENSORI;
-      if (eventType === 'config_terrari_delete') targetSheetName = SHEET_NAMES.CONFIG_TERRARI;
       
       var sheet = ss.getSheetByName(targetSheetName);
       var n = 0;
@@ -793,8 +777,6 @@ function doPost(e) {
       if (eventType === 'colonia_sync')  targetSheetName = SHEET_NAMES.COLONIE;
       if (eventType === 'cliente_sync')  targetSheetName = SHEET_NAMES.CLIENTI;
       if (eventType === 'cessione_sync') targetSheetName = SHEET_NAMES.CESSIONI;
-      if (eventType === 'config_sensori_sync') targetSheetName = SHEET_NAMES.CONFIG_SENSORI;
-      if (eventType === 'config_terrari_sync') targetSheetName = SHEET_NAMES.CONFIG_TERRARI;
       
       var sheet = ss.getSheetByName(targetSheetName);
       if (!sheet) {
@@ -815,55 +797,6 @@ function doPost(e) {
       return buildJsonResponse(risposta);
     }
     
-    // ════════════════════════════════════════════════════════════
-    // ROUTE: sensor_batch (scrittura letture ESP8266 + lookup terrario)
-    // ════════════════════════════════════════════════════════════
-    if (action === 'sensor_batch') {
-      var lettureSheet = ss.getSheetByName(SHEET_NAMES.LETTURE);
-      if (!lettureSheet) {
-        ensureHeaders(ss, SHEET_NAMES.LETTURE);
-        lettureSheet = ss.getSheetByName(SHEET_NAMES.LETTURE);
-      }
-      
-      var configSensoriSheet = ss.getSheetByName(SHEET_NAMES.CONFIG_SENSORI);
-      var sensorId = dati.sensor_id;
-      var readings = dati.readings;
-      
-      // Trova terrario_id corrente associato a questo sensorId
-      var terrarioId = '';
-      if (configSensoriSheet) {
-        var sensorsData = readSheetAsObjects(configSensoriSheet);
-        for (var i = 0; i < sensorsData.length; i++) {
-          if (String(sensorsData[i].id) === String(sensorId)) {
-            terrarioId = sensorsData[i].terrario_id || '';
-            break;
-          }
-        }
-      }
-      
-      // Inserisci le letture
-      for (var r = 0; r < readings.length; r++) {
-        var reading = readings[r];
-        var rowData = {
-          timestamp: reading.timestamp,
-          sensor_id: sensorId,
-          temperature: reading.temp,
-          humidity: reading.hum,
-          terrario_id: terrarioId
-        };
-        writeRowStrict(lettureSheet, SHEET_NAMES.LETTURE, rowData);
-      }
-      
-      // Invalida cache del foglio Letture
-      cacheInvalidate(cache, 'sheet_' + SHEET_NAMES.LETTURE);
-      
-      risposta = {
-        status: 'success',
-        message: 'Batch di ' + readings.length + ' letture registrato per sensore ' + sensorId
-      };
-      return buildJsonResponse(risposta);
-    }
-
     // ════════════════════════════════════════════════════════════
     // ROUTE: timeline (pesata, cibo, prelievo, calibrazione, nuovo_sangue)
     // ════════════════════════════════════════════════════════════
@@ -942,6 +875,100 @@ function doPost(e) {
         status: 'success',
         message: 'Evento "' + eventType + '" registrato in Timeline.',
         event_id: eventId
+      };
+      return buildJsonResponse(risposta);
+    }
+    
+    // ════════════════════════════════════════════════════════════
+    // ROUTE: termoigrometro (termoigrometro_data)
+    // ════════════════════════════════════════════════════════════
+    // Payload atteso:
+    //   {
+    //     event_type: 'termoigrometro_data',
+    //     device_id:  'AA:BB:CC:DD:EE:FF',   // MAC address ESP8266
+    //     readings:   [{t10: 255, h10: 650}, ...]  // batch letture (max 60)
+    //   }
+    // Ogni lettura viene scritta come riga separata nel foglio Termoigrometri.
+    // Il timestamp è generato server-side (GAS) per evitare deriva orologio ESP.
+    if (action === 'termoigrometro') {
+      var termoSheet = ss.getSheetByName(SHEET_NAMES.TERMOIGROMETRI);
+      if (!termoSheet) {
+        ensureHeaders(ss, SHEET_NAMES.TERMOIGROMETRI);
+        termoSheet = ss.getSheetByName(SHEET_NAMES.TERMOIGROMETRI);
+      }
+      
+      var deviceId = dati.device_id ? String(dati.device_id).trim() : 'unknown';
+      var readings = dati.readings;
+      
+      if (!readings || !Array.isArray(readings) || readings.length === 0) {
+        throw new Error('termoigrometro_data: campo "readings" mancante o vuoto.');
+      }
+      
+      // Calcola un timestamp base: ora del server GAS.
+      // Le letture sono spaziate di ~60s (SLEEP_US del firmware).
+      // Distribuiamo i timestamp a ritroso: l'ultima lettura = adesso,
+      // la prima = adesso - (N-1) * 60s.
+      var nowMs = Date.now();
+      var INTERVAL_MS = 60 * 1000; // 60 secondi tra le letture
+      var n = readings.length;
+      
+      var schema = SCHEMAS[SHEET_NAMES.TERMOIGROMETRI];
+      var batchRows = [];
+      
+      for (var i = 0; i < n; i++) {
+        var r = readings[i];
+        var t10 = typeof r.t10 === 'number' ? r.t10 : parseInt(r.t10, 10);
+        var h10 = typeof r.h10 === 'number' ? r.h10 : parseInt(r.h10, 10);
+        
+        // Sanity check range (identico a quello del firmware)
+        if (isNaN(t10) || isNaN(h10)) continue;
+        var tempC  = t10 / 10.0;
+        var humPct = h10 / 10.0;
+        if (tempC < -40 || tempC > 125 || humPct < 0 || humPct > 100) continue;
+        
+        // Timestamp distribuito: i=0 → il più vecchio, i=n-1 → il più recente
+        var readingMs = nowMs - (n - 1 - i) * INTERVAL_MS;
+        var readingIso = Utilities.formatDate(
+          new Date(readingMs),
+          'Europe/Rome',
+          "yyyy-MM-dd'T'HH:mm:ss"
+        );
+        
+        var row = [];
+        for (var c = 0; c < schema.length; c++) {
+          var key = schema[c];
+          if      (key === 'timestamp')   row.push(readingIso);
+          else if (key === 'device_id')   row.push(deviceId);
+          else if (key === 'temperature') row.push(tempC);
+          else if (key === 'humidity')    row.push(humPct);
+          else row.push('');
+        }
+        batchRows.push(row);
+      }
+      
+      if (batchRows.length === 0) {
+        throw new Error('termoigrometro_data: nessuna lettura valida nel batch.');
+      }
+      
+      // Scrittura batch (molto più veloce di appendRow singolo)
+      var startRow = termoSheet.getLastRow() + 1;
+      termoSheet.getRange(startRow, 1, batchRows.length, schema.length).setValues(batchRows);
+      
+      // Invalida cache del foglio Termoigrometri
+      cacheInvalidate(cache, 'sheet_' + SHEET_NAMES.TERMOIGROMETRI);
+      
+      debugLog('termoigrometro_data', {
+        device: deviceId,
+        written: batchRows.length,
+        discarded: readings.length - batchRows.length
+      });
+      
+      risposta = {
+        status: 'success',
+        message: 'Batch termoigrometro: ' + batchRows.length + ' letture scritte (' +
+                 (readings.length - batchRows.length) + ' scartate per range non valido).',
+        device_id: deviceId,
+        written: batchRows.length
       };
       return buildJsonResponse(risposta);
     }

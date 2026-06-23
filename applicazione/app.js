@@ -206,17 +206,13 @@ let appState = {
     // Auto-Tuning: storico delle misurazioni di massa per categoria (media mobile 3x)
     calibrationHistory: {},
     // Auto-Tuning: costanti biologiche personalizzate (override di MASS)
-    customMass: {},
-    // Dati Monitoraggio Ambientale
-    lectureData: [],
-    sensori: [],
-    terrari: []
+    customMass: {}
 };
 
 // --- DATABASE (IndexedDB) ---
 const dbName = "DubiaDB";
-// Versione 5: aggiunto store per monitoraggio clima (lectures, config_sensori, config_terrari)
-const dbVersion = 5;
+// Versione 4: aggiunto store colonies
+const dbVersion = 4;
 let db;
 
 const initDB = () => {
@@ -247,16 +243,6 @@ const initDB = () => {
             if (!db.objectStoreNames.contains("colonies")) {
                 db.createObjectStore("colonies", { keyPath: "id", autoIncrement: true });
             }
-            // Crea store clima se non esistono (v5+)
-            if (!db.objectStoreNames.contains("lectures")) {
-                db.createObjectStore("lectures", { keyPath: "timestamp" });
-            }
-            if (!db.objectStoreNames.contains("config_sensori")) {
-                db.createObjectStore("config_sensori", { keyPath: "id" });
-            }
-            if (!db.objectStoreNames.contains("config_terrari")) {
-                db.createObjectStore("config_terrari", { keyPath: "id" });
-            }
             // Migration v1→v2: invalida i parametri salvati in modo che vengano
             // rivalidati al prossimo caricamento (reset a DEFAULT_PARAMS se fuori range)
             if (oldVersion === 1) {
@@ -267,9 +253,6 @@ const initDB = () => {
             }
             if (oldVersion < 4) {
                 console.info('[D.U.B.I.A.] Migration v4: aggiunto store colonies.');
-            }
-            if (oldVersion < 5) {
-                console.info('[D.U.B.I.A.] Migration v5: aggiunto store clima (lectures, config_sensori, config_terrari).');
             }
         };
 
@@ -396,14 +379,11 @@ const loadInitialData = async () => {
     if (navigator.onLine) {
         showNotification("Sincronizzazione", "Download dati dal cloud...", "success");
         try {
-            const [timelineResult, clientiResult, cessioniResult, colonieResult, lettureResult, sensoriResult, terrariResult] = await Promise.allSettled([
+            const [timelineResult, clientiResult, cessioniResult, colonieResult] = await Promise.allSettled([
                 cloudGet("Timeline", 10000),
                 cloudGet("Clienti",  8000),
                 cloudGet("Cessioni", 8000),
-                cloudGet("Colonie",  8000),
-                cloudGet("Letture", 10000),
-                cloudGet("Config_Sensori", 8000),
-                cloudGet("Config_Terrari", 8000)
+                cloudGet("Colonie",  8000)
             ]);
 
             // Timeline → misure principali
@@ -454,6 +434,7 @@ const loadInitialData = async () => {
                 const tx = db.transaction("colonies", "readwrite");
                 const store = tx.objectStore("colonies");
                 coloniesMap.forEach((c, id) => {
+                    // Normalizza is_deleted: stringa vuota e null → false
                     const isDeleted = c.is_deleted === true || c.is_deleted === 'true' || c.is_deleted === 1;
                     const mapped = {
                         id, name: c.name || `Colonia ${id}`, type: c.type || "Pasto",
@@ -463,7 +444,7 @@ const loadInitialData = async () => {
                         subadults_count: parseInt(c.subadults_count) || 0, medium_count: parseInt(c.medium_count) || 0,
                         small_count: parseInt(c.small_count) || 0, baby_count: parseInt(c.baby_count) || 0,
                         notes: c.notes || "",
-                        is_deleted: isDeleted
+                        is_deleted: isDeleted  // ← Fix: era mancante, causava colonie zombie
                     };
                     store.put(mapped);
                     const idx = appState.colonies.findIndex(x => x.id === id);
@@ -473,60 +454,10 @@ const loadInitialData = async () => {
                 console.info(`[D.U.B.I.A.] Colonie cloud: ${coloniesMap.size}.`);
             }
 
-            // Letture Clima cloud → merge con locale
-            const lettureData = lettureResult.status === "fulfilled" ? lettureResult.value : [];
-            if (lettureData.length > 0) {
-                const tx = db.transaction("lectures", "readwrite");
-                const store = tx.objectStore("lectures");
-                lettureData.forEach(l => { if (l.timestamp) store.put(l); });
-                appState.lectureData = lettureData.map(l => ({
-                    ...l,
-                    temperature: parseFloat(l.temperature) || 0,
-                    humidity: parseFloat(l.humidity) || 0
-                })).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-                console.info(`[D.U.B.I.A.] Letture cloud: ${appState.lectureData.length}.`);
-            }
-
-            // Config Sensori cloud → merge con locale
-            const sensoriData = sensoriResult.status === "fulfilled" ? sensoriResult.value : [];
-            if (sensoriData.length > 0) {
-                const tx = db.transaction("config_sensori", "readwrite");
-                const store = tx.objectStore("config_sensori");
-                sensoriData.forEach(s => { if (s.id) store.put(s); });
-                appState.sensori = sensoriData.map(s => ({
-                    ...s,
-                    is_deleted: s.is_deleted === true || s.is_deleted === 'true' || s.is_deleted === 1
-                })).filter(s => !s.is_deleted);
-                console.info(`[D.U.B.I.A.] Sensori cloud: ${appState.sensori.length}.`);
-            }
-
-            // Config Terrari cloud → merge con locale
-            const terrariData = terrariResult.status === "fulfilled" ? terrariResult.value : [];
-            if (terrariData.length > 0) {
-                const tx = db.transaction("config_terrari", "readwrite");
-                const store = tx.objectStore("config_terrari");
-                terrariData.forEach(t => { if (t.id) store.put(t); });
-                appState.terrari = terrariData.map(t => ({
-                    ...t,
-                    temp_min: parseFloat(t.temp_min) || 22,
-                    temp_max: parseFloat(t.temp_max) || 32,
-                    hum_min: parseFloat(t.hum_min) || 40,
-                    hum_max: parseFloat(t.hum_max) || 70,
-                    is_deleted: t.is_deleted === true || t.is_deleted === 'true' || t.is_deleted === 1
-                })).filter(t => !t.is_deleted);
-                console.info(`[D.U.B.I.A.] Terrari cloud: ${appState.terrari.length}.`);
-            } else {
-                appState.terrari = [
-                    { id: 'terrario_1', name: 'Terrario 1 - Dubia Adulte', temp_min: 25, temp_max: 32, hum_min: 50, hum_max: 70 },
-                    { id: 'terrario_2', name: 'Terrario 2 - Accrescimento A', temp_min: 24, temp_max: 30, hum_min: 45, hum_max: 65 },
-                    { id: 'terrario_3', name: 'Terrario 3 - Accrescimento B', temp_min: 24, temp_max: 30, hum_min: 45, hum_max: 65 },
-                    { id: 'terrario_4', name: 'Terrario 4 - Svezzamento Baby', temp_min: 26, temp_max: 32, hum_min: 60, hum_max: 80 }
-                ];
-                appState.terrari.forEach(t => cloudPostWithQueue({ event_type: "config_terrari_sync", ...t }));
-            }
-
             showNotification("Sincronizzazione", "Dati cloud caricati con successo.", "success");
+            // Flush eventuali POST offline in coda
             flushOfflineQueue();
+            // Avvia background sync
             startBackgroundSync();
             return;
 
@@ -538,58 +469,16 @@ const loadInitialData = async () => {
         showNotification("Offline", "Nessuna connessione. Caricamento dati locali.", "warning");
     }
 
-    // ── STEP 3 (fallback): Caricamento da IndexedDB locale ────────────────
+    // ── STEP 3 (fallback): Misure da IndexedDB locale ────────────────────
     return new Promise((resolve) => {
-        const tx = db.transaction(["measurements", "lectures", "config_sensori", "config_terrari"], "readonly");
-        const mStore = tx.objectStore("measurements");
-        const lStore = tx.objectStore("lectures");
-        const sStore = tx.objectStore("config_sensori");
-        const tStore = tx.objectStore("config_terrari");
-
-        mStore.getAll().onsuccess = (e) => {
+        const tx = db.transaction("measurements", "readonly");
+        const req = tx.objectStore("measurements").getAll();
+        req.onsuccess = () => {
             if (appState.measurements.length === 0) {
-                appState.measurements = (e.target.result || []).sort((a, b) => new Date(a.date) - new Date(b.date));
+                appState.measurements = (req.result || []).sort((a, b) => new Date(a.date) - new Date(b.date));
             }
-        };
-
-        lStore.getAll().onsuccess = (e) => {
-            if (appState.lectureData.length === 0) {
-                appState.lectureData = (e.target.result || []).map(l => ({
-                    ...l,
-                    temperature: parseFloat(l.temperature) || 0,
-                    humidity: parseFloat(l.humidity) || 0
-                })).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-            }
-        };
-
-        sStore.getAll().onsuccess = (e) => {
-            if (appState.sensori.length === 0) {
-                appState.sensori = (e.target.result || []).map(s => ({
-                    ...s,
-                    is_deleted: s.is_deleted === true || s.is_deleted === 'true' || s.is_deleted === 1
-                })).filter(s => !s.is_deleted);
-            }
-        };
-
-        tStore.getAll().onsuccess = (e) => {
-            if (appState.terrari.length === 0) {
-                appState.terrari = (e.target.result || []).map(t => ({
-                    ...t,
-                    temp_min: parseFloat(t.temp_min) || 22,
-                    temp_max: parseFloat(t.temp_max) || 32,
-                    hum_min: parseFloat(t.hum_min) || 40,
-                    hum_max: parseFloat(t.hum_max) || 70,
-                    is_deleted: t.is_deleted === true || t.is_deleted === 'true' || t.is_deleted === 1
-                })).filter(t => !t.is_deleted);
-                
-                if (appState.terrari.length === 0) {
-                    appState.terrari = [
-                        { id: 'terrario_1', name: 'Terrario 1 - Dubia Adulte', temp_min: 25, temp_max: 32, hum_min: 50, hum_max: 70 },
-                        { id: 'terrario_2', name: 'Terrario 2 - Accrescimento A', temp_min: 24, temp_max: 30, hum_min: 45, hum_max: 65 },
-                        { id: 'terrario_3', name: 'Terrario 3 - Accrescimento B', temp_min: 24, temp_max: 30, hum_min: 45, hum_max: 65 },
-                        { id: 'terrario_4', name: 'Terrario 4 - Svezzamento Baby', temp_min: 26, temp_max: 32, hum_min: 60, hum_max: 80 }
-                    ];
-                }
+            if (appState.measurements.length === 0) {
+                showNotification("Nessun Dato", "Cloud e DB locale vuoti. Inserisci la tua prima rilevazione.", "warning");
             }
             resolve();
         };
@@ -1775,15 +1664,13 @@ const updateUI = () => {
     if (globalWeightData.source === 'colonies') {
         // Bottom-up: usa il peso somma delle colonie come base per tutti i calcoli
         _updateUIWithWeight(globalWeightData.weight);
-    } else if (appState.measurements.length > 0) {
+    } else {
+        if (appState.measurements.length === 0) return;
         _updateUIWithWeight(appState.measurements[appState.measurements.length - 1].total_weight);
     }
 
     // Data Decay: aggiorna widget affidabilità
     if (typeof renderDataDecay === 'function') renderDataDecay();
-
-    // Aggiornamento Clima Dashboard
-    if (typeof updateClimaUI === 'function') updateClimaUI();
 };
 
 const _updateUIWithWeight = (globalWeight) => {
@@ -2693,6 +2580,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             tab.classList.add('active');
             document.getElementById(tab.dataset.target).classList.add('active');
+
+            // Hook: inizializza il modulo clima alla prima apertura della tab
+            if (tab.dataset.target === 'clima') {
+                ClimateModule.init();
+            }
         });
     });
 
@@ -4810,603 +4702,387 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ── Override o Patch per processNewMeasurement ───────────────────────
-// ── Override o Patch per processNewMeasurement ───────────────────────
 // Dobbiamo assicurarci che i dati della singola colonia vengano aggiornati quando si salva un evento
 // Fine del file
 
-// ══════════════════════════════════════════════════════
-// MONITORAGGIO CLIMATICO — LOGICA INTEGRATIVA
-// ══════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════════════
+// CLIMATE MODULE — Monitoraggio Termoigrometri
+// ══════════════════════════════════════════════════════════════════════
+// Responsabilità:
+//   - fetchClimateData()       → cloudGet('Termoigrometri')
+//   - renderLiveCards(data)    → aggiorna valori T e U + badge LIVE
+//   - renderSparklines(data)   → mini-grafici nelle card
+//   - renderHistoryChart(data) → grafico storico dual-axis Chart.js
+//   - renderStatsStrip(data)   → min/avg/max per T e U
+//   - init()                   → primo caricamento + auto-refresh 5 min
+// ══════════════════════════════════════════════════════════════════════
 
-const activeAlerts = new Set();
+const ClimateModule = (() => {
+    /* ─── Stato interno ─────────────────────────────────────────── */
+    let _allData     = [];       // Array grezzo completo dal GAS
+    let _histChart   = null;     // Istanza Chart.js storico
+    let _tempSpark   = null;     // Istanza sparkline temperatura
+    let _humSpark    = null;     // Istanza sparkline umidità
+    let _currentRange = '7d';   // Range selezionato
+    let _initialized  = false;  // Evita doppie init
+    let _refreshTimer = null;   // Timer auto-refresh
+    const REFRESH_MS  = 5 * 60 * 1000; // 5 minuti (= TTL cache GAS)
+    const SPARKLINE_POINTS = 48;        // Ultimi 48 punti per la sparkline (~48 ore)
 
-/**
- * Gestisce l'aggiornamento e il rendering della Dashboard del Clima.
- */
-const updateClimaUI = () => {
-    const terrariumGrid = document.getElementById('terrariumGrid');
-    if (!terrariumGrid) return;
+    /* ─── Colori tema ───────────────────────────────────────────── */
+    const C_TEMP     = '#E67E22';
+    const C_TEMP_BG  = 'rgba(230,126,34,0.15)';
+    const C_HUM      = '#3498DB';
+    const C_HUM_BG   = 'rgba(52,152,219,0.15)';
+    const C_GRID     = 'rgba(255,255,255,0.07)';
+    const C_TICK     = '#94A3B8';
 
-    if (appState.terrari.length === 0) {
-        terrariumGrid.innerHTML = `
-            <div class="table-empty" style="grid-column: span 3; text-align: center; padding: 2rem;">
-                Nessun terrario configurato. Clicca su "Configura Clima" per crearne uno.
-            </div>`;
-    } else {
-        terrariumGrid.innerHTML = appState.terrari.map(t => {
-            // Trova letture specifiche per questo terrario
-            const readings = appState.lectureData.filter(l => l.terrario_id === t.id);
-            const latestReading = readings.length > 0 ? readings[readings.length - 1] : null;
+    /* ─── Utility ───────────────────────────────────────────────── */
+    function parseTimestamp(ts) {
+        if (!ts) return null;
+        // Il GAS scrive ISO 8601: "2026-06-23T14:30:00"
+        const d = new Date(ts);
+        return isNaN(d.getTime()) ? null : d;
+    }
 
-            // Trova sensori associati a questo terrario
-            const assignedSensors = appState.sensori.filter(s => s.terrario_id === t.id);
-            const sensorsLabel = assignedSensors.length > 0
-                ? assignedSensors.map(s => s.name).join(', ')
-                : 'Nessuna sonda';
+    function fmt1(n) {
+        return typeof n === 'number' ? n.toFixed(1) : '--';
+    }
 
-            let tempDisp = '--';
-            let humDisp = '--';
-            let statusClass = 'ok';
-            let statusBadge = '';
-            let alertLogs = [];
+    function fmtTimestamp(d) {
+        if (!d) return '--';
+        const pad = n => String(n).padStart(2,'0');
+        return `${pad(d.getDate())}/${pad(d.getMonth()+1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
 
-            let tempAlertKey = `${t.id}_temperatura`;
-            let humAlertKey = `${t.id}_umidità`;
+    /* ─── Filtra per range ──────────────────────────────────────── */
+    function filterByRange(data, range) {
+        if (!data || !data.length) return [];
+        if (range === 'all') return data;
 
-            if (latestReading) {
-                tempDisp = latestReading.temperature.toFixed(1) + ' °C';
-                humDisp = latestReading.humidity.toFixed(1) + ' %';
+        const now = Date.now();
+        const cutMap = { '24h': 24*3600*1000, '7d': 7*24*3600*1000, '30d': 30*24*3600*1000 };
+        const cut = cutMap[range] || cutMap['7d'];
+        return data.filter(row => {
+            const d = parseTimestamp(row.timestamp);
+            return d && (now - d.getTime()) <= cut;
+        });
+    }
 
-                const temp = latestReading.temperature;
-                const hum = latestReading.humidity;
+    /* ─── Aggiorna badge LIVE ───────────────────────────────────── */
+    function updateBadge(hasData, lastDate) {
+        const badge    = document.getElementById('climaLiveBadge');
+        const badgeTxt = document.getElementById('climaLiveBadgeText');
+        const lastUpd  = document.getElementById('climaLastUpdate');
+        if (!badge) return;
 
-                // Controllo e reset allarmi T
-                if (temp < t.temp_min) {
-                    statusClass = 'alert';
-                    statusBadge += ` ❄️ FREDDO`;
-                    alertLogs.push({ metric: 'temperatura', value: temp, limit: t.temp_min, type: 'bassa' });
-                } else if (temp > t.temp_max) {
-                    statusClass = 'alert';
-                    statusBadge += ` 🔥 CALDO`;
-                    alertLogs.push({ metric: 'temperatura', value: temp, limit: t.temp_max, type: 'alta' });
-                } else {
-                    activeAlerts.delete(`${tempAlertKey}_bassa`);
-                    activeAlerts.delete(`${tempAlertKey}_alta`);
-                }
-
-                // Controllo e reset allarmi H
-                if (hum < t.hum_min) {
-                    statusClass = statusClass === 'alert' ? 'alert' : 'warning';
-                    statusBadge += ` 💧 SECCO`;
-                    alertLogs.push({ metric: 'umidità', value: hum, limit: t.hum_min, type: 'bassa' });
-                } else if (hum > t.hum_max) {
-                    statusClass = statusClass === 'alert' ? 'alert' : 'warning';
-                    statusBadge += ` 🌧️ UMIDO`;
-                    alertLogs.push({ metric: 'umidità', value: hum, limit: t.hum_max, type: 'alta' });
-                } else {
-                    activeAlerts.delete(`${humAlertKey}_bassa`);
-                    activeAlerts.delete(`${humAlertKey}_alta`);
-                }
-
-                // Spedisci notifiche se allarmato
-                if (alertLogs.length > 0) {
-                    alertLogs.forEach(al => {
-                        checkEnvironmentalAlerts(t.id, t.name, al.metric, al.value, al.limit, al.type);
-                    });
-                }
+        if (hasData) {
+            badge.classList.add('active');
+            if (badgeTxt) badgeTxt.textContent = 'LIVE';
+            if (lastUpd && lastDate) {
+                lastUpd.textContent = 'Ultimo dato: ' + fmtTimestamp(lastDate);
             }
-
-            const cardBorder = statusClass === 'alert' ? 'border: 2px solid var(--alert-red) !important;' : statusClass === 'warning' ? 'border: 2px solid #F2C94C !important;' : 'border: 1px solid var(--border-color);';
-            const valColor = statusClass === 'alert' ? 'color: var(--alert-red);' : statusClass === 'warning' ? 'color: #F2C94C;' : 'color: var(--accent-green);';
-            const badgeBg = statusClass === 'alert' ? 'background: rgba(192,41,43,0.15); color: var(--alert-red); border: 1px solid rgba(192,41,43,0.3);' : statusClass === 'warning' ? 'background: rgba(242,201,76,0.15); color: #F2C94C; border: 1px solid rgba(242,201,76,0.3);' : 'background: rgba(39,174,96,0.15); color: var(--accent-green); border: 1px solid rgba(39,174,96,0.3);';
-            const badgeText = statusBadge ? statusBadge.trim() : '● OTTIMALE';
-
-            return `
-            <div class="card stat-card climate-card" style="margin-bottom:0; display:flex; flex-direction:column; justify-content:space-between; ${cardBorder}">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap: 0.5rem;">
-                    <div style="overflow:hidden; text-overflow:ellipsis;">
-                        <h4 style="font-size:1.1rem; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;" title="${t.name}">${t.name}</h4>
-                        <span class="subtitle" style="font-size:0.75rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; max-width:180px;" title="${sensorsLabel}">Sonde: ${sensorsLabel}</span>
-                    </div>
-                    <span class="badge" style="font-size:0.65rem; font-weight:800; padding:0.25rem 0.5rem; border-radius:4px; white-space:nowrap; text-transform:uppercase; ${badgeBg}">${badgeText}</span>
-                </div>
-                
-                <div class="climate-values" style="display:flex; gap:1.5rem; margin-top:1.5rem; margin-bottom:0.5rem;">
-                    <div style="flex:1;">
-                        <span class="subtitle" style="font-size:0.7rem; text-transform:uppercase; font-weight:600; letter-spacing:0.5px;">Temperatura</span>
-                        <div class="value" style="font-size:2.2rem; font-weight:800; line-height:1.2; margin-top:0.25rem; ${valColor}">${tempDisp}</div>
-                        <span class="subtitle" style="font-size:0.65rem; margin-top:0.25rem;">Range: ${t.temp_min}-${t.temp_max} °C</span>
-                    </div>
-                    <div style="flex:1;">
-                        <span class="subtitle" style="font-size:0.7rem; text-transform:uppercase; font-weight:600; letter-spacing:0.5px;">Umidità</span>
-                        <div class="value" style="font-size:2.2rem; font-weight:800; line-height:1.2; margin-top:0.25rem; ${valColor}">${humDisp}</div>
-                        <span class="subtitle" style="font-size:0.65rem; margin-top:0.25rem;">Range: ${t.hum_min}-${t.hum_max} %</span>
-                    </div>
-                </div>
-            </div>`;
-        }).join('');
-    }
-
-    // Inizializzazione dropdown filtri del grafico
-    const filterDropdown = document.getElementById('chartTerrarioFilter');
-    if (filterDropdown && !filterDropdown.dataset.initialized) {
-        const currentVal = filterDropdown.value;
-        filterDropdown.innerHTML = '<option value="ALL">Tutti i Terrari</option>' +
-            appState.terrari.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
-        filterDropdown.value = currentVal || 'ALL';
-        filterDropdown.addEventListener('change', () => updateClimateChart());
-        filterDropdown.dataset.initialized = 'true';
-    }
-
-    updateClimateChart();
-};
-
-/**
- * Aggrega temporalmente i dati climatici per evitare l'overcrowd dell'asse X.
- */
-const aggregateClimateData = (readings, range) => {
-    if (readings.length === 0) return { labels: [], temps: [], hums: [] };
-
-    // Ordina per timestamp crescente
-    const sorted = [...readings].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-
-    let intervalMs;
-    let labelFormatFn;
-
-    if (range === '24h') {
-        // Aggrega ogni 15 minuti per le ultime 24 ore (96 punti)
-        intervalMs = 15 * 60 * 1000;
-        labelFormatFn = (d) => d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
-    } else if (range === '7d') {
-        // Aggregazione oraria per 7 giorni (168 punti)
-        intervalMs = 60 * 60 * 1000;
-        labelFormatFn = (d) => `${d.getDate()}/${d.getMonth() + 1} ${d.getHours()}:00`;
-    } else {
-        // Aggregazione giornaliera per 30 giorni (30 punti)
-        intervalMs = 24 * 60 * 60 * 1000;
-        labelFormatFn = (d) => `${d.getDate()}/${d.getMonth() + 1}`;
-    }
-
-    const groups = {};
-
-    sorted.forEach(r => {
-        const ts = new Date(r.timestamp).getTime();
-        const roundedTs = Math.floor(ts / intervalMs) * intervalMs;
-
-        if (!groups[roundedTs]) {
-            groups[roundedTs] = { tempSum: 0, humSum: 0, count: 0 };
-        }
-
-        groups[roundedTs].tempSum += r.temperature;
-        groups[roundedTs].humSum += r.humidity;
-        groups[roundedTs].count++;
-    });
-
-    const sortedKeys = Object.keys(groups).map(Number).sort((a, b) => a - b);
-
-    const labels = [];
-    const temps = [];
-    const hums = [];
-
-    sortedKeys.forEach(ts => {
-        const g = groups[ts];
-        labels.push(labelFormatFn(new Date(ts)));
-        temps.push(Math.round((g.tempSum / g.count) * 10) / 10);
-        hums.push(Math.round((g.humSum / g.count) * 10) / 10);
-    });
-
-    return { labels, temps, hums };
-};
-
-/**
- * Aggiorna il grafico climatico dual-axis (T rossa, H blu) a seconda del filtro terrario e range.
- */
-const updateClimateChart = () => {
-    const canvas = document.getElementById('climateChart');
-    if (!canvas) return;
-
-    const filterVal = document.getElementById('chartTerrarioFilter')?.value || 'ALL';
-    const rangeBtn = document.querySelector('.btn-range.active');
-    const range = rangeBtn ? rangeBtn.dataset.range : '24h';
-
-    // Filtra per terrario
-    let readings = [];
-    if (filterVal === 'ALL') {
-        readings = [...appState.lectureData];
-    } else {
-        readings = appState.lectureData.filter(l => l.terrario_id === filterVal);
-    }
-
-    // Filtra per range di tempo
-    const now = Date.now();
-    let cutoffMs;
-    if (range === '24h') cutoffMs = 24 * 60 * 60 * 1000;
-    else if (range === '7d') cutoffMs = 7 * 24 * 60 * 60 * 1000;
-    else cutoffMs = 30 * 24 * 60 * 60 * 1000;
-
-    readings = readings.filter(l => (now - new Date(l.timestamp).getTime()) <= cutoffMs);
-
-    // Aggrega
-    const aggregated = aggregateClimateData(readings, range);
-
-    // Rendering Chart.js
-    const ctx = canvas.getContext('2d');
-    if (appState.charts.climate) appState.charts.climate.destroy();
-
-    appState.charts.climate = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: aggregated.labels,
-            datasets: [
-                {
-                    label: 'Temperatura (°C)',
-                    data: aggregated.temps,
-                    borderColor: '#C0292B',
-                    backgroundColor: 'rgba(192, 41, 43, 0.08)',
-                    borderWidth: 2,
-                    yAxisID: 'yTemp',
-                    tension: 0.3,
-                    fill: true,
-                    pointRadius: range === '24h' ? 0 : 2
-                },
-                {
-                    label: 'Umidità (%)',
-                    data: aggregated.hums,
-                    borderColor: '#2D4A7A',
-                    backgroundColor: 'rgba(45, 74, 122, 0.08)',
-                    borderWidth: 2,
-                    yAxisID: 'yHum',
-                    tension: 0.3,
-                    fill: true,
-                    pointRadius: range === '24h' ? 0 : 2
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'top', labels: { color: '#E2E8F0', font: { family: 'Inter', weight: 600 } } },
-                tooltip: { mode: 'index', intersect: false }
-            },
-            scales: {
-                yTemp: {
-                    type: 'linear',
-                    position: 'left',
-                    grid: { color: 'rgba(255,255,255,0.05)' },
-                    ticks: { color: '#C0292B', callback: v => v + ' °C' },
-                    title: { display: true, text: 'Temperatura (°C)', color: '#C0292B' }
-                },
-                yHum: {
-                    type: 'linear',
-                    position: 'right',
-                    grid: { drawOnChartArea: false },
-                    ticks: { color: '#2D4A7A', callback: v => v + ' %' },
-                    title: { display: true, text: 'Umidità (%)', color: '#2D4A7A' }
-                },
-                x: {
-                    grid: { display: false },
-                    ticks: { color: '#94A3B8' }
-                }
-            }
-        }
-    });
-};
-
-/**
- * Gestione Allarmi Ambientali con predisposizione webhook per notifiche attive.
- */
-const checkEnvironmentalAlerts = (terrarioId, terrarioName, metric, value, limit, type) => {
-    const alertKey = `${terrarioId}_${metric}_${type}`;
-    if (activeAlerts.has(alertKey)) return;
-
-    activeAlerts.add(alertKey);
-    const alertMsg = type === 'alta'
-        ? `${metric === 'temperatura' ? 'T' : 'H'} elevata: ${value.toFixed(1)}${metric === 'temperatura' ? '°C' : '%'} (Soglia max: ${limit.toFixed(1)})`
-        : `${metric === 'temperatura' ? 'T' : 'H'} troppo bassa: ${value.toFixed(1)}${metric === 'temperatura' ? '°C' : '%'} (Soglia min: ${limit.toFixed(1)})`;
-
-    showNotification(`ALLARME ${terrarioName.toUpperCase()} 🚨`, alertMsg, "alert");
-
-    // Invio di notifica (Slack/Telegram webhook predisposto)
-    dispatchNotificationWebhook({
-        terrario_id: terrarioId,
-        terrario_name: terrarioName,
-        metric: metric,
-        value: value,
-        limit: limit,
-        alert_type: type,
-        timestamp: new Date().toISOString()
-    });
-};
-
-const dispatchNotificationWebhook = (data) => {
-    console.info("[Webhook Allarme] Predisposizione per integrazione notifica attiva inviata:", data);
-    // Esempio: fetch('https://your-notification-service.com/webhook', { method: 'POST', body: JSON.stringify(data) });
-};
-
-/**
- * Rendering listini modale configurazione Clima.
- */
-const renderConfigTerrari = () => {
-    const listDiv = document.getElementById('terrariConfigList');
-    if (!listDiv) return;
-
-    listDiv.innerHTML = appState.terrari.map(t => `
-        <div class="config-item" style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem; background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:8px;">
-            <div>
-                <strong style="color:var(--text-main);">${t.name}</strong>
-                <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.25rem;">
-                    Target T: ${t.temp_min}-${t.temp_max}°C | H: ${t.hum_min}-${t.hum_max}%
-                </div>
-            </div>
-            <div style="display:flex; gap:0.5rem;">
-                <button type="button" class="btn-standard btn-edit-terrario" data-id="${t.id}" style="padding:0.3rem 0.6rem; font-size:0.8rem; background:var(--bg-navy-lightest);">✏️ Modifica</button>
-                <button type="button" class="btn-standard btn-danger btn-delete-terrario" data-id="${t.id}" style="padding:0.3rem 0.6rem; font-size:0.8rem; background:var(--alert-red);">🗑️</button>
-            </div>
-        </div>
-    `).join('');
-};
-
-const renderConfigSonde = () => {
-    const listDiv = document.getElementById('sondeConfigList');
-    if (!listDiv) return;
-
-    // Auto-discovery delle sonde dai dati storici grezzi
-    const uniqueRawSensorIds = [...new Set(appState.lectureData.map(l => l.sensor_id))];
-
-    // Se un sensore dai dati grezzi non è registrato nelle config sensori, crealo temporaneamente
-    uniqueRawSensorIds.forEach(id => {
-        if (!appState.sensori.find(s => s.id === id)) {
-            const newSensor = {
-                id: id,
-                name: `Sonda (${id.substring(id.length - 5)})`,
-                terrario_id: '',
-                is_deleted: false
-            };
-            appState.sensori.push(newSensor);
-            cloudPostWithQueue({ event_type: "config_sensori_sync", ...newSensor });
-            const tx = db.transaction("config_sensori", "readwrite");
-            tx.objectStore("config_sensori").put(newSensor);
-        }
-    });
-
-    if (appState.sensori.length === 0) {
-        listDiv.innerHTML = `<div class="table-empty" style="padding:1.5rem; text-align:center;">Nessun sensore rilevato. Accendi gli ESP8266 per trasmettere dati.</div>`;
-        return;
-    }
-
-    listDiv.innerHTML = appState.sensori.map(s => `
-        <div class="config-item sensor-config-item" data-sensor-id="${s.id}" style="padding:0.75rem; background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:8px; margin-bottom:0.5rem;">
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; align-items:center;">
-                <div>
-                    <span style="font-size:0.7rem; color:var(--text-muted); display:block; font-family:monospace;">MAC: ${s.id}</span>
-                    <input type="text" class="input-standard sensor-name-input" value="${s.name}" style="width:100%; margin-top:0.25rem; padding:0.35rem;" placeholder="Es. Sonda Zona Nord">
-                </div>
-                <div>
-                    <span style="font-size:0.7rem; color:var(--text-muted); display:block;">TERRARIO ASSEGNATO</span>
-                    <select class="input-standard sensor-terrario-select" style="width:100%; margin-top:0.25rem; padding:0.35rem;">
-                        <option value="">-- Non Assegnato --</option>
-                        ${appState.terrari.map(t => `<option value="${t.id}" ${t.id === s.terrario_id ? 'selected' : ''}>${t.name}</option>`).join('')}
-                    </select>
-                </div>
-            </div>
-        </div>
-    `).join('');
-};
-
-/**
- * Salva la configurazione delle sonde e l'assegnazione ai terrari.
- */
-const saveConfigClima = async () => {
-    const sensorItems = document.querySelectorAll('.sensor-config-item');
-    for (const item of sensorItems) {
-        const id = item.dataset.sensorId;
-        const name = item.querySelector('.sensor-name-input').value.trim() || `Sonda ${id}`;
-        const terrario_id = item.querySelector('.sensor-terrario-select').value;
-
-        const existing = appState.sensori.find(s => s.id === id);
-        if (existing) {
-            existing.name = name;
-            existing.terrario_id = terrario_id;
-
-            // Sync cloud
-            await cloudPostWithQueue({
-                event_type: "config_sensori_sync",
-                id: id,
-                name: name,
-                terrario_id: terrario_id,
-                is_deleted: false
-            });
-
-            // Local save
-            const tx = db.transaction("config_sensori", "readwrite");
-            tx.objectStore("config_sensori").put(existing);
+        } else {
+            badge.classList.remove('active');
+            if (badgeTxt) badgeTxt.textContent = 'IN ATTESA';
+            if (lastUpd) lastUpd.textContent = 'Nessun dato ricevuto';
         }
     }
 
-    updateClimaUI();
-    showNotification("Salvataggio", "Configurazione sensori salvata correttamente.", "success");
-};
+    /* ─── Card live ─────────────────────────────────────────────── */
+    function renderLiveCards(data) {
+        const tempEl = document.getElementById('climaTempValue');
+        const humEl  = document.getElementById('climaHumValue');
 
-// Event Listeners aggiunti al boot
-document.addEventListener('DOMContentLoaded', () => {
-    // 1. Modale Clima Config
-    const btnOpenConfigClima = document.getElementById('btnOpenConfigClima');
-    if (btnOpenConfigClima) {
-        btnOpenConfigClima.addEventListener('click', () => {
-            renderConfigTerrari();
-            renderConfigSonde();
-            document.getElementById('configClimaModal').classList.add('active');
-        });
-    }
-
-    const btnCloseConfigClima = document.getElementById('btnCloseConfigClima');
-    if (btnCloseConfigClima) {
-        btnCloseConfigClima.addEventListener('click', () => {
-            document.getElementById('configClimaModal').classList.remove('active');
-        });
-    }
-
-    const btnSaveConfigClima = document.getElementById('btnSaveConfigClima');
-    if (btnSaveConfigClima) {
-        btnSaveConfigClima.addEventListener('click', async () => {
-            await saveConfigClima();
-            document.getElementById('configClimaModal').classList.remove('active');
-        });
-    }
-
-    // 2. Tab switcher nel modale
-    const modalTabBtns = document.querySelectorAll('.modal-tab-btn');
-    modalTabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            modalTabBtns.forEach(b => {
-                b.classList.remove('active');
-                b.style.color = 'var(--text-muted)';
-                b.style.borderBottomColor = 'transparent';
-            });
-            btn.classList.add('active');
-            btn.style.color = 'var(--accent-green)';
-            btn.style.borderBottomColor = 'var(--accent-green)';
-
-            const targetId = btn.dataset.modalTarget;
-            document.querySelectorAll('.modal-pane').forEach(p => p.style.display = 'none');
-            const targetPane = document.getElementById(targetId);
-            if (targetPane) targetPane.style.display = 'block';
-        });
-    });
-
-    // 3. Modulo Nuovo Terrario
-    const btnAddTerrario = document.getElementById('btnAddTerrario');
-    if (btnAddTerrario) {
-        btnAddTerrario.addEventListener('click', () => {
-            document.getElementById('terrarioEditForm').reset();
-            document.getElementById('terrarioEditId').value = '';
-            document.getElementById('terrarioEditTitle').innerText = 'Nuovo Terrario';
-            document.getElementById('terrarioEditModal').classList.add('active');
-        });
-    }
-
-    const btnCancelTerrarioEdit = document.getElementById('btnCancelTerrarioEdit');
-    if (btnCancelTerrarioEdit) {
-        btnCancelTerrarioEdit.addEventListener('click', () => {
-            document.getElementById('terrarioEditModal').classList.remove('active');
-        });
-    }
-
-    const terrarioEditForm = document.getElementById('terrarioEditForm');
-    if (terrarioEditForm) {
-        terrarioEditForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const idVal = document.getElementById('terrarioEditId').value;
-            const t = {
-                name: document.getElementById('terrarioEditName').value.trim(),
-                temp_min: parseFloat(document.getElementById('terrarioEditTempMin').value),
-                temp_max: parseFloat(document.getElementById('terrarioEditTempMax').value),
-                hum_min: parseFloat(document.getElementById('terrarioEditHumMin').value),
-                hum_max: parseFloat(document.getElementById('terrarioEditHumMax').value),
-                is_deleted: false
-            };
-
-            if (idVal) {
-                t.id = idVal;
-                const idx = appState.terrari.findIndex(x => x.id === t.id);
-                if (idx >= 0) appState.terrari[idx] = t;
-            } else {
-                t.id = 'terrario_' + Date.now();
-                appState.terrari.push(t);
-            }
-
-            // Sync cloud
-            await cloudPostWithQueue({ event_type: "config_terrari_sync", ...t });
-
-            // Local save
-            const tx = db.transaction("config_terrari", "readwrite");
-            tx.objectStore("config_terrari").put(t);
-
-            document.getElementById('terrarioEditModal').classList.remove('active');
-            renderConfigTerrari();
-
-            // Invalida dropdown del filtro grafico per ricaricarlo al volo
-            const filterDropdown = document.getElementById('chartTerrarioFilter');
-            if (filterDropdown) delete filterDropdown.dataset.initialized;
-
-            updateClimaUI();
-            showNotification("Terrario Salvato", `Terrario "${t.name}" salvato con successo.`, "success");
-        });
-    }
-
-    // 4. Modifica/Elimina terrari
-    document.addEventListener('click', async (e) => {
-        const editBtn = e.target.closest('.btn-edit-terrario');
-        if (editBtn) {
-            const id = editBtn.dataset.id;
-            const t = appState.terrari.find(x => x.id === id);
-            if (t) {
-                document.getElementById('terrarioEditId').value = t.id;
-                document.getElementById('terrarioEditName').value = t.name;
-                document.getElementById('terrarioEditTempMin').value = t.temp_min;
-                document.getElementById('terrarioEditTempMax').value = t.temp_max;
-                document.getElementById('terrarioEditHumMin').value = t.hum_min;
-                document.getElementById('terrarioEditHumMax').value = t.hum_max;
-                document.getElementById('terrarioEditTitle').innerText = 'Modifica Terrario';
-                document.getElementById('terrarioEditModal').classList.add('active');
-            }
+        if (!data || !data.length) {
+            if (tempEl) tempEl.textContent = '--.-';
+            if (humEl)  humEl.textContent  = '--.-';
+            updateBadge(false, null);
             return;
         }
 
-        const deleteBtn = e.target.closest('.btn-delete-terrario');
-        if (deleteBtn) {
-            const id = deleteBtn.dataset.id;
-            const t = appState.terrari.find(x => x.id === id);
-            if (t) {
-                if (confirm(`Sei sicuro di voler eliminare il terrario "${t.name}"? Le sonde assegnate saranno scollegate.`)) {
-                    t.is_deleted = true;
+        // Ultimo record valido
+        const last = data[data.length - 1];
+        const temp = parseFloat(last.temperature);
+        const hum  = parseFloat(last.humidity);
+        const lastDate = parseTimestamp(last.timestamp);
 
-                    // Sync cloud deletion
-                    await cloudPostWithQueue({ event_type: "config_terrari_delete", id: id });
+        if (tempEl) tempEl.textContent = fmt1(temp);
+        if (humEl)  humEl.textContent  = fmt1(hum);
 
-                    // Local delete
-                    const tx = db.transaction("config_terrari", "readwrite");
-                    tx.objectStore("config_terrari").delete(id);
+        // Colore dinamico temperatura
+        if (tempEl) {
+            if (temp < 20)      tempEl.style.color = '#3498DB';
+            else if (temp > 35) tempEl.style.color = '#C0392B';
+            else                tempEl.style.color = '#E67E22';
+        }
 
-                    appState.terrari = appState.terrari.filter(x => x.id !== id);
+        updateBadge(true, lastDate);
+    }
 
-                    // Scollega le sonde assegnate a questo terrario
-                    for (const s of appState.sensori) {
-                        if (s.terrario_id === id) {
-                            s.terrario_id = '';
-                            await cloudPostWithQueue({ event_type: "config_sensori_sync", ...s });
-                            const txS = db.transaction("config_sensori", "readwrite");
-                            txS.objectStore("config_sensori").put(s);
+    /* ─── Sparkline mini-grafico ────────────────────────────────── */
+    function renderSparklines(data) {
+        const slice = data.slice(-SPARKLINE_POINTS);
+        const labels = slice.map(() => '');
+        const temps  = slice.map(r => parseFloat(r.temperature));
+        const hums   = slice.map(r => parseFloat(r.humidity));
+
+        const sparkCfg = (values, color, bgColor) => ({
+            type: 'line',
+            data: {
+                labels,
+                datasets: [{ data: values, borderColor: color, backgroundColor: bgColor,
+                             borderWidth: 1.5, pointRadius: 0, tension: 0.4, fill: true }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false, animation: false,
+                plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                scales: {
+                    x: { display: false },
+                    y: { display: false, min: Math.min(...values) - 1, max: Math.max(...values) + 1 }
+                }
+            }
+        });
+
+        // Temperatura sparkline
+        const tempCanvas = document.getElementById('climaTempSparkline');
+        if (tempCanvas) {
+            if (_tempSpark) { _tempSpark.destroy(); _tempSpark = null; }
+            _tempSpark = new Chart(tempCanvas, sparkCfg(temps, C_TEMP, C_TEMP_BG));
+        }
+
+        // Umidità sparkline
+        const humCanvas = document.getElementById('climaHumSparkline');
+        if (humCanvas) {
+            if (_humSpark) { _humSpark.destroy(); _humSpark = null; }
+            _humSpark = new Chart(humCanvas, sparkCfg(hums, C_HUM, C_HUM_BG));
+        }
+    }
+
+    /* ─── Grafico storico dual-axis ─────────────────────────────── */
+    function renderHistoryChart(data) {
+        const container = document.getElementById('climaChartContainer');
+        const emptyState = document.getElementById('climaEmptyState');
+        const canvas = document.getElementById('climaHistoryChart');
+
+        if (!data || !data.length) {
+            if (container)  container.style.display  = 'none';
+            if (emptyState) emptyState.style.display  = 'block';
+            return;
+        }
+
+        if (container)  container.style.display  = 'block';
+        if (emptyState) emptyState.style.display  = 'none';
+
+        if (!canvas) return;
+
+        // Down-sample se troppi punti (max 200 per performance)
+        let pts = data;
+        if (pts.length > 200) {
+            const step = Math.ceil(pts.length / 200);
+            pts = pts.filter((_, i) => i % step === 0);
+        }
+
+        const labels = pts.map(r => {
+            const d = parseTimestamp(r.timestamp);
+            return d ? fmtTimestamp(d) : '';
+        });
+        const temps = pts.map(r => parseFloat(r.temperature));
+        const hums  = pts.map(r => parseFloat(r.humidity));
+
+        if (_histChart) { _histChart.destroy(); _histChart = null; }
+
+        _histChart = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Temperatura (°C)',
+                        data: temps,
+                        borderColor: C_TEMP,
+                        backgroundColor: C_TEMP_BG,
+                        borderWidth: 2,
+                        pointRadius: pts.length < 50 ? 3 : 0,
+                        pointHoverRadius: 5,
+                        tension: 0.4,
+                        fill: true,
+                        yAxisID: 'yTemp'
+                    },
+                    {
+                        label: 'Umidità (%)',
+                        data: hums,
+                        borderColor: C_HUM,
+                        backgroundColor: C_HUM_BG,
+                        borderWidth: 2,
+                        pointRadius: pts.length < 50 ? 3 : 0,
+                        pointHoverRadius: 5,
+                        tension: 0.4,
+                        fill: true,
+                        yAxisID: 'yHum'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                animation: { duration: 400 },
+                plugins: {
+                    legend: {
+                        display: true,
+                        labels: { color: C_TICK, font: { family: 'Inter', size: 12 }, boxWidth: 14, padding: 16 }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(24,43,73,0.95)',
+                        titleColor: '#E2E8F0',
+                        bodyColor: '#94A3B8',
+                        borderColor: 'rgba(255,255,255,0.1)',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            label: ctx => {
+                                const v = ctx.parsed.y;
+                                return ctx.datasetIndex === 0
+                                    ? `  🔥 ${v.toFixed(1)} °C`
+                                    : `  💧 ${v.toFixed(1)} %`;
+                            }
                         }
                     }
-
-                    renderConfigTerrari();
-                    const filterDropdown = document.getElementById('chartTerrarioFilter');
-                    if (filterDropdown) delete filterDropdown.dataset.initialized;
-
-                    updateClimaUI();
-                    showNotification("Terrario Eliminato", "Terrario rimosso dal database.", "success");
+                },
+                scales: {
+                    x: {
+                        ticks: { color: C_TICK, maxTicksLimit: 8, font: { size: 11, family: 'Inter' } },
+                        grid:  { color: C_GRID }
+                    },
+                    yTemp: {
+                        type: 'linear', position: 'left',
+                        ticks: { color: C_TEMP, font: { size: 11, family: 'Inter', weight: '600' },
+                                 callback: v => v.toFixed(1) + ' °C' },
+                        grid: { color: C_GRID }
+                    },
+                    yHum: {
+                        type: 'linear', position: 'right',
+                        ticks: { color: C_HUM, font: { size: 11, family: 'Inter', weight: '600' },
+                                 callback: v => v.toFixed(0) + ' %' },
+                        grid: { drawOnChartArea: false }
+                    }
                 }
             }
+        });
+    }
+
+    /* ─── Strip statistiche ─────────────────────────────────────── */
+    function renderStatsStrip(data) {
+        const set = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = val;
+        };
+
+        if (!data || !data.length) {
+            ['climaStatTempMin','climaStatTempAvg','climaStatTempMax',
+             'climaStatHumMin','climaStatHumAvg','climaStatHumMax']
+             .forEach(id => set(id, '--'));
             return;
         }
-    });
 
-    // 5. Pulsanti range del grafico clima
-    const rangeBtns = document.querySelectorAll('.btn-range');
-    rangeBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            rangeBtns.forEach(b => {
-                b.classList.remove('active');
-                b.style.color = 'var(--text-muted)';
-                b.style.background = 'transparent';
+        const temps = data.map(r => parseFloat(r.temperature)).filter(v => !isNaN(v));
+        const hums  = data.map(r => parseFloat(r.humidity)).filter(v => !isNaN(v));
+
+        const min = arr => Math.min(...arr);
+        const max = arr => Math.max(...arr);
+        const avg = arr => arr.reduce((a,b) => a+b, 0) / arr.length;
+
+        set('climaStatTempMin', temps.length ? fmt1(min(temps)) + ' °C' : '--');
+        set('climaStatTempAvg', temps.length ? fmt1(avg(temps)) + ' °C' : '--');
+        set('climaStatTempMax', temps.length ? fmt1(max(temps)) + ' °C' : '--');
+        set('climaStatHumMin',  hums.length  ? fmt1(min(hums))  + ' %'  : '--');
+        set('climaStatHumAvg',  hums.length  ? fmt1(avg(hums))  + ' %'  : '--');
+        set('climaStatHumMax',  hums.length  ? fmt1(max(hums))  + ' %'  : '--');
+    }
+
+    /* ─── Setup bottoni range ───────────────────────────────────── */
+    function setupRangeButtons() {
+        const btns = document.querySelectorAll('.clima-range-btn');
+        btns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                btns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                _currentRange = btn.dataset.range;
+                applyRange();
             });
-            btn.classList.add('active');
-            btn.style.color = 'var(--accent-green)';
-            btn.style.background = 'rgba(39, 174, 96, 0.1)';
-            updateClimateChart();
         });
-    });
-});
+    }
 
+    /* ─── Applica range corrente ai grafici e stats ─────────────── */
+    function applyRange() {
+        const filtered = filterByRange(_allData, _currentRange);
+        renderHistoryChart(filtered);
+        renderStatsStrip(filtered);
+    }
+
+    /* ─── Fetch dati dal GAS ────────────────────────────────────── */
+    async function fetchClimateData() {
+        try {
+            const raw = await cloudGet('Termoigrometri');
+            if (!Array.isArray(raw)) return [];
+
+            // Converti valori numerici (GAS li manda come stringhe a volte)
+            return raw
+                .map(r => ({
+                    timestamp:   r.timestamp || '',
+                    device_id:   r.device_id  || '',
+                    temperature: parseFloat(r.temperature),
+                    humidity:    parseFloat(r.humidity)
+                }))
+                .filter(r => !isNaN(r.temperature) && !isNaN(r.humidity))
+                .sort((a, b) => {
+                    const da = parseTimestamp(a.timestamp);
+                    const db = parseTimestamp(b.timestamp);
+                    if (!da && !db) return 0;
+                    if (!da) return -1;
+                    if (!db) return 1;
+                    return da - db;
+                });
+        } catch (e) {
+            console.warn('[ClimateModule] fetchClimateData errore:', e.message);
+            return [];
+        }
+    }
+
+    /* ─── Refresh completo (fetch + render tutto) ───────────────── */
+    async function refresh() {
+        _allData = await fetchClimateData();
+        const filtered = filterByRange(_allData, _currentRange);
+
+        renderLiveCards(_allData);     // Card live usano sempre l'ultimo dato
+        renderSparklines(_allData);    // Sparkline usano gli ultimi SPARKLINE_POINTS punti
+        renderHistoryChart(filtered);  // Storico usa il range selezionato
+        renderStatsStrip(filtered);    // Stats usano il range selezionato
+    }
+
+    /* ─── Inizializzazione (chiamata al primo click sulla tab) ──── */
+    async function init() {
+        if (_initialized) {
+            // Se già inizializzato, aggiorna solo se sono passati > 60s
+            // (evita re-fetch ad ogni click sulla tab)
+            return;
+        }
+        _initialized = true;
+
+        setupRangeButtons();
+        await refresh();
+
+        // Auto-refresh ogni 5 minuti
+        if (_refreshTimer) clearInterval(_refreshTimer);
+        _refreshTimer = setInterval(refresh, REFRESH_MS);
+        console.log('[ClimateModule] Inizializzato. Auto-refresh ogni', REFRESH_MS / 60000, 'minuti.');
+    }
+
+    /* ─── API pubblica ──────────────────────────────────────────── */
+    return { init, refresh };
+
+})();
+
+// Esponi globalmente per debug
+window.ClimateModule = ClimateModule;

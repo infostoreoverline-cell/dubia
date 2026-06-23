@@ -1,143 +1,129 @@
-const GAS_URL = "https://script.google.com/macros/s/AKfycbzmrROPiLBIWt9qDsno9BKb_fWvPcmmH2xtp5UAHg4anQGOdd03U5IP6QjDnpsiB04NNA/exec";
+﻿/**
+ * ============================================================================
+ *  D.U.B.I.A. — /api/ingest (Vercel Serverless Function)
+ *
+ *  Bridge ESP8266 firmware → Google Apps Script backend.
+ *
+ *  Il firmware (termoigrometro_v2) invia un POST CSV ogni ~1h con le
+ *  letture accumulate del sensore SHT40:
+ *    - Body:   testo CSV, righe "t10,h10\n"
+ *    - Header: Content-Type: text/csv
+ *    - Header: X-Device-ID: <MAC address ESP8266>
+ *
+ *  Questo endpoint:
+ *    1. Legge il body CSV e lo parsea in coppie {t10, h10}
+ *    2. Valida device_id dall'header X-Device-ID
+ *    3. Invia un POST JSON al GAS con event_type='termoigrometro_data'
+ *    4. Risponde 200 OK al firmware (o codice di errore)
+ * ============================================================================
+ */
 
-// Helper per estrarre il body grezzo
-async function getRawBody(req) {
-  if (typeof req.body === 'string') {
-    return req.body;
+// URL Google Apps Script — aggiornare dopo ogni re-deploy GAS.
+const GAS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzmrROPiLBIWt9qDsno9BKb_fWvPcmmH2xtp5UAHg4anQGOdd03U5IP6QjDnpsiB04NNA/exec';
+
+const MAX_RETRIES       = 3;
+const RETRY_BASE_DELAY  = 1000; // ms
+
+async function postToGAS(payload) {
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const res = await fetch(GAS_ENDPOINT, {
+        method: 'POST',
+        redirect: 'follow',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error(HTTP  );
+      const json = await res.json();
+      if (json.status === 'error') throw new Error('GAS error: ' + json.message);
+      return { ok: true, data: json };
+    } catch (err) {
+      if (attempt === MAX_RETRIES) return { ok: false, error: err.message };
+      await new Promise(r => setTimeout(r, RETRY_BASE_DELAY * Math.pow(2, attempt)));
+    }
   }
-  if (Buffer.isBuffer(req.body)) {
-    return req.body.toString('utf8');
-  }
-  return new Promise((resolve, reject) => {
-    let data = '';
-    req.on('data', chunk => {
-      data += chunk;
-    });
-    req.on('end', () => {
-      resolve(data);
-    });
-    req.on('error', err => {
-      reject(err);
-    });
-  });
 }
 
-module.exports = async (req, res) => {
-  // Gestione CORS e metodi preflight
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Device-ID');
-
+export default async function handler(req, res) {
+  // CORS preflight
   if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Device-ID');
+    return res.status(204).end();
   }
 
   if (req.method !== 'POST') {
-    return res.status(405).json({ status: 'error', message: 'Method not allowed. Use POST.' });
+    return res.status(405).json({ status: 'error', message: 'Method Not Allowed. Use POST.' });
   }
 
+  const deviceId = (req.headers['x-device-id'] || '').trim() || 'unknown';
+
+  // Leggi body raw (il firmware invia text/csv come stream)
+  let rawBody = '';
   try {
-    // 1. Estrai Device ID (MAC Address)
-    const sensorId = req.headers['x-device-id'] || req.headers['X-Device-ID'];
-    if (!sensorId) {
-      return res.status(400).json({ status: 'error', message: 'Missing X-Device-ID header' });
-    }
-
-    // 2. Leggi il body in formato CSV
-    const csvContent = await getRawBody(req);
-    if (!csvContent || csvContent.trim() === '') {
-      return res.status(400).json({ status: 'error', message: 'Empty body' });
-    }
-
-    // 3. Parsa il CSV (formato: temp10,hum10 per riga)
-    const lines = csvContent.split('\n');
-    const parsedReadings = [];
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue; // Salta righe vuote
-
-      const parts = line.split(',');
-      if (parts.length < 2) {
-        console.warn(`[Ingest] Riga non valida saltata: "${line}"`);
-        continue;
-      }
-
-      const tempVal = parseInt(parts[0], 10);
-      const humVal = parseInt(parts[1], 10);
-
-      if (isNaN(tempVal) || isNaN(humVal)) {
-        console.warn(`[Ingest] Valori numerici non validi nella riga: "${line}"`);
-        continue;
-      }
-
-      // Conversione diretta da moltiplicato per 10 a decimale
-      const temperature = tempVal / 10.0;
-      const humidity = humVal / 10.0;
-
-      parsedReadings.push({
-        temp: temperature,
-        hum: humidity
+    if (typeof req.body === 'string') {
+      rawBody = req.body;
+    } else if (Buffer.isBuffer(req.body)) {
+      rawBody = req.body.toString('utf8');
+    } else {
+      rawBody = await new Promise((resolve, reject) => {
+        let data = '';
+        req.on('data', chunk => { data += chunk.toString('utf8'); });
+        req.on('end', () => resolve(data));
+        req.on('error', reject);
       });
     }
-
-    if (parsedReadings.length === 0) {
-      return res.status(400).json({ status: 'error', message: 'No valid data parsed from CSV' });
-    }
-
-    // 4. Ricostruisci i timestamp a ritroso di 1 minuto per riga a partire da ora (Date.now())
-    const receiptTime = Date.now();
-    const totalReadings = parsedReadings.length;
-
-    const readingsWithTimestamp = parsedReadings.map((reading, index) => {
-      // Se abbiamo N letture a intervalli di 1 minuto, l'ultima (index = N-1) è a receiptTime,
-      // la penultima (index = N-2) è a receiptTime - 1m, ecc.
-      const timestampMs = receiptTime - (totalReadings - 1 - index) * 60 * 1000;
-      return {
-        timestamp: new Date(timestampMs).toISOString(),
-        temp: reading.temp,
-        hum: reading.hum
-      };
-    });
-
-    // 5. Prepara il payload per Google Apps Script
-    const gasPayload = {
-      event_type: 'sensor_batch',
-      sensor_id: sensorId,
-      readings: readingsWithTimestamp
-    };
-
-    // 6. Invia il payload a Google Apps Script
-    console.log(`[Ingest] Invio batch di ${totalReadings} letture per sensore ${sensorId} a Google Apps Script...`);
-    const gasResponse = await fetch(GAS_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(gasPayload)
-    });
-
-    if (!gasResponse.ok) {
-      throw new Error(`Google Apps Script HTTP Error: ${gasResponse.status}`);
-    }
-
-    const gasJson = await gasResponse.json();
-    if (gasJson.status === 'error') {
-      throw new Error(`Google Apps Script Error: ${gasJson.message}`);
-    }
-
-    // 7. Rispondi con successo all'ESP8266 (predisposto per futuri comandi bidirezionali)
-    return res.status(200).json({
-      status: 'success',
-      message: `Successfully uploaded ${totalReadings} readings`,
-      commands: [] // L'array commands è pronto per ospitare comandi inviati all'ESP
-    });
-
   } catch (err) {
-    console.error('[Ingest] Error during processing:', err);
-    return res.status(500).json({
-      status: 'error',
-      message: err.message || 'Internal server error'
-    });
+    return res.status(400).json({ status: 'error', message: 'Impossibile leggere il body: ' + err.message });
   }
-};
+
+  if (!rawBody || !rawBody.trim()) {
+    return res.status(400).json({ status: 'error', message: 'Body vuoto.' });
+  }
+
+  // Parsa CSV: ogni riga = "t10,h10"
+  const lines = rawBody.trim().split(/\r?\n/);
+  const readings = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    const parts = trimmed.split(',');
+    if (parts.length < 2) { console.warn('[ingest] Riga non valida:', trimmed); continue; }
+    const t10 = parseInt(parts[0], 10);
+    const h10 = parseInt(parts[1], 10);
+    if (isNaN(t10) || isNaN(h10)) { console.warn('[ingest] Valori NaN:', parts[0], parts[1]); continue; }
+    const tempC  = t10 / 10.0;
+    const humPct = h10 / 10.0;
+    if (tempC < -40 || tempC > 125 || humPct < 0 || humPct > 100) { console.warn('[ingest] Fuori range: T=' + tempC + ' H=' + humPct); continue; }
+    readings.push({ t10, h10 });
+  }
+
+  if (readings.length === 0) {
+    return res.status(400).json({ status: 'error', message: 'Nessuna lettura valida nel CSV (' + lines.length + ' righe totali).' });
+  }
+
+  console.log('[ingest] Device=' + deviceId + ' | Letture valide: ' + readings.length + '/' + lines.length);
+
+  const payload = {
+    event_type: 'termoigrometro_data',
+    device_id:  deviceId,
+    readings:   readings
+  };
+
+  const result = await postToGAS(payload);
+
+  if (!result.ok) {
+    console.error('[ingest] Errore GAS:', result.error);
+    return res.status(502).json({ status: 'error', message: 'Errore forwarding GAS: ' + result.error });
+  }
+
+  console.log('[ingest] GAS OK:', result.data && result.data.message);
+  return res.status(200).json({
+    status:    'success',
+    message:   readings.length + ' letture inoltrate al database.',
+    device_id: deviceId,
+    written:   (result.data && result.data.written) || readings.length
+  });
+}

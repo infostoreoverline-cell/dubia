@@ -1722,77 +1722,340 @@ button, input[type="text"], input[type="number"], input[type="date"], select, te
     .stage-name { font-size: 0.65rem; }
 }
 
-/* ═══════════════════════════════════════════════════════════
-   D.U.B.I.A. V5 — Monitoraggio Climatico (Tab Clima)
-   ═══════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════
+   CLIMA SECTION — Monitoraggio Termoigrometri
+   ═══════════════════════════════════════════════════════════════════ */
 
-.terrarium-grid {
-    margin-top: 1rem;
+/* Colori tema clima */
+:root {
+    --clima-temp:        #E67E22;
+    --clima-temp-glow:   rgba(230, 126, 34, 0.18);
+    --clima-temp-border: rgba(230, 126, 34, 0.35);
+    --clima-hum:         #3498DB;
+    --clima-hum-glow:    rgba(52, 152, 219, 0.18);
+    --clima-hum-border:  rgba(52, 152, 219, 0.35);
+    --clima-live-green:  #2ECC71;
 }
 
-.climate-card {
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+/* Sezione clima come main tab — padding coerente */
+.clima-section {
+    padding: 1rem 1.5rem;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+/* ─── Header bar ──────────────────────────────────────────────── */
+.clima-header-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.clima-section-title {
+    font-size: 1.3rem;
+    font-weight: 800;
+    background: linear-gradient(90deg, var(--clima-temp), var(--clima-hum));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.2rem;
+}
+
+.clima-status-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.3rem;
+}
+
+/* Badge LIVE */
+.clima-live-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 0.2rem 0.6rem;
+    transition: color 0.4s, border-color 0.4s;
+}
+
+.clima-live-badge.active {
+    color: var(--clima-live-green);
+    border-color: rgba(46, 204, 113, 0.4);
+    background: rgba(46, 204, 113, 0.08);
+}
+
+/* Punto pulsante */
+.clima-pulse {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    flex-shrink: 0;
+    transition: background 0.4s;
+}
+
+.clima-live-badge.active .clima-pulse {
+    background: var(--clima-live-green);
+    animation: climaPulse 2s ease-in-out infinite;
+}
+
+@keyframes climaPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.5); }
+    50%       { box-shadow: 0 0 0 5px rgba(46, 204, 113, 0); }
+}
+
+.clima-last-update {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+
+/* ─── Live cards grid ─────────────────────────────────────────── */
+.clima-live-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.clima-live-card {
     position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.4rem 1.2rem 1rem;
     overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.climate-card.ok {
-    border-color: rgba(39, 174, 96, 0.2);
-}
-
-.climate-card.warning {
-    border-color: rgba(242, 201, 76, 0.4);
-    background: rgba(242, 201, 76, 0.05);
-}
-
-.climate-card.alert {
-    border-color: rgba(192, 41, 43, 0.4);
-    background: rgba(192, 41, 43, 0.05);
-}
-
-.climate-card:hover {
+.clima-live-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2);
 }
 
-.climate-values .value {
-    font-family: 'Inter', sans-serif;
+/* Decorazione sfondo blob */
+.clima-live-card::before {
+    content: '';
+    position: absolute;
+    top: -20px;
+    right: -20px;
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    filter: blur(35px);
+    pointer-events: none;
+}
+
+.clima-card-temp {
+    border-color: var(--clima-temp-border) !important;
+    background: linear-gradient(135deg, var(--card-bg), var(--clima-temp-glow)) !important;
+    box-shadow: 0 4px 24px var(--clima-temp-glow);
+}
+
+.clima-card-temp::before { background: var(--clima-temp-glow); }
+
+.clima-card-hum {
+    border-color: var(--clima-hum-border) !important;
+    background: linear-gradient(135deg, var(--card-bg), var(--clima-hum-glow)) !important;
+    box-shadow: 0 4px 24px var(--clima-hum-glow);
+}
+
+.clima-card-hum::before { background: var(--clima-hum-glow); }
+
+.clima-card-icon {
+    font-size: 2rem;
+    line-height: 1;
+    flex-shrink: 0;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+
+.clima-card-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.clima-card-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 0.3rem;
+}
+
+.clima-card-value-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.3rem;
+    margin-bottom: 0.8rem;
+}
+
+.clima-card-value {
+    font-size: 3rem;
+    font-weight: 800;
+    line-height: 1;
     font-variant-numeric: tabular-nums;
-    letter-spacing: -0.5px;
+    transition: color 0.4s;
 }
 
-.modal-tab-btn {
-    transition: all 0.2s ease;
+.clima-card-temp .clima-card-value { color: var(--clima-temp); }
+.clima-card-hum  .clima-card-value { color: var(--clima-hum);  }
+
+.clima-card-unit {
+    font-size: 1.1rem;
+    font-weight: 400;
+    color: var(--text-muted);
+    margin-bottom: 0.2rem;
 }
 
-.modal-tab-btn:hover {
-    color: var(--text-main) !important;
+/* Sparkline */
+.clima-card-sparkline {
+    height: 40px;
+    width: 100%;
 }
 
-.modal-tab-btn.active {
-    border-bottom: 2px solid var(--accent-green);
+.clima-card-sparkline canvas {
+    width: 100% !important;
+    height: 40px !important;
 }
 
-.config-item {
-    transition: background-color 0.2s ease;
+/* Colori shorthand */
+.clima-temp-color { color: var(--clima-temp); }
+.clima-hum-color  { color: var(--clima-hum);  }
+
+/* ─── History chart card ──────────────────────────────────────── */
+.clima-chart-card {
+    margin-bottom: 1rem;
 }
 
-.config-item:hover {
-    background: rgba(255, 255, 255, 0.06) !important;
+.clima-chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.2rem;
+    gap: 1rem;
+    flex-wrap: wrap;
 }
 
-.btn-range {
-    transition: all 0.2s ease;
-    cursor: pointer;
+/* Range selector */
+.clima-range-selector {
+    display: flex;
+    gap: 0.3rem;
+    flex-shrink: 0;
 }
 
-.btn-range:hover {
-    color: var(--text-main) !important;
-    background: rgba(255, 255, 255, 0.05) !important;
-}
-
-.btn-range.active {
-    background: rgba(39, 174, 96, 0.15) !important;
-    color: var(--accent-green) !important;
+.clima-range-btn {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    border-radius: 6px;
+    padding: 0.3rem 0.65rem;
+    font-size: 0.78rem;
     font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Inter', sans-serif;
+}
+
+.clima-range-btn:hover {
+    background: rgba(255,255,255,0.1);
+    color: var(--text-main);
+}
+
+.clima-range-btn.active {
+    background: rgba(142, 68, 173, 0.25);
+    border-color: rgba(142, 68, 173, 0.5);
+    color: var(--accent-purple);
+}
+
+/* Empty state */
+.clima-empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-muted);
+}
+
+.clima-empty-icon {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 1rem;
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50%       { transform: translateY(-8px); }
+}
+
+/* ─── Stats strip ─────────────────────────────────────────────── */
+.clima-stats-strip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1rem 1.2rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.clima-stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0 0.8rem;
+}
+
+.clima-stat-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.clima-stat-value {
+    font-size: 1.1rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+.clima-stat-sep {
+    width: 1px;
+    height: 2rem;
+    background: var(--border-color);
+    flex-shrink: 0;
+    align-self: center;
+}
+
+.clima-stat-sep-major {
+    width: 2px;
+    background: rgba(255,255,255,0.15);
+    height: 2.5rem;
+    margin: 0 0.3rem;
+}
+
+/* ─── Responsive ──────────────────────────────────────────────── */
+@media screen and (max-width: 600px) {
+    .clima-section { padding: 1rem; }
+    .clima-live-grid { grid-template-columns: 1fr; }
+    .clima-card-value { font-size: 2.2rem; }
+    .clima-range-selector { flex-wrap: wrap; }
+    .clima-chart-header { flex-direction: column; gap: 0.75rem; }
+    .clima-stats-strip { gap: 0.3rem; padding: 0.75rem; }
+    .clima-stat-item { padding: 0 0.4rem; }
+    .clima-stat-sep { display: none; }
+    .clima-stat-sep-major { display: none; }
 }

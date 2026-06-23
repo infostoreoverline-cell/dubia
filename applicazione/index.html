@@ -40,8 +40,8 @@
         <button class="tab-btn" data-target="colonies">📦 Colonie</button>
         <button class="tab-btn" data-target="census">Censimento</button>
         <button class="tab-btn" data-target="diagnostics">Diagnostica</button>
-        <button class="tab-btn" data-target="clima">🌡️ Clima</button>
         <button class="tab-btn" data-target="clienti">👥 Clienti</button>
+        <button class="tab-btn" data-target="clima">🌡️ Clima</button>
     </nav>
 
     <!-- MAIN CONTENT -->
@@ -622,48 +622,130 @@
 
             <div style="height: 4rem;"></div>
         </section>
+    </main>
 
-        <!-- CLIMA TAB -->
-        <section id="clima" class="tab-content">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
-                <div>
-                    <h2>🌡️ Monitoraggio Climatico</h2>
-                    <span class="subtitle">Controllo in tempo reale di temperatura e umidità</span>
-                </div>
-                <div style="display: flex; gap: 0.5rem;">
-                    <button id="btnOpenConfigClima" class="btn-standard btn-primary">⚙️ Configura Clima</button>
-                </div>
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- CLIMA TAB — Monitoraggio Ambientale Termoigrometri      -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- NOTE: inserito come fratello di <main> perché la sezione
+         clima usa lo stesso layout a scroll della pagina, ma
+         viene mostrata/nascosta tramite il sistema di tab. -->
+    <section id="clima" class="tab-content clima-section">
+
+        <!-- ── HEADER SEZIONE ──────────────────────────────────── -->
+        <div class="clima-header-bar">
+            <div>
+                <h2 class="clima-section-title">🌡️ Monitoraggio Climatico</h2>
+                <p class="subtitle-text" style="margin-bottom:0;">Temperatura e Umidità in tempo reale</p>
             </div>
-
-            <!-- Terrarium Status Cards Grid -->
-            <div class="terrarium-grid" id="terrariumGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
-                <!-- Caricato dinamicamente via JS -->
+            <div class="clima-status-group">
+                <div class="clima-live-badge" id="climaLiveBadge">
+                    <span class="clima-pulse"></span>
+                    <span id="climaLiveBadgeText">IN ATTESA</span>
+                </div>
+                <span class="clima-last-update" id="climaLastUpdate">--</span>
             </div>
+        </div>
 
-            <!-- Chart and Filters Section -->
-            <div class="card" style="margin-bottom: 1.5rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
-                    <h3 style="margin-bottom: 0;">Analisi Storica Clima</h3>
-                    <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-                        <!-- Filtro Terrario -->
-                        <select id="chartTerrarioFilter" class="input-standard" style="width: 180px; padding: 0.4rem;">
-                            <option value="ALL">Tutti i Terrari</option>
-                        </select>
-                        <!-- Range temporale -->
-                        <div class="btn-group" style="display: flex; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; background: var(--bg-navy);">
-                            <button class="btn-standard btn-range active" data-range="24h" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; border-radius: 0; border: none; background: transparent; color: var(--text-muted);">24 Ore</button>
-                            <button class="btn-standard btn-range" data-range="7d" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; border-radius: 0; border: none; border-left: 1px solid var(--border-color); background: transparent; color: var(--text-muted);">7 Giorni</button>
-                            <button class="btn-standard btn-range" data-range="30d" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; border-radius: 0; border: none; border-left: 1px solid var(--border-color); background: transparent; color: var(--text-muted);">30 Giorni</button>
-                        </div>
+        <!-- ── CARD LIVE: Temperatura + Umidità ──────────────── -->
+        <div class="clima-live-grid">
+            <!-- Card Temperatura -->
+            <div class="card clima-live-card clima-card-temp">
+                <div class="clima-card-icon">🔥</div>
+                <div class="clima-card-body">
+                    <span class="clima-card-label">TEMPERATURA</span>
+                    <div class="clima-card-value-row">
+                        <span class="clima-card-value" id="climaTempValue">--.-</span>
+                        <span class="clima-card-unit">&deg;C</span>
+                    </div>
+                    <div class="clima-card-sparkline">
+                        <canvas id="climaTempSparkline"></canvas>
                     </div>
                 </div>
-                <div class="chart-card" style="height: 350px;">
-                    <canvas id="climateChart"></canvas>
+            </div>
+
+            <!-- Card Umidità -->
+            <div class="card clima-live-card clima-card-hum">
+                <div class="clima-card-icon">💧</div>
+                <div class="clima-card-body">
+                    <span class="clima-card-label">UMIDITÀ</span>
+                    <div class="clima-card-value-row">
+                        <span class="clima-card-value" id="climaHumValue">--.-</span>
+                        <span class="clima-card-unit">% RH</span>
+                    </div>
+                    <div class="clima-card-sparkline">
+                        <canvas id="climaHumSparkline"></canvas>
+                    </div>
                 </div>
             </div>
-            <div style="height: 4rem;"></div>
-        </section>
-    </main>
+        </div>
+
+        <!-- ── GRAFICO STORICO ─────────────────────────────────── -->
+        <div class="card clima-chart-card">
+            <div class="clima-chart-header">
+                <div>
+                    <h3>Andamento Storico</h3>
+                    <p class="subtitle-text" style="margin-bottom:0; font-size:0.8rem;">Temperatura (&deg;C) e Umidità (%) nel tempo</p>
+                </div>
+                <!-- Selettore range temporale -->
+                <div class="clima-range-selector" id="climaRangeSelector">
+                    <button class="clima-range-btn" data-range="24h">24h</button>
+                    <button class="clima-range-btn active" data-range="7d">7 gg</button>
+                    <button class="clima-range-btn" data-range="30d">30 gg</button>
+                    <button class="clima-range-btn" data-range="all">Tutto</button>
+                </div>
+            </div>
+
+            <!-- Stato vuoto (mostrato quando non ci sono dati) -->
+            <div id="climaEmptyState" class="clima-empty-state" style="display:none;">
+                <span class="clima-empty-icon">📡</span>
+                <p>Nessun dato climatico ricevuto ancora.</p>
+                <p class="subtitle-text">I dati appariranno quando il sensore ESP8266 invierà il primo batch.</p>
+            </div>
+
+            <!-- Canvas grafico (nascosto se non ci sono dati) -->
+            <div id="climaChartContainer" style="position:relative; width:100%; height:320px;">
+                <canvas id="climaHistoryChart"></canvas>
+            </div>
+        </div>
+
+        <!-- ── STATISTICHE PERIODO ────────────────────────────── -->
+        <div class="clima-stats-strip" id="climaStatsStrip">
+            <div class="clima-stat-item">
+                <span class="clima-stat-label">🔜 T. Min</span>
+                <span class="clima-stat-value clima-temp-color" id="climaStatTempMin">--</span>
+            </div>
+            <div class="clima-stat-sep"></div>
+            <div class="clima-stat-item">
+                <span class="clima-stat-label">⏲️ T. Media</span>
+                <span class="clima-stat-value clima-temp-color" id="climaStatTempAvg">--</span>
+            </div>
+            <div class="clima-stat-sep"></div>
+            <div class="clima-stat-item">
+                <span class="clima-stat-label">🔝 T. Max</span>
+                <span class="clima-stat-value clima-temp-color" id="climaStatTempMax">--</span>
+            </div>
+            <div class="clima-stat-sep clima-stat-sep-major"></div>
+            <div class="clima-stat-item">
+                <span class="clima-stat-label">🔜 H. Min</span>
+                <span class="clima-stat-value clima-hum-color" id="climaStatHumMin">--</span>
+            </div>
+            <div class="clima-stat-sep"></div>
+            <div class="clima-stat-item">
+                <span class="clima-stat-label">⏲️ H. Media</span>
+                <span class="clima-stat-value clima-hum-color" id="climaStatHumAvg">--</span>
+            </div>
+            <div class="clima-stat-sep"></div>
+            <div class="clima-stat-item">
+                <span class="clima-stat-label">🔝 H. Max</span>
+                <span class="clima-stat-value clima-hum-color" id="climaStatHumMax">--</span>
+            </div>
+        </div>
+
+        <div style="height: 4rem;"></div>
+    </section>
+
+    <!-- (il tag </main> è sopra, la section clima è al suo livello) -->
 
     <!-- FLOATING ACTION BUTTON -->
     <button class="fab" id="fabAdd" title="Aggiungi Pesata">+</button>
@@ -1122,83 +1204,6 @@
             <p id="qrScanError" style="color: var(--alert-red); font-size: 0.85rem; margin-top: 0.5rem; text-align: center; display: none;">
                 ⚠️ QR Code non riconosciuto o non valido per D.U.B.I.A.
             </p>
-        </div>
-    </div>
-
-    <!-- CONFIG CLIMA MODAL -->
-    <div class="modal-overlay" id="configClimaModal">
-        <div class="modal modal-wide" style="max-width: 700px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                <h2>⚙️ Configurazione Clima</h2>
-                <button type="button" class="btn-standard btn-cancel" id="btnCloseConfigClima" style="padding: 0.4rem 0.8rem; background: none; border: none; color: var(--text-muted); font-size: 1.2rem; cursor: pointer;">✕</button>
-            </div>
-            
-            <div class="modal-tabs" style="display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 1.5rem; gap: 1rem;">
-                <button class="modal-tab-btn active" data-modal-target="paneTerrari" style="background: none; border: none; color: var(--accent-green); padding: 0.75rem 0.5rem; cursor: pointer; border-bottom: 2px solid var(--accent-green); font-weight: 600;">📦 Gestione Terrari</button>
-                <button class="modal-tab-btn" data-modal-target="paneSonde" style="background: none; border: none; color: var(--text-muted); padding: 0.75rem 0.5rem; cursor: pointer; border-bottom: 2px solid transparent; font-weight: 600;">🌡️ Mappatura Sonde</button>
-            </div>
-
-            <!-- Pane Terrari -->
-            <div class="modal-pane active" id="paneTerrari">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <h3 style="font-size: 1rem; margin: 0;">Lista Terrari</h3>
-                    <button type="button" id="btnAddTerrario" class="btn-standard btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">+ Nuovo Terrario</button>
-                </div>
-                <div id="terrariConfigList" style="max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem; padding-right: 0.5rem;">
-                    <!-- Caricato dinamicamente -->
-                </div>
-            </div>
-
-            <!-- Pane Sonde -->
-            <div class="modal-pane" id="paneSonde" style="display: none;">
-                <h3 style="font-size: 1rem; margin-bottom: 0.5rem;">Mappatura Sensori Fisici</h3>
-                <p class="subtitle-text" style="margin-bottom: 1rem;">Assegna e rinomina i termoigrometri ESP8266. Vengono mostrati i sensori attivi rilevati.</p>
-                <div id="sondeConfigList" style="max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem; padding-right: 0.5rem;">
-                    <!-- Caricato dinamicamente -->
-                </div>
-            </div>
-
-            <div class="modal-actions" style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
-                <button type="button" class="btn-standard btn-primary" id="btnSaveConfigClima" style="margin-left: auto;">Chiudi</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL MODIFICA TERRARIO -->
-    <div class="modal-overlay" id="terrarioEditModal" style="z-index: 1100;">
-        <div class="modal" style="max-width: 450px;">
-            <h2 id="terrarioEditTitle">Nuovo Terrario</h2>
-            <form id="terrarioEditForm" style="margin-top: 1rem;">
-                <input type="hidden" id="terrarioEditId">
-                <div class="form-group">
-                    <label for="terrarioEditName">Nome Terrario *</label>
-                    <input type="text" id="terrarioEditName" class="input-standard" required placeholder="Es. Terrario 1 - Dubia Piccole">
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 0.5rem;">
-                    <div class="form-group" style="margin-bottom: 0.5rem;">
-                        <label for="terrarioEditTempMin">Temp Minima (°C) *</label>
-                        <input type="number" step="0.1" id="terrarioEditTempMin" class="input-standard" required value="22.0">
-                    </div>
-                    <div class="form-group" style="margin-bottom: 0.5rem;">
-                        <label for="terrarioEditTempMax">Temp Massima (°C) *</label>
-                        <input type="number" step="0.1" id="terrarioEditTempMax" class="input-standard" required value="32.0">
-                    </div>
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-                    <div class="form-group" style="margin-bottom: 0.5rem;">
-                        <label for="terrarioEditHumMin">Umidità Minima (%) *</label>
-                        <input type="number" step="0.1" id="terrarioEditHumMin" class="input-standard" required value="40.0">
-                    </div>
-                    <div class="form-group" style="margin-bottom: 0.5rem;">
-                        <label for="terrarioEditHumMax">Umidità Massima (%) *</label>
-                        <input type="number" step="0.1" id="terrarioEditHumMax" class="input-standard" required value="70.0">
-                    </div>
-                </div>
-                <div class="modal-actions">
-                    <button type="button" class="btn-standard btn-cancel" id="btnCancelTerrarioEdit">Annulla</button>
-                    <button type="submit" class="btn-standard btn-primary">Salva Terrario</button>
-                </div>
-            </form>
         </div>
     </div>
 
