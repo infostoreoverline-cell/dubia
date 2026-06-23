@@ -1721,3 +1721,78 @@ button, input[type="text"], input[type="number"], input[type="date"], select, te
     .pyramid-row { grid-template-columns: 1fr 90px 1fr; }
     .stage-name { font-size: 0.65rem; }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   D.U.B.I.A. V5 — Monitoraggio Climatico (Tab Clima)
+   ═══════════════════════════════════════════════════════════ */
+
+.terrarium-grid {
+    margin-top: 1rem;
+}
+
+.climate-card {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.climate-card.ok {
+    border-color: rgba(39, 174, 96, 0.2);
+}
+
+.climate-card.warning {
+    border-color: rgba(242, 201, 76, 0.4);
+    background: rgba(242, 201, 76, 0.05);
+}
+
+.climate-card.alert {
+    border-color: rgba(192, 41, 43, 0.4);
+    background: rgba(192, 41, 43, 0.05);
+}
+
+.climate-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2);
+}
+
+.climate-values .value {
+    font-family: 'Inter', sans-serif;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.5px;
+}
+
+.modal-tab-btn {
+    transition: all 0.2s ease;
+}
+
+.modal-tab-btn:hover {
+    color: var(--text-main) !important;
+}
+
+.modal-tab-btn.active {
+    border-bottom: 2px solid var(--accent-green);
+}
+
+.config-item {
+    transition: background-color 0.2s ease;
+}
+
+.config-item:hover {
+    background: rgba(255, 255, 255, 0.06) !important;
+}
+
+.btn-range {
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.btn-range:hover {
+    color: var(--text-main) !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+}
+
+.btn-range.active {
+    background: rgba(39, 174, 96, 0.15) !important;
+    color: var(--accent-green) !important;
+    font-weight: 600;
+}

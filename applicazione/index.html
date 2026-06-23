@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>D.U.B.I.A. - Cervello Digitale</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#182B49">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- D.U.B.I.A. Core Math Module (deve caricarsi PRIMA di app.js) -->
+    <script src="dubia_module.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <!-- QR Code Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <link rel="stylesheet" href="style.css">
+
+</head>
+<body>
+    <!-- HEADER -->
+    <header>
+        <div class="logo">
+            <h1>D.U.B.I.A.</h1>
+            <span class="subtitle">Dynamic Updating Biomass Inference Algorithm</span>
+        </div>
+        <div class="header-right">
+            <button id="btnOpenPrezzi" class="btn-prezzi" title="Personalizza prezzi per tipologia">💰 Prezzi</button>
+            <div class="health-indicator" id="healthIndicator">
+                <span class="health-value" id="healthValue">--%</span>
+                <span class="health-label">Indice Salute (H)</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- NAVIGATION TABS -->
+    <nav class="tabs">
+        <button class="tab-btn active" data-target="dashboard">Dashboard</button>
+        <button class="tab-btn" data-target="colonies">📦 Colonie</button>
+        <button class="tab-btn" data-target="census">Censimento</button>
+        <button class="tab-btn" data-target="diagnostics">Diagnostica</button>
+        <button class="tab-btn" data-target="clima">🌡️ Clima</button>
+        <button class="tab-btn" data-target="clienti">👥 Clienti</button>
+    </nav>
+
+    <!-- MAIN CONTENT -->
+    <main>
+        <!-- DASHBOARD TAB -->
+        <section id="dashboard" class="tab-content active">
+            <div class="card delta-g-card">
+                <h3>Orizzonte di Stima Temporale (Δg)</h3>
+                <div class="slider-container">
+                    <input type="range" id="deltaGSlider" min="1" max="365" step="1" value="30">
+                    <input type="number" id="deltaGInput" class="input-standard" style="width: 80px;" min="1" max="365" step="1" value="30">
+                    <span>giorni</span>
+                </div>
+                <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+                    <button class="btn-standard btn-primary btn-preset" data-val="7" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">+7 gg</button>
+                    <button class="btn-standard btn-primary btn-preset" data-val="14" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">+14 gg</button>
+                    <button class="btn-standard btn-primary btn-preset" data-val="30" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">+30 gg</button>
+                    <button class="btn-standard btn-primary btn-preset" data-val="90" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">+90 gg</button>
+                </div>
+            </div>
+
+            <div class="cards-container">
+                <div class="card stat-card">
+                    <h3>Peso Totale Colonia (Reale)</h3>
+                    <div class="value" id="realWeightValue">-- g</div>
+                </div>
+                <div class="card stat-card">
+                    <h3>Peso Teorico Stimato</h3>
+                    <div class="value" id="predWeightValue">-- g</div>
+                </div>
+                <div class="card stat-card" style="border-color: #f39c12;">
+                    <h3>Valore Economico Stimato</h3>
+                    <div class="value" id="economicValueValue" style="color: #f39c12;">-- €</div>
+                    <p class="subtitle-text" style="font-size: 0.75rem;">Stima basata sui prezzi di mercato.</p>
+                </div>
+                <div class="card stat-card" style="border-color: #3498db;">
+                    <h3>Fabbisogno Idrico/Umido</h3>
+                    <div class="value" id="waterNeedValue" style="color: #3498db;">-- g/giorno</div>
+                    <p class="subtitle-text" style="font-size: 0.75rem;">Cibo umido raccomandato.</p>
+                </div>
+            </div>
+
+            <div class="card chart-card">
+                <h3>Analisi Biomassa (Reale vs Teorica)</h3>
+                <canvas id="weightChart"></canvas>
+            </div>
+            
+            <div class="bottom-params-section">
+                <div class="card params-card">
+                    <h3>Parametri di Apprendimento Live</h3>
+                    <div class="params-grid">
+                        <div class="param">
+                            <span class="param-label">θ₁ (Resa Alimentazione)</span>
+                            <span class="param-value" id="theta1Value">--</span>
+                        </div>
+                        <div class="param">
+                            <span class="param-label">θ₂ (Crescita Naturale)</span>
+                            <span class="param-value" id="theta2Value">0.10</span>
+                        </div>
+                        <div class="param" style="grid-column: span 2;">
+                            <span class="param-label">Fattore di Mortalità Fisiologica (Mensile)</span>
+                            <div style="display: flex; gap: 0.5rem; align-items: center; margin-top: 0.25rem;">
+                                <input type="number" id="inputMortality" class="input-standard" style="width: 80px;" min="0" max="100" step="0.1" value="1.5">
+                                <span>%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card stat-card pregnant-ratio-card">
+                    <h3>Tasso Femmine Gravide Stimato</h3>
+                    <div class="value" id="pregnantRatioValue">-- %</div>
+                    <p class="subtitle-text">Calcolato in base allo scostamento di biomassa (+0.4g/femmina).</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- CENSUS TAB -->
+        <section id="census" class="tab-content">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3>Calibrazione Manuale Demografia</h3>
+                    <button id="btnCalibrate" class="btn-standard btn-primary" style="padding: 0.5rem 1rem; font-size: 0.85rem;">Avvia Calibrazione</button>
+                </div>
+                <p class="subtitle-text">Inserisci il conteggio reale di una categoria per forzare l'algoritmo a correggere le stime volumetriche.</p>
+            </div>
+
+            <div class="card" id="sexRatioCard" style="margin-bottom: 1rem;">
+                <h3>Rapporto Sessuale (Maschi:Femmine)</h3>
+                <div class="value" id="sexRatioValue" style="font-size: 1.5rem; font-weight: bold;">--</div>
+                <p class="subtitle-text" id="sexRatioStatus" style="margin-top: 0.5rem; margin-bottom: 0;">Calcolo in corso...</p>
+            </div>
+
+            <div class="card" id="demographicAlarmCard" style="margin-bottom: 1rem; border-color: var(--alert-red); display: none;">
+                <h3 style="color: var(--alert-red);">Allarme Demografico</h3>
+                <p class="subtitle-text" id="demographicAlarmText" style="margin-top: 0.5rem; margin-bottom: 0;">Possibile collo di bottiglia futuro rilevato.</p>
+            </div>
+
+            <div class="card" id="harvestSimulatorCard">
+                <h3>Simulatore di Prelievo (Harvest)</h3>
+
+                <div style="margin-bottom: 1rem; padding: 0.75rem; background: rgba(243, 156, 18, 0.1); border: 1px solid #f39c12; border-radius: 8px;">
+                    <span style="font-size: 0.9rem; color: #f39c12; font-weight: 600;">Soglia di Sostenibilità (MSY) a 30 gg:</span>
+                    <strong id="msyValueText" style="font-size: 1.2rem; color: #f39c12; margin-left: 0.5rem;">-- g</strong>
+                    <p style="font-size: 0.75rem; color: #f39c12; margin-top: 0.25rem; margin-bottom: 0;">Biomassa massima prelevabile in 30 giorni senza mandare la colonia in declino.</p>
+                </div>
+
+
+                <div class="form-group" style="margin-bottom: 0.5rem;">
+                    <label>Modalità di Prelievo:</label>
+                    <select id="harvestCategory" class="input-standard" style="margin-bottom: 0.5rem;">
+                        <option value="ALL">Generico (Tutte le taglie)</option>
+                        <option value="MALE">Solo Maschi Adulti (1.5g)</option>
+                        <option value="FEMALE">Solo Femmine Adulte (2.5g)</option>
+                        <option value="SUBADULT">Solo Sub-Adulte (1.6g)</option>
+                        <option value="MEDIUM">Solo Neanidi Medie (0.8g)</option>
+                        <option value="SMALL">Solo Neanidi Piccole (0.3g)</option>
+                        <option value="BABY">Solo Micro-Neanidi (0.1g)</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0.5rem;">
+                    <label>Quantità da prelevare (grammi):</label>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <input type="number" id="harvestAmount" class="input-standard" min="0" step="1" value="0" style="width: 100px;">
+                        <span style="font-size: 0.9rem; color: var(--text-muted);">g</span>
+                        <span id="harvestCountLabel" style="font-size: 0.8rem; color: var(--accent-purple); display: none;">(circa <span id="harvestCountVal">0</span> insetti)</span>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.9rem;">
+                        <input type="checkbox" id="harvestCyclic" class="input-checkbox" style="width: 18px; height: 18px;">
+                        <span>Prelievo Ciclico (ogni settimana)</span>
+                    </label>
+                </div>
+
+                <div id="msyWarning" style="color: var(--alert-red); font-size: 0.85rem; margin-bottom: 0.5rem; display: none;">
+                    ⚠️ Attenzione: questo prelievo supera la Soglia di Sostenibilità (MSY). La colonia andrà in declino.
+                </div>
+
+                <p class="subtitle-text">Nuova stima a <span id="harvestDaysLabel">30</span> gg: <strong id="harvestFutureWeight" style="color: var(--accent-green);">-- g</strong></p>
+
+                <div id="optimalSuggester" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <strong style="color: var(--accent-purple); font-size: 0.85rem;">Suggeritore Intelligente:</strong>
+                    <p id="optimalSuggesterText" style="font-size: 0.8rem; margin-top: 0.25rem; color: var(--text-muted);">Analisi in corso...</p>
+                </div>
+
+                <div style="margin-top: 1rem;">
+                    <button id="btnConfirmHarvestSim" class="btn-standard" style="width: 100%; background-color: var(--accent-purple);">Conferma Prelievo Ora</button>
+                </div>
+            </div>
+
+            <div class="card" id="alignmentStatusCard">
+                <h3>Stato Allineamento Realtà-Teoria</h3>
+                <p class="subtitle-text">Verifica se i conteggi fisici delle colonie combaciano con il censimento teorico.</p>
+                <div id="alignmentStatusContainer" style="padding: 1rem; border-radius: 8px; margin-top: 1rem; background-color: rgba(255,255,255,0.05); border: 1px solid var(--border-color);">
+                    <div id="alignmentStatusMessage" style="font-weight: 500; margin-bottom: 0.5rem;">Analisi in corso...</div>
+                    <div id="alignmentStatusDetails" style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;"></div>
+                    <button id="btnSyncCensus" class="btn-standard" style="display: none; background-color: var(--accent-purple); width: 100%;">Sincronizza Censimento con Colonie</button>
+                    <button id="btnResetCalibrations" class="btn-standard" style="display: none; background-color: var(--alert-red); width: 100%; margin-top: 0.5rem;">Resetta Calibrazioni Manuali</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Censimento Demografico — Tabella di Output</h3>
+                <p class="subtitle-text">Calcolato secondo il Modulo 4 del Teorema D.U.B.I.A. &nbsp;·&nbsp; Aggiornato automaticamente ad ogni pesata</p>
+
+                <!-- Formula reference -->
+                <div id="censusFormulaBox" class="formula-box" style="margin-bottom:1rem;">
+                    <div class="formula-row"><span class="formula-label">W_adulti</span><span class="formula-eq">= W_t × A_t</span></div>
+                    <div class="formula-row"><span class="formula-label">W_neanidi</span><span class="formula-eq">= W_t × (1 − A_t)</span></div>
+                    <div class="formula-row"><span class="formula-label">N_femmine</span><span class="formula-eq">= (W_adulti × 0.77) / 2.5g</span></div>
+                    <div class="formula-row"><span class="formula-label">N_maschi</span><span class="formula-eq">= (W_adulti × 0.23) / 1.5g</span></div>
+                    <div class="formula-row"><span class="formula-label">N_medie</span><span class="formula-eq">= (W_neanidi × 70%) / 0.8g</span></div>
+                    <div class="formula-row"><span class="formula-label">N_baby</span><span class="formula-eq">= (W_neanidi × 30%) / 0.1g</span></div>
+                </div>
+
+                <!-- Banner Sovrascrittura -->
+                <div id="censusOverrideBanner" style="display:none; background-color: rgba(242, 201, 76, 0.1); border: 1px solid #F2C94C; color: #F2C94C; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.9rem;">
+                    ⚠️ <strong>Dati Reali Attivi:</strong> Le quantità e i pesi qui sotto derivano dalle tue calibrazioni fisiche (colonie). Le formule teoriche del Modulo 4 puro sono state adattate per riflettere la realtà dei tuoi box.
+                </div>
+
+                <div class="table-container">
+                    <table id="censusTable">
+                        <thead>
+                            <tr>
+                                <th>Stadio Vitale</th>
+                                <th>Individui (N)</th>
+                                <th>Biomassa (g)</th>
+                                <th>Stato / Destinazione</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="4" style="text-align:center;color:var(--text-muted);">Inserisci una pesata per calcolare il censimento...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Distribuzione Visiva (Grafico)</h3>
+                <p class="subtitle-text">Calcolata in base alla biomassa totale e alle costanti specifiche.</p>
+                
+                <div style="position: relative; width: 100%; height: 300px; overflow: visible; margin-bottom: 1rem;">
+                    <canvas id="censusChart" style="max-width:100%; box-sizing:border-box;"></canvas>
+                </div>
+                <div id="dataDecayWidget" class="data-decay-widget">
+                    <div class="decay-header">
+                        <span>🟡 Affidabilità Dati: <strong class="decay-yellow">--</strong></span>
+                        <span class="decay-last">--</span>
+                    </div>
+                    <div class="decay-bar-track"><div class="decay-bar-fill decay-yellow" style="width:50%"></div></div>
+                    <div class="decay-info">In attesa di dati...</div>
+                </div>
+
+                <div id="maturationTimerCard" style="margin-bottom: 1rem; font-size: 0.85rem; color: var(--accent-purple); display: none;">
+                    ⏱️ <strong>Timer di Maturazione:</strong> <span id="maturationTimerText">...</span>
+                </div>
+
+
+                <!-- Intestazione Piramide -->
+                <div class="pyramid-header">
+                    <span class="pyramid-header-left">♂ MASCHI</span>
+                    <span class="pyramid-header-center">Stadio Vitale</span>
+                    <span class="pyramid-header-right">FEMMINE ♀</span>
+                </div>
+
+                <!-- Piramide Bilaterale Age-Structure -->
+                <div id="agePyramid" class="age-pyramid">
+                    <!-- Generato dinamicamente da renderAgePyramid() -->
+                    <div class="pyramid-row" style="opacity:0.4;">
+                        <div class="pyramid-bar-container left"><div class="pyramid-bar-fill" style="width:40%;background:#3498db;"></div></div>
+                        <div class="pyramid-label"><span class="stage-name">In attesa...</span></div>
+                        <div class="pyramid-bar-container right"><div class="pyramid-bar-fill" style="width:40%;background:#9b59b6;"></div></div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Extra space at the bottom of the Census tab -->
+            <div style="height: 4rem;"></div>
+        </section>
+
+        <!-- DIAGNOSTICS TAB -->
+        <section id="diagnostics" class="tab-content">
+            <div class="card">
+                <h3>Registro Manutenzione</h3>
+                <p class="subtitle-text" style="margin-bottom: 1rem;">Task ricorrenti da completare</p>
+                <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" id="taskCleaning" class="input-checkbox" style="width: 20px; height: 20px;">
+                        <span>Pulizia Fondo Teca</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" id="taskCartons" class="input-checkbox" style="width: 20px; height: 20px;">
+                        <span>Sostituzione Cartoni Uova</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" id="taskTreatments" class="input-checkbox" style="width: 20px; height: 20px;">
+                        <span>Trattamenti Antiacaro (se necessari)</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="card stat-card" style="border-color: var(--accent-green);">
+                <h3>Indice di Conversione Alimentare (FCR) Medio</h3>
+                <div class="value" id="fcrValue" style="color: var(--accent-green);">--</div>
+                <p class="subtitle-text">Grammi di cibo necessari per generare 1g di biomassa. (Ideale: < 2.0)</p>
+            </div>
+
+            <div class="card">
+                <h3>Storico Indice di Salute (H)</h3>
+                <p class="subtitle-text" style="margin-bottom:0.5rem;">H(t) = (θ₁ / θ₁*) × 100 &nbsp;·&nbsp; θ₁* = 0.30 (ottimale storico)</p>
+                <div class="h-threshold-legend" style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;">
+                    <span class="h-legend-item h-optimal">● ≥ 90% Ottimale</span>
+                    <span class="h-legend-item h-warning">● 75–89% Warning</span>
+                    <span class="h-legend-item h-critical">● &lt; 75% Critico</span>
+                </div>
+                <canvas id="healthChart"></canvas>
+            </div>
+
+            <!-- DIAGNOSTICA DIFFERENZIALE (Modulo 3 - specifica) -->
+            <div class="card" style="margin-top:0;">
+                <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem;">
+                    <span style="font-size:1.5rem;">🔬</span>
+                    <div>
+                        <h3 style="margin:0;">Diagnostica Differenziale</h3>
+                        <p class="subtitle-text" style="margin:0;font-size:0.8rem;">Analisi automatica θ₁ e θ₂ · Aggiornata ad ogni pesata</p>
+                    </div>
+                </div>
+                <!-- Regole diagnostiche (sempre visibili come riferimento) -->
+                <div class="diag-rules">
+                    <div class="diag-rule"><span class="diag-rule-cond">θ₁ &lt; 80% del default</span><span class="diag-rule-arrow">→</span><span class="diag-rule-label theta1">Qualità Nutrizionale / Idratazione</span></div>
+                    <div class="diag-rule"><span class="diag-rule-cond">θ₂ &lt; 80% del default</span><span class="diag-rule-arrow">→</span><span class="diag-rule-label theta2">Stress Termico / Umidità</span></div>
+                    <div class="diag-rule"><span class="diag-rule-cond">H &lt; 75%</span><span class="diag-rule-arrow">→</span><span class="diag-rule-label critical">Senescenza / Inbreeding</span></div>
+                </div>
+                <div id="differentialDiagnosticsPanel" style="margin-top:1rem;">
+                    <div class="diag-ok">
+                        <span class="diag-icon">⏳</span>
+                        <div><strong>In attesa di dati...</strong><p>Inserisci almeno una pesata per attivare la diagnostica.</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-bottom: 1rem; gap: 1rem;">
+                    <h3 style="margin: 0;">Log Manutenzione & Pesate</h3>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <button id="btnNewBlood" class="btn-standard btn-primary" style="background-color: var(--accent-purple);">+ Nuovo Sangue</button>
+                        <button id="btnExportCSV" class="btn-standard btn-primary">Esporta CSV</button>
+                        <button id="btnResetDB" class="btn-standard btn-danger">Reset Dati</button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table id="historyTable">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Peso (g)</th>
+                                <th>Cibo (g)</th>
+                                <th>Prelievo (g)</th>
+                                <th>FCR</th>
+                                <th>H (%)</th>
+                                <th>Note</th>
+                                <th>Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Generato via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top: 1rem;">
+                <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-bottom: 1rem; gap: 1rem;">
+                    <h3 style="margin: 0;">Registro Storico dei Prelievi Effettivi</h3>
+                </div>
+                <div class="table-container">
+                    <table id="harvestHistoryTable">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Prelievo (g)</th>
+                                <th>Note</th>
+                                <th>Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Generato via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
+        <!-- COLONIE TAB -->
+        <section id="colonies" class="tab-content">
+            <div class="card">
+                <div class="clienti-card-header" style="margin-bottom: 1rem;">
+                    <div>
+                        <h3>Gestione Colonie</h3>
+                        <p class="subtitle-text" style="margin-bottom:0;">Monitora le singole scatole</p>
+                    </div>
+                    <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                        <button id="btnScanQR" class="btn-standard btn-primary" style="white-space:nowrap; background-color: var(--accent-purple);">📷 Scansiona QR</button>
+                        <button id="btnNuovaColonia" class="btn-standard btn-primary" style="white-space:nowrap;">+ Nuova Colonia</button>
+                    </div>
+                </div>
+
+                <!-- Lista Colonie -->
+                <div id="coloniesList">
+                    <div class="clienti-empty">
+                        <span class="clienti-empty-icon">📦</span>
+                        <p>Nessuna colonia registrata.</p>
+                        <p class="subtitle-text">Clicca su <strong>+ Nuova Colonia</strong> per iniziare.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card" id="colonyDetailCard" style="display: none; border-color: var(--accent-purple);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                    <div>
+                        <h3 id="detailColonyName" style="color: var(--accent-purple); font-size: 1.2rem; margin-bottom: 0.2rem;">Nome Colonia</h3>
+                        <span class="animal-badge" id="detailColonyType" style="background: rgba(142, 68, 173, 0.2); color: var(--accent-purple); border-color: rgba(142, 68, 173, 0.4);">Tipo</span>
+                    </div>
+                    <button class="btn-standard" id="btnDetailClose" style="padding: 0.4rem 0.8rem;">Chiudi</button>
+                </div>
+                
+                <div class="params-grid" style="margin-bottom: 1rem; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));">
+                    <div class="param">
+                        <span class="param-label">Peso Attuale</span>
+                        <span class="param-value" id="detailColonyWeight">-- g</span>
+                    </div>
+                    <div class="param">
+                        <span class="param-label">Adulti <span id="detailColonySexRatio" style="font-size: 0.75rem; color: var(--accent-purple); font-weight: bold; margin-left: 6px;"></span></span>
+                        <span class="param-value" style="font-size: 1rem;"><span id="detailColonyMales">--</span> ♂ / <span id="detailColonyFemales">--</span> ♀</span>
+                    </div>
+                    <div class="param">
+                        <span class="param-label">Sub-Adulte</span>
+                        <span class="param-value" style="font-size: 1rem;" id="detailColonySubadults">--</span>
+                    </div>
+                    <div class="param">
+                        <span class="param-label">N. Medie</span>
+                        <span class="param-value" style="font-size: 1rem;" id="detailColonyMedium">--</span>
+                    </div>
+                    <div class="param">
+                        <span class="param-label">N. Piccole</span>
+                        <span class="param-value" style="font-size: 1rem;" id="detailColonySmall">--</span>
+                    </div>
+                    <div class="param">
+                        <span class="param-label">Baby</span>
+                        <span class="param-value" style="font-size: 1rem;" id="detailColonyBaby">--</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Note Generali</label>
+                    <p class="subtitle-text" id="detailColonyNotes" style="font-size: 0.85rem; font-style: italic;">Nessuna nota.</p>
+                </div>
+
+                <div id="colonyPredictionContainer" style="margin-top: 1rem; margin-bottom: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <h4 style="margin-bottom: 0.5rem; color: var(--accent-purple);">Previsione Demografica</h4>
+                    <p class="subtitle-text" style="margin-bottom: 1rem; font-size: 0.8rem;">Trascina lo slider per vedere l'evoluzione prevista (Biomassa e Popolazione) di questa specifica colonia.</p>
+                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                        <input type="range" id="colonyPredictionSlider" min="0" max="365" step="15" value="0" style="flex: 1;">
+                        <span id="colonyPredictionDaysLabel" style="min-width: 60px; text-align: right; font-weight: bold; color: var(--accent-green);">0 gg</span>
+                    </div>
+                    <div style="position: relative; width: 100%; height: 250px; margin-bottom: 1rem;">
+                        <canvas id="colonyPredictionChart"></canvas>
+                    </div>
+
+                    <!-- Grafico a Ciambella Dinamico Singola Colonia -->
+                    <div style="position: relative; width: 100%; height: 280px; margin-top: 1.5rem; margin-bottom: 0.5rem;">
+                        <canvas id="colonyPredDoughnutChart"></canvas>
+                    </div>
+
+                    <!-- Smart Legend Grid (Contatori Animati) -->
+                    <div class="smart-legend-grid">
+                        <div class="smart-legend-card">
+                            <div class="smart-legend-header">
+                                <div class="smart-legend-color" style="background-color: #9b59b6;"></div>
+                                <span class="smart-legend-label">Femmine</span>
+                            </div>
+                            <span class="smart-legend-value" id="smartCountFemale">--</span>
+                        </div>
+                        <div class="smart-legend-card">
+                            <div class="smart-legend-header">
+                                <div class="smart-legend-color" style="background-color: #3498db;"></div>
+                                <span class="smart-legend-label">Maschi</span>
+                            </div>
+                            <span class="smart-legend-value" id="smartCountMale">--</span>
+                        </div>
+                        <div class="smart-legend-card">
+                            <div class="smart-legend-header">
+                                <div class="smart-legend-color" style="background-color: #e67e22;"></div>
+                                <span class="smart-legend-label">Sub-Adulte</span>
+                            </div>
+                            <span class="smart-legend-value" id="smartCountSubAdult">--</span>
+                        </div>
+                        <div class="smart-legend-card">
+                            <div class="smart-legend-header">
+                                <div class="smart-legend-color" style="background-color: #2ecc71;"></div>
+                                <span class="smart-legend-label">Medie</span>
+                            </div>
+                            <span class="smart-legend-value" id="smartCountMedium">--</span>
+                        </div>
+                        <div class="smart-legend-card">
+                            <div class="smart-legend-header">
+                                <div class="smart-legend-color" style="background-color: #1abc9c;"></div>
+                                <span class="smart-legend-label">Piccole</span>
+                            </div>
+                            <span class="smart-legend-value" id="smartCountSmall">--</span>
+                        </div>
+                        <div class="smart-legend-card">
+                            <div class="smart-legend-header">
+                                <div class="smart-legend-color" style="background-color: #f1c40f;"></div>
+                                <span class="smart-legend-label">Baby</span>
+                            </div>
+                            <span class="smart-legend-value" id="smartCountBaby">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <button class="btn-standard btn-primary" id="btnDetailAddMeasure" style="flex: 1; white-space: nowrap;">+ Aggiungi Pesata/Dati</button>
+                    <button class="btn-standard" id="btnDetailTransfer" style="white-space: nowrap; background-color: var(--accent-purple);">↔️ Trasferisci</button>
+                    <button class="btn-standard" id="btnDetailShowQR" style="white-space: nowrap;">Mostra QR</button>
+                    <button class="btn-standard btn-danger" id="btnDetailDelete" style="white-space: nowrap;">Elimina</button>
+                </div>
+            </div>
+            <div style="height: 4rem;"></div>
+        </section>
+
+        <!-- CLIENTI TAB -->
+        <section id="clienti" class="tab-content">
+
+            <!-- Stat Cards -->
+            <div class="clienti-stats-grid">
+                <div class="card stat-card clienti-stat-card">
+                    <h3>Clienti Registrati</h3>
+                    <div class="value" id="clientiTotali">0</div>
+                </div>
+                <div class="card stat-card clienti-stat-card" style="border-color: var(--accent-purple);">
+                    <h3>Cessioni Totali</h3>
+                    <div class="value" id="cessioniTotali" style="color: var(--accent-purple);">0</div>
+                </div>
+                <div class="card stat-card clienti-stat-card" style="border-color: #3498db;">
+                    <h3>Grammi Ceduti</h3>
+                    <div class="value" id="grammiCeduti" style="color: #3498db;">0 g</div>
+                </div>
+                <div class="card stat-card clienti-stat-card" style="border-color: #f39c12;">
+                    <h3>Incassato Totale</h3>
+                    <div class="value" id="euroTotale" style="color: #f39c12;">€ 0,00</div>
+                </div>
+            </div>
+
+            <!-- Database Clienti -->
+            <div class="card">
+                <div class="clienti-card-header">
+                    <div>
+                        <h3>Database Clienti</h3>
+                        <p class="subtitle-text" style="margin-bottom:0;">Anagrafica acquirenti abituali</p>
+                    </div>
+                    <button id="btnNuovoCliente" class="btn-standard btn-primary">+ Nuovo Cliente</button>
+                </div>
+
+                <!-- Search Bar -->
+                <div class="clienti-search-wrapper">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="clientiSearch" class="clienti-search-input" placeholder="Cerca per nome, città, animale...">
+                </div>
+
+                <!-- Lista Clienti -->
+                <div id="clientiList">
+                    <div class="clienti-empty">
+                        <span class="clienti-empty-icon">👥</span>
+                        <p>Nessun cliente ancora registrato.</p>
+                        <p class="subtitle-text">Clicca su <strong>+ Nuovo Cliente</strong> per iniziare.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Storico Cessioni -->
+            <div class="card">
+                <div class="clienti-card-header" style="margin-bottom: 1rem;">
+                    <div>
+                        <h3>Storico Cessioni</h3>
+                        <p class="subtitle-text" style="margin-bottom:0;">Registro completo delle blatte cedute</p>
+                    </div>
+                    <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                        <select id="cessioniFilterCliente" class="input-standard" style="width:auto; font-size:0.85rem; padding:0.5rem 0.75rem;">
+                            <option value="">Tutti i clienti</option>
+                        </select>
+                        <button id="btnNuovaCessione" class="btn-standard btn-primary" style="white-space:nowrap;">📦 Nuova Cessione</button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table id="cessioniTable">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Cliente</th>
+                                <th>Tipo Blatta</th>
+                                <th>Quantità</th>
+                                <th>Totale €</th>
+                                <th>Note</th>
+                                <th>Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="7" class="table-empty">Nessuna cessione registrata.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div style="height: 4rem;"></div>
+        </section>
+
+        <!-- CLIMA TAB -->
+        <section id="clima" class="tab-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                <div>
+                    <h2>🌡️ Monitoraggio Climatico</h2>
+                    <span class="subtitle">Controllo in tempo reale di temperatura e umidità</span>
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button id="btnOpenConfigClima" class="btn-standard btn-primary">⚙️ Configura Clima</button>
+                </div>
+            </div>
+
+            <!-- Terrarium Status Cards Grid -->
+            <div class="terrarium-grid" id="terrariumGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+                <!-- Caricato dinamicamente via JS -->
+            </div>
+
+            <!-- Chart and Filters Section -->
+            <div class="card" style="margin-bottom: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+                    <h3 style="margin-bottom: 0;">Analisi Storica Clima</h3>
+                    <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                        <!-- Filtro Terrario -->
+                        <select id="chartTerrarioFilter" class="input-standard" style="width: 180px; padding: 0.4rem;">
+                            <option value="ALL">Tutti i Terrari</option>
+                        </select>
+                        <!-- Range temporale -->
+                        <div class="btn-group" style="display: flex; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; background: var(--bg-navy);">
+                            <button class="btn-standard btn-range active" data-range="24h" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; border-radius: 0; border: none; background: transparent; color: var(--text-muted);">24 Ore</button>
+                            <button class="btn-standard btn-range" data-range="7d" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; border-radius: 0; border: none; border-left: 1px solid var(--border-color); background: transparent; color: var(--text-muted);">7 Giorni</button>
+                            <button class="btn-standard btn-range" data-range="30d" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; border-radius: 0; border: none; border-left: 1px solid var(--border-color); background: transparent; color: var(--text-muted);">30 Giorni</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-card" style="height: 350px;">
+                    <canvas id="climateChart"></canvas>
+                </div>
+            </div>
+            <div style="height: 4rem;"></div>
+        </section>
+    </main>
+
+    <!-- FLOATING ACTION BUTTON -->
+    <button class="fab" id="fabAdd" title="Aggiungi Pesata">+</button>
+
+    <!-- MODAL TRASFERIMENTO BIOMASSA -->
+    <div class="modal-overlay" id="transferModal">
+        <div class="modal modal-wide">
+            <h2 style="color: var(--accent-purple);">↔️ Trasferisci Biomassa</h2>
+            <p class="subtitle-text" style="margin-bottom: 1rem;">Sposta biomassa tra due colonie senza alterare il totale globale. L'evento verrà tracciato in Timeline.</p>
+            <div class="form-group">
+                <label for="transferAmount">Quantità da spostare (grammi)</label>
+                <input type="number" id="transferAmount" class="input-standard" min="1" step="1" value="50">
+            </div>
+            <div class="form-group">
+                <label for="transferCategory">Categoria</label>
+                <select id="transferCategory" class="input-standard">
+                    <option value="ALL">Generica (mix)</option>
+                    <option value="FEMALE">Femmine Adulte (2.5g)</option>
+                    <option value="MALE">Maschi Adulti (1.5g)</option>
+                    <option value="SUBADULT">Sub-Adulte (1.6g)</option>
+                    <option value="MEDIUM">Neanidi Medie (0.8g)</option>
+                    <option value="SMALL">Neanidi Piccole (0.3g)</option>
+                    <option value="BABY">Micro-Neanidi (0.1g)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="transferFrom">DA (Colonia Sorgente)</label>
+                <select id="transferFrom" class="input-standard"></select>
+            </div>
+            <div class="form-group">
+                <label for="transferTo">A (Colonia Destinazione)</label>
+                <select id="transferTo" class="input-standard"></select>
+            </div>
+            <!-- Preview antepriama -->
+            <div class="transfer-preview" id="transferPreview">
+                <strong style="font-size:0.8rem; color: var(--text-muted);">Anteprima dopo il trasferimento:</strong>
+                <div class="arrow-row">
+                    <div class="t-colony">
+                        <strong id="transferFromName">DA</strong>
+                        <span id="transferFromAfter">-- g</span>
+                    </div>
+                    <div class="t-arrow">→</div>
+                    <div class="t-colony">
+                        <strong id="transferToName">A</strong>
+                        <span id="transferToAfter">-- g</span>
+                    </div>
+                </div>
+                <p style="font-size:0.75rem; text-align:center; margin-top:0.5rem; color:var(--accent-green);" id="transferGlobalNote">Totale globale: invariato</p>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-standard btn-cancel" id="btnTransferCancel">Annulla</button>
+                <button type="button" class="btn-standard btn-primary" id="btnTransferConfirm" style="background-color: var(--accent-purple);">Conferma Trasferimento</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL RICONCILIAZIONE SPLIT-SCREEN -->
+    <div class="modal-overlay" id="reconciliationModal">
+        <div class="modal modal-wide">
+            <h2 style="color: var(--alert-red); font-size: 1.1rem;">⚠️ Discrepanza Rilevata</h2>
+            <p class="subtitle-text" style="margin-bottom: 0.75rem;">Il peso reale inserito differisce significativamente dalla previsione algoritmica. Seleziona la causa più probabile.</p>
+            <div class="recon-split">
+                <div class="recon-panel estimated">
+                    <div class="recon-panel-label">🔵 Stima Algoritmica</div>
+                    <div class="recon-panel-weight" id="reconEstimated">-- g</div>
+                    <div style="font-size:0.78rem; color:var(--text-muted);">basata su θ₁, θ₂</div>
+                </div>
+                <div class="recon-delta-center">
+                    <div class="recon-delta-value" id="reconDeltaVal">--</div>
+                    <div class="recon-delta-pct" id="reconDeltaPct">--</div>
+                </div>
+                <div class="recon-panel real">
+                    <div class="recon-panel-label">🟢 Peso Reale</div>
+                    <div class="recon-panel-weight" id="reconReal">-- g</div>
+                    <div style="font-size:0.78rem; color:var(--text-muted);">misurato sulla bilancia</div>
+                </div>
+            </div>
+            <p style="font-size:0.875rem; font-weight:600; margin-bottom: 0.5rem;">Perché c'è questa discrepanza?</p>
+            <div class="recon-reason-grid">
+                <button class="recon-reason-btn" data-reason="mortality">💀 Mortalità Alta<br><small>Aumento tasso di mortalità</small></button>
+                <button class="recon-reason-btn" data-reason="unrecorded_harvest">✂️ Prelievo Non Registrato<br><small>Aggiungo evento prelievo</small></button>
+                <button class="recon-reason-btn" data-reason="cold_food">❄️ Freddo / Alimentazione<br><small>Ricalibra θ₁ e θ₂</small></button>
+                <button class="recon-reason-btn danger" data-reason="error">❌ Errore di Pesata<br><small>ANNULLA — non salvare</small></button>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="modal-overlay" id="entryModal">
+        <div class="modal">
+            <h2>Nuovo Evento</h2>
+            <form id="entryForm">
+                <div class="form-group">
+                    <label for="inputType">Tipo di Evento</label>
+                    <select id="inputType" class="input-standard" required>
+                        <option value="pesata">Nuova Pesata (Controllo Reale)</option>
+                        <option value="cibo">Aggiunta Cibo</option>
+                        <option value="prelievo">Registra Prelievo</option>
+                    </select>
+                </div>
+                <div class="form-group" id="groupColony">
+                    <label for="inputColonyId">Colonia Associata</label>
+                    <select id="inputColonyId" class="input-standard">
+                        <option value="">-- Massa Globale (Tutte le colonie) --</option>
+                    </select>
+                    <p class="subtitle-text" style="font-size:0.75rem; margin-top:0.25rem; margin-bottom:0;">Associa questo evento a una colonia specifica, oppure lascialo globale.</p>
+                </div>
+                <div class="form-group">
+                    <label for="inputDate">Data</label>
+                    <input type="date" id="inputDate" class="input-standard" required>
+                </div>
+                <div class="form-group" id="groupWeight">
+                    <label for="inputWeight">Peso Totale Colonia (grammi)</label>
+                    <input type="number" step="0.1" id="inputWeight" class="input-standard" required>
+                </div>
+                <div class="form-group" id="groupFoodAmount">
+                <label for="inputFoodAmount">Cibo somministrato (grammi)</label>
+                <input type="number" id="inputFoodAmount" class="input-standard" min="0" step="0.1">
+            </div>
+                <div class="form-group" id="groupHarvestAmount">
+                    <label for="inputHarvestAmount">Prelievo Effettuato (grammi)</label>
+                    <input type="number" step="0.1" id="inputHarvestAmount" class="input-standard" value="0">
+                </div>
+                <div class="form-group" id="groupAdultRatio">
+                    <label for="inputAdultRatioSlider">Rapporto Adulti (At)</label>
+                    <div class="slider-container">
+                        <input type="range" id="inputAdultRatioSlider" min="0.0" max="1.0" step="0.01" value="0.35">
+                        <input type="number" step="0.01" id="inputAdultRatio" class="input-standard" min="0.0" max="1.0" value="0.35" style="width: 80px;" required>
+                    </div>
+                </div>
+                <div class="form-group" id="groupColonyCounts" style="display: none; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <label for="inputColonyMales">Numero Maschi</label>
+                        <input type="number" id="inputColonyMales" class="input-standard" min="0" step="1" value="0">
+                    </div>
+                    <div>
+                        <label for="inputColonyFemales">Numero Femmine</label>
+                        <input type="number" id="inputColonyFemales" class="input-standard" min="0" step="1" value="0">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="inputNotes">Note di Manutenzione</label>
+                    <textarea id="inputNotes" class="input-standard" rows="3" placeholder="Es. pulizia fondo, sostituzione cartoni..."></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-standard btn-cancel" id="btnCancelEntry">Annulla</button>
+                    <button type="submit" class="btn-standard btn-primary">Salva ed Elabora</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL FOR CALIBRATION -->
+    <div class="modal-overlay" id="calibrationModal">
+        <div class="modal">
+            <h2>Calibrazione Manuale</h2>
+            <form id="calibrationForm">
+                <div class="form-group">
+                    <label for="calibCategory">Categoria</label>
+                    <select id="calibCategory" class="input-standard" required>
+                        <option value="FEMALE">Femmine Adulte (2.5g)</option>
+                        <option value="MALE">Maschi Adulti (1.5g)</option>
+                        <option value="SUBADULT">Sub-Adulte (1.6g)</option>
+                        <option value="MEDIUM">Neanidi Medie (0.8g)</option>
+                        <option value="SMALL">Neanidi Piccole (0.3g)</option>
+                        <option value="BABY">Micro-Neanidi (0.1g)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="calibCount">Conteggio Reale Rilevato</label>
+                    <input type="number" id="calibCount" class="input-standard" min="1" step="1" required>
+                </div>
+                <p class="subtitle-text" style="font-size: 0.8rem; margin-top: 1rem;">
+                    Questa operazione correggerà i parametri interni per allinearli alla realtà osservata. Verrà creata una nuova rilevazione automatica di compensazione.
+                </p>
+                <div class="modal-actions">
+                    <button type="button" class="btn-standard btn-cancel" id="btnCancelCalib">Annulla</button>
+                    <button type="submit" class="btn-standard btn-primary">Applica Calibrazione</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL NUOVO/MODIFICA CLIENTE -->
+    <div class="modal-overlay" id="clientModal">
+        <div class="modal modal-clienti">
+            <h2 id="clientModalTitle">Nuovo Cliente</h2>
+            <form id="clientForm">
+                <input type="hidden" id="clientId">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label for="clientNome">Nome *</label>
+                        <input type="text" id="clientNome" class="input-standard" required placeholder="Es. Marco">
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label for="clientCognome">Cognome *</label>
+                        <input type="text" id="clientCognome" class="input-standard" required placeholder="Es. Rossi">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="clientCitta">Città</label>
+                    <input type="text" id="clientCitta" class="input-standard" placeholder="Es. Milano">
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label for="clientTelefono">Telefono</label>
+                        <input type="tel" id="clientTelefono" class="input-standard" placeholder="+39 ...">
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label for="clientEmail">Email</label>
+                        <input type="email" id="clientEmail" class="input-standard" placeholder="nome@email.com">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="clientAnimale">Animale Allevato</label>
+                    <select id="clientAnimale" class="input-standard">
+                        <option value="rettile">🦎 Rettile</option>
+                        <option value="anfibio">🐸 Anfibio</option>
+                        <option value="uccello">🦜 Uccello</option>
+                        <option value="mammifero">🐾 Mammifero</option>
+                        <option value="pesce">🐟 Pesce</option>
+                        <option value="altro">🐾 Altro</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="clientNote">Note</label>
+                    <textarea id="clientNote" class="input-standard" rows="2" placeholder="Preferenze, frequenza acquisti, ecc."></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-standard btn-cancel" id="btnCancelClient">Annulla</button>
+                    <button type="submit" class="btn-standard btn-primary">Salva Cliente</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL NUOVA CESSIONE -->
+    <div class="modal-overlay" id="cessioneModal">
+        <div class="modal modal-clienti">
+            <h2>📦 Nuova Cessione</h2>
+            <form id="cessioneForm">
+                <div class="form-group">
+                    <label for="cessioneCliente">Cliente *</label>
+                    <select id="cessioneCliente" class="input-standard" required>
+                        <option value="">— Seleziona cliente —</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="cessioneData">Data *</label>
+                    <input type="date" id="cessioneData" class="input-standard" required>
+                </div>
+                <div class="form-group">
+                    <label for="cessioneTipo">Tipo Blatta *</label>
+                    <select id="cessioneTipo" class="input-standard" required></select>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label for="cessioneQuantita">Quantità (grammi) *</label>
+                        <input type="number" id="cessioneQuantita" class="input-standard" min="0.1" step="0.1" required placeholder="Es. 50">
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label for="cessionePrezzoUnit">Prezzo unitario (€/g)</label>
+                        <input type="number" id="cessionePrezzoUnit" class="input-standard" min="0" step="0.01" placeholder="0.50">
+                    </div>
+                </div>
+                <input type="hidden" id="cessioneTotale">
+                <div class="cessione-totale-preview" id="cessioneTotalePreview">Totale: € 0,00 · ≈ 0 individui</div>
+                <div class="form-group">
+                    <label for="cessioneNote">Note</label>
+                    <textarea id="cessioneNote" class="input-standard" rows="2" placeholder="Es. consegna a mano, sconto applicato..."></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-standard btn-cancel" id="btnCancelCessione">Annulla</button>
+                    <button type="submit" class="btn-standard btn-primary">Registra Cessione</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL PREZZI -->
+    <div class="modal-overlay" id="prezziModal">
+        <div class="modal modal-prezzi">
+            <h2>💰 Prezzi per Tipologia</h2>
+            <p class="subtitle-text" style="margin-bottom:1.5rem;">Imposta il prezzo per grammo di ogni categoria. Il Valore Economico in Home si aggiornerà automaticamente.</p>
+            <form id="prezziForm">
+                <div class="price-rows-container">
+                    <div class="price-row">
+                        <span class="price-row-label">🔴 Femmine Adulte <small>(2.5g)</small></span>
+                        <div class="price-row-input">
+                            <span class="price-currency">€</span>
+                            <input type="number" id="price_FEMALE" class="input-standard" min="0" step="0.01" value="0.50">
+                            <span class="price-unit">/g</span>
+                        </div>
+                    </div>
+                    <div class="price-row">
+                        <span class="price-row-label">🔵 Maschi Adulti <small>(1.5g)</small></span>
+                        <div class="price-row-input">
+                            <span class="price-currency">€</span>
+                            <input type="number" id="price_MALE" class="input-standard" min="0" step="0.01" value="0.40">
+                            <span class="price-unit">/g</span>
+                        </div>
+                    </div>
+                    <div class="price-row">
+                        <span class="price-row-label">🟡 Sub-Adulte <small>(1.6g)</small></span>
+                        <div class="price-row-input">
+                            <span class="price-currency">€</span>
+                            <input type="number" id="price_SUBADULT" class="input-standard" min="0" step="0.01" value="0.30">
+                            <span class="price-unit">/g</span>
+                        </div>
+                    </div>
+                    <div class="price-row">
+                        <span class="price-row-label">🟢 Neanidi Medie <small>(0.8g)</small></span>
+                        <div class="price-row-input">
+                            <span class="price-currency">€</span>
+                            <input type="number" id="price_MEDIUM" class="input-standard" min="0" step="0.01" value="0.20">
+                            <span class="price-unit">/g</span>
+                        </div>
+                    </div>
+                    <div class="price-row">
+                        <span class="price-row-label">⚪ Neanidi Piccole <small>(0.3g)</small></span>
+                        <div class="price-row-input">
+                            <span class="price-currency">€</span>
+                            <input type="number" id="price_SMALL" class="input-standard" min="0" step="0.01" value="0.10">
+                            <span class="price-unit">/g</span>
+                        </div>
+                    </div>
+                    <div class="price-row">
+                        <span class="price-row-label">🟡 Micro-Neanidi <small>(0.1g)</small></span>
+                        <div class="price-row-input">
+                            <span class="price-currency">€</span>
+                            <input type="number" id="price_BABY" class="input-standard" min="0" step="0.01" value="0.05">
+                            <span class="price-unit">/g</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="price-preview-box" id="prezziValoreColoniaPreview">
+                    Valore Colonia stimato: — (inserisci una pesata prima)
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-standard btn-cancel" id="btnCancelPrezzi">Annulla</button>
+                    <button type="submit" class="btn-standard btn-primary">💾 Salva Prezzi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL COLONIA -->
+    <div class="modal-overlay" id="colonyModal">
+        <div class="modal">
+            <h2 id="colonyModalTitle">Nuova Colonia</h2>
+            <form id="colonyForm">
+                <input type="hidden" id="colonyId">
+                <div class="form-group">
+                    <label for="colonyName">Nome Identificativo *</label>
+                    <input type="text" id="colonyName" class="input-standard" required placeholder="Es. Scatola A - Riproduttori">
+                </div>
+                <div class="form-group">
+                    <label for="colonyType">Tipo (Destinazione d'Uso) *</label>
+                    <select id="colonyType" class="input-standard" required>
+                        <option value="Riproduzione">Riproduzione</option>
+                        <option value="Pasto">Pasto (Rettili/Animali)</option>
+                        <option value="Baby">Accrescimento (Baby)</option>
+                        <option value="Altro">Altro</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+                    <label style="margin-bottom: 0;">Composizione Popolazione</label>
+                    <button type="button" id="btnFillRemainingColony" class="btn-standard" style="padding: 0.3rem 0.6rem; font-size: 0.75rem; background: rgba(142, 68, 173, 0.2); color: var(--accent-purple); border: 1px solid rgba(142, 68, 173, 0.4); border-radius: 4px;">✨ Riempi con Rimanenti</button>
+                </div>
+                <div class="form-group" style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom: 0.5rem;">
+                    <div style="flex:1; min-width:80px;">
+                        <label for="colonyMales" style="font-size:0.8rem;">Maschi</label>
+                        <input type="number" id="colonyMales" class="input-standard colony-count-input" min="0" placeholder="N°">
+                    </div>
+                    <div style="flex:1; min-width:80px;">
+                        <label for="colonyFemales" style="font-size:0.8rem;">Femmine</label>
+                        <input type="number" id="colonyFemales" class="input-standard colony-count-input" min="0" placeholder="N°">
+                    </div>
+                    <div style="flex:1; min-width:80px;">
+                        <label for="colonySubadults" style="font-size:0.8rem;">Sub-Adulte</label>
+                        <input type="number" id="colonySubadults" class="input-standard colony-count-input" min="0" placeholder="N°">
+                    </div>
+                </div>
+                <div class="form-group" style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom: 0.5rem;">
+                    <div style="flex:1; min-width:80px;">
+                        <label for="colonyMedium" style="font-size:0.8rem;">N. Medie</label>
+                        <input type="number" id="colonyMedium" class="input-standard colony-count-input" min="0" placeholder="N°">
+                    </div>
+                    <div style="flex:1; min-width:80px;">
+                        <label for="colonySmall" style="font-size:0.8rem;">N. Piccole</label>
+                        <input type="number" id="colonySmall" class="input-standard colony-count-input" min="0" placeholder="N°">
+                    </div>
+                    <div style="flex:1; min-width:80px;">
+                        <label for="colonyBaby" style="font-size:0.8rem;">Baby</label>
+                        <input type="number" id="colonyBaby" class="input-standard colony-count-input" min="0" placeholder="N°">
+                    </div>
+                </div>
+                <p class="subtitle-text" style="font-size: 0.8rem; margin-top:-0.2rem; margin-bottom: 0.5rem;">Inserendo il numero di individui, il grafico previsionale userà ESATTAMENTE i dati di questa colonia e calcolerà in automatico il peso.</p>
+                <div id="colonyEstimatedWeightLive" style="color: var(--accent-green); font-weight: bold; font-size: 0.9rem; margin-bottom: 1rem; padding: 0.5rem; background: rgba(46, 204, 113, 0.1); border-radius: 4px; display: none;">
+                    Stima Peso: 0.00 g
+                </div>
+                <div id="colonyCountWarning" style="color: #F2C94C; font-size: 0.85rem; margin-bottom: 1rem; padding: 0.5rem; background: rgba(242, 201, 76, 0.1); border: 1px solid #F2C94C; border-radius: 4px; display: none;">
+                </div>
+
+                <div class="form-group">
+                    <label for="colonyNotes">Note Generali</label>
+                    <textarea id="colonyNotes" class="input-standard" rows="2" placeholder="Dimensioni vasca, origine, etc."></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-standard btn-cancel" id="btnCancelColony">Annulla</button>
+                    <button type="submit" class="btn-standard btn-primary">Salva Colonia</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL QR DISPLAY -->
+    <div class="modal-overlay" id="qrDisplayModal">
+        <div class="modal" style="text-align: center;">
+            <h2 id="qrColonyName" style="margin-bottom: 0.5rem; color: var(--accent-purple);">QR Code</h2>
+            <p class="subtitle-text" style="margin-bottom: 1.5rem;">Scansiona questo codice dall'app per gestire la colonia.</p>
+            <div style="background: white; padding: 1rem; border-radius: 8px; display: inline-block;" id="qrCanvasContainer">
+            </div>
+            <div class="modal-actions" style="justify-content: center; margin-top: 2rem;">
+                <button type="button" class="btn-standard btn-primary" id="btnPrintQR" style="margin-right: 1rem;">🖨️ Stampa</button>
+                <button type="button" class="btn-standard btn-cancel" id="btnCloseQrDisplay">Chiudi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL QR SCANNER -->
+    <div class="modal-overlay" id="qrScannerModal">
+        <div class="modal" style="max-width: 420px; padding: 1rem; position: relative;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2 style="margin: 0;">📷 Scansiona QR</h2>
+                <button type="button" class="btn-standard btn-cancel" id="btnCloseQrScanner" style="padding: 0.4rem 0.8rem;">✕</button>
+            </div>
+
+            <!-- Spinner visibile mentre la fotocamera si avvia -->
+            <div id="qrCameraLoader">
+                <div class="spinner"></div>
+                <span>Avvio fotocamera posteriore...</span>
+            </div>
+
+            <!-- Wrapper video con mirino sovrapposto -->
+            <div id="qrVideoWrapper" style="display: none;">
+                <!-- Html5Qrcode inserisce il <video> qui dentro -->
+                <div id="qr-reader"></div>
+                <!-- Linea di scansione animata -->
+                <div id="qrScanLine"></div>
+            </div>
+
+            <p style="text-align:center; font-size:0.78rem; color:var(--text-muted); margin-top:0.75rem;">
+                Inquadra il QR Code della colonia
+            </p>
+            <p id="qrScanError" style="color: var(--alert-red); font-size: 0.85rem; margin-top: 0.5rem; text-align: center; display: none;">
+                ⚠️ QR Code non riconosciuto o non valido per D.U.B.I.A.
+            </p>
+        </div>
+    </div>
+
+    <!-- CONFIG CLIMA MODAL -->
+    <div class="modal-overlay" id="configClimaModal">
+        <div class="modal modal-wide" style="max-width: 700px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2>⚙️ Configurazione Clima</h2>
+                <button type="button" class="btn-standard btn-cancel" id="btnCloseConfigClima" style="padding: 0.4rem 0.8rem; background: none; border: none; color: var(--text-muted); font-size: 1.2rem; cursor: pointer;">✕</button>
+            </div>
+            
+            <div class="modal-tabs" style="display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 1.5rem; gap: 1rem;">
+                <button class="modal-tab-btn active" data-modal-target="paneTerrari" style="background: none; border: none; color: var(--accent-green); padding: 0.75rem 0.5rem; cursor: pointer; border-bottom: 2px solid var(--accent-green); font-weight: 600;">📦 Gestione Terrari</button>
+                <button class="modal-tab-btn" data-modal-target="paneSonde" style="background: none; border: none; color: var(--text-muted); padding: 0.75rem 0.5rem; cursor: pointer; border-bottom: 2px solid transparent; font-weight: 600;">🌡️ Mappatura Sonde</button>
+            </div>
+
+            <!-- Pane Terrari -->
+            <div class="modal-pane active" id="paneTerrari">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3 style="font-size: 1rem; margin: 0;">Lista Terrari</h3>
+                    <button type="button" id="btnAddTerrario" class="btn-standard btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">+ Nuovo Terrario</button>
+                </div>
+                <div id="terrariConfigList" style="max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem; padding-right: 0.5rem;">
+                    <!-- Caricato dinamicamente -->
+                </div>
+            </div>
+
+            <!-- Pane Sonde -->
+            <div class="modal-pane" id="paneSonde" style="display: none;">
+                <h3 style="font-size: 1rem; margin-bottom: 0.5rem;">Mappatura Sensori Fisici</h3>
+                <p class="subtitle-text" style="margin-bottom: 1rem;">Assegna e rinomina i termoigrometri ESP8266. Vengono mostrati i sensori attivi rilevati.</p>
+                <div id="sondeConfigList" style="max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem; padding-right: 0.5rem;">
+                    <!-- Caricato dinamicamente -->
+                </div>
+            </div>
+
+            <div class="modal-actions" style="margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                <button type="button" class="btn-standard btn-primary" id="btnSaveConfigClima" style="margin-left: auto;">Chiudi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL MODIFICA TERRARIO -->
+    <div class="modal-overlay" id="terrarioEditModal" style="z-index: 1100;">
+        <div class="modal" style="max-width: 450px;">
+            <h2 id="terrarioEditTitle">Nuovo Terrario</h2>
+            <form id="terrarioEditForm" style="margin-top: 1rem;">
+                <input type="hidden" id="terrarioEditId">
+                <div class="form-group">
+                    <label for="terrarioEditName">Nome Terrario *</label>
+                    <input type="text" id="terrarioEditName" class="input-standard" required placeholder="Es. Terrario 1 - Dubia Piccole">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 0.5rem;">
+                    <div class="form-group" style="margin-bottom: 0.5rem;">
+                        <label for="terrarioEditTempMin">Temp Minima (°C) *</label>
+                        <input type="number" step="0.1" id="terrarioEditTempMin" class="input-standard" required value="22.0">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0.5rem;">
+                        <label for="terrarioEditTempMax">Temp Massima (°C) *</label>
+                        <input type="number" step="0.1" id="terrarioEditTempMax" class="input-standard" required value="32.0">
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div class="form-group" style="margin-bottom: 0.5rem;">
+                        <label for="terrarioEditHumMin">Umidità Minima (%) *</label>
+                        <input type="number" step="0.1" id="terrarioEditHumMin" class="input-standard" required value="40.0">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0.5rem;">
+                        <label for="terrarioEditHumMax">Umidità Massima (%) *</label>
+                        <input type="number" step="0.1" id="terrarioEditHumMax" class="input-standard" required value="70.0">
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-standard btn-cancel" id="btnCancelTerrarioEdit">Annulla</button>
+                    <button type="submit" class="btn-standard btn-primary">Salva Terrario</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- NOTIFICATION AREA -->
+    <div id="notificationArea" class="notification-area"></div>
+
+    <script src="app.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').then(registration => {
+                    console.log('ServiceWorker registration successful');
+                }).catch(err => {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+            });
+        }
+    </script>
+</body>
+</html>
