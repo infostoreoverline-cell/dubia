@@ -1,0 +1,12 @@
+{
+  "name": "biotwin-sensor-api",
+  "version": "1.0.0",
+  "description": "BioTwin Dubia — API backend per sensori IoT ESP8266",
+  "private": true,
+  "engines": {
+    "node": ">=18.x"
+  },
+  "dependencies": {
+    "googleapis": "^144.0.0"
+  }
+}

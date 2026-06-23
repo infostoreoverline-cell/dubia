@@ -1,0 +1,42 @@
+# Dependency directories
+node_modules/
+.npm/
+
+# Build output
+dist/
+build/
+.next/
+out/
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment / secrets
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Temporary
+*.tmp
+*.temp
+
+# Keep teoria.txt (biological reference)
+# Keep supabase_schema.sql (needed for setup)
