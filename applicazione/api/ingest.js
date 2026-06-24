@@ -33,7 +33,7 @@ async function postToGAS(payload) {
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(payload)
       });
-      if (!res.ok) throw new Error(HTTP  );
+      if (!res.ok) throw new Error('HTTP error ' + res.status);
       const json = await res.json();
       if (json.status === 'error') throw new Error('GAS error: ' + json.message);
       return { ok: true, data: json };
