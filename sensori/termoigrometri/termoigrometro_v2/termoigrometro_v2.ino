@@ -443,6 +443,12 @@ void setup() {
     DBG_PRINTLN(F("[MAN] Ciclo Display 10s (double-reset)"));
     runDisplayCycle(10000UL);
 
+    // Forza la trasmissione immediata dei dati dopo il display
+    DBG_PRINTLN(F("[MAN] Invio dati immediato post-display..."));
+    WiFi.forceSleepWake();
+    delay(1);
+    sendWiFiData();
+
   } else if (autoWake) {
     // Avvio automatico da timer
     if (rtcCounter.counter >= READINGS_PER_SEND) {
@@ -474,6 +480,12 @@ void setup() {
     // Avvio manuale a freddo (USB o power-on): mostra schermo 10s
     DBG_PRINTLN(F("[MAN] Avvio freddo — Ciclo Display 10s"));
     runDisplayCycle(10000UL);
+
+    // Forza la trasmissione immediata dei dati dopo il display
+    DBG_PRINTLN(F("[MAN] Invio dati immediato post-display..."));
+    WiFi.forceSleepWake();
+    delay(1);
+    sendWiFiData();
   }
 
   DBG_PRINTF("[BOOT] → deepSleep %llu s\n", SLEEP_US / 1000000ULL);
