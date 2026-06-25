@@ -5200,11 +5200,9 @@ const ClimateModule = (() => {
             showNotification('Salvataggio', 'Salvataggio associazione in corso...', 'success');
             const payload = {
                 event_type: 'sensore_sync',
-                dati: {
-                    id: devId,
-                    nome: name,
-                    is_deleted: false
-                }
+                id: devId,
+                nome: name,
+                is_deleted: false
             };
             
             const res = await cloudPostWithQueue(payload);
@@ -5230,9 +5228,7 @@ const ClimateModule = (() => {
             showNotification('Rimozione', 'Rimozione associazione in corso...', 'success');
             const payload = {
                 event_type: 'sensore_delete',
-                dati: {
-                    id: devId
-                }
+                id: devId
             };
             
             const res = await cloudPostWithQueue(payload);

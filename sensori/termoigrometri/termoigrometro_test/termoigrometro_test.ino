@@ -58,8 +58,8 @@ static constexpr uint8_t  DISP_PRI          = 0x3C;
 static constexpr uint8_t  DISP_FALL         = 0x3D;
 static constexpr uint8_t  SCREEN_W          = 128;
 static constexpr uint8_t  SCREEN_H          = 64;
-static constexpr uint64_t SLEEP_US          = 5ULL * 1000000ULL;   // 5 secondi per test
-static constexpr uint32_t READINGS_PER_SEND = 12;                  // Invia ogni 12 misure = 1 minuto per test
+static constexpr uint64_t SLEEP_US          = 60ULL * 1000000ULL;  // 60 secondi (1 minuto)
+static constexpr uint32_t READINGS_PER_SEND = 60;                  // Invia ogni 60 misure = 1 ora
 static constexpr uint32_t WIFI_TIMEOUT_MS   = 12000UL;
 static constexpr uint32_t FS_MAX_BYTES      = 65536UL;
 static constexpr uint32_t DISPLAY_WIN_MS    = 2000UL;  // Finestra doppio reset (ms)
@@ -490,6 +490,12 @@ void setup() {
       // 3b. Avvio manuale a freddo (USB o power-on): mostra schermo 10s
       DBG_PRINTLN(F("[MAN] Avvio a freddo — Ciclo Display 10s"));
       runDisplayCycle(10000UL);
+
+      // Forza la trasmissione immediata dei dati dopo il display
+      DBG_PRINTLN(F("[MAN] Invio dati immediato post-display..."));
+      WiFi.forceSleepWake();
+      delay(1);
+      sendWiFiData();
     }
   } else {
     // DOUBLE-RESET (manualOverride == true)
@@ -498,6 +504,12 @@ void setup() {
     // Mostra schermo 10 secondi
     DBG_PRINTLN(F("[MAN] Ciclo Display 10s (double-reset)"));
     runDisplayCycle(10000UL);
+
+    // Forza la trasmissione immediata dei dati dopo il display
+    DBG_PRINTLN(F("[MAN] Invio dati immediato post-display..."));
+    WiFi.forceSleepWake();
+    delay(1);
+    sendWiFiData();
   }
 
   uint32_t elapsedMs = millis();
