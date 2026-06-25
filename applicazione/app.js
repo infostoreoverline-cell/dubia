@@ -4892,6 +4892,37 @@ const ClimateModule = (() => {
         const temps = pts.map(r => parseFloat(r.temperature));
         const hums  = pts.map(r => parseFloat(r.humidity));
 
+        // Calcolo span minimo (per evitare grafici troppo frastagliati)
+        const validTemps = temps.filter(t => !isNaN(t));
+        const validHums = hums.filter(h => !isNaN(h));
+        
+        let minT, maxT, minH, maxH;
+        if (validTemps.length > 0) {
+            const tMin = Math.min(...validTemps);
+            const tMax = Math.max(...validTemps);
+            if (tMax - tMin < 4) {
+                const tMid = (tMax + tMin) / 2;
+                minT = tMid - 2;
+                maxT = tMid + 2;
+            } else {
+                minT = tMin - 1;
+                maxT = tMax + 1;
+            }
+        }
+        
+        if (validHums.length > 0) {
+            const hMin = Math.min(...validHums);
+            const hMax = Math.max(...validHums);
+            if (hMax - hMin < 10) {
+                const hMid = (hMax + hMin) / 2;
+                minH = hMid - 5;
+                maxH = hMid + 5;
+            } else {
+                minH = hMin - 2;
+                maxH = hMax + 2;
+            }
+        }
+
         if (_histChart) { _histChart.destroy(); _histChart = null; }
 
         _histChart = new Chart(canvas, {
@@ -4959,12 +4990,14 @@ const ClimateModule = (() => {
                     },
                     yTemp: {
                         type: 'linear', position: 'left',
+                        suggestedMin: minT, suggestedMax: maxT,
                         ticks: { color: C_TEMP, font: { size: 11, family: 'Inter', weight: '600' },
                                  callback: v => v.toFixed(1) + ' °C' },
                         grid: { color: C_GRID }
                     },
                     yHum: {
                         type: 'linear', position: 'right',
+                        suggestedMin: minH, suggestedMax: maxH,
                         ticks: { color: C_HUM, font: { size: 11, family: 'Inter', weight: '600' },
                                  callback: v => v.toFixed(0) + ' %' },
                         grid: { drawOnChartArea: false }
