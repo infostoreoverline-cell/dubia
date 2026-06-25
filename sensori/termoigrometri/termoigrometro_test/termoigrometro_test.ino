@@ -1,13 +1,16 @@
 /*
  * ╔══════════════════════════════════════════════════════════════════╗
- * ║         TERMOIGROMETRO ESP8266 — VERSIONE TEST VELOCE            ║
+ * ║         TERMOIGROMETRO ESP8266 — ULTRA LOW-POWER v2.0           ║
  * ╠══════════════════════════════════════════════════════════════════╣
  * ║  MCU      : ESP8266 (ESP-12F / NodeMCU)                         ║
- * ║  Sensore  : SHT40 — I2C su GPIO14 (SCL/D5) e GPIO12 (SDA/D6)  ║
- * ║  Display  : SSD1306 0.96" OLED — fallback addr 0x3C → 0x3D     ║
+ * ║  Sensore  : SHT40 — I2C su D2 (SDA=4) e D1 (SCL=5)            ║
+ * ║  Display  : SSD1306 0.96" OLED — I2C su D5 (SDA=14) e D6(12)  ║
  * ║  Storage  : LittleFS (Flash interna)                             ║
  * ║  REQUISITO HW: collegare GPIO16 (D0) a RST per il wake-up       ║
  * ╚══════════════════════════════════════════════════════════════════╝
+ *
+ *  ATTIVAZIONE SCHERMO MANUALE: doppio click sul tasto RESET
+ *  entro 1.5 secondi dall'avvio (durante la finestra di standby).
  */
 
 // ─── §0  DEBUG ───────────────────────────────────────────────────────────────
@@ -15,7 +18,7 @@
 #define DEBUG
 
 #ifdef DEBUG
-#define DBG_BEGIN(b)    do { Serial.begin(b); delay(10); } while (0) // 10 ms basta per UART FIFO
+#define DBG_BEGIN(b)    do { Serial.begin(b); delay(10); } while (0)
 #define DBG_PRINT(x)    Serial.print(x)
 #define DBG_PRINTLN(x)  Serial.println(x)
 #define DBG_PRINTF(...) Serial.printf(__VA_ARGS__)
@@ -34,28 +37,32 @@
 #include <ESP8266WiFi.h>
 #include <LittleFS.h>
 #include <WiFiClient.h>
+#include <WiFiClientSecure.h>
 #include <Wire.h>
 #include <user_interface.h>  // REASON_DEEP_SLEEP_AWAKE
+
+ADC_MODE(ADC_VCC);
+
 
 // ─── §2  CONFIGURAZIONE ───────────────────────────────────────────────────────
 static const char WIFI_SSID[] PROGMEM = "ASUS";
 static const char WIFI_PASS[] PROGMEM = "24no1998";
-static const char HTTP_EP[]   PROGMEM = "https://dubia-flame.vercel.app/api/ingest"; // Endpoint Vercel corretto
+static const char HTTP_EP[]   PROGMEM = "https://dubia-flame.vercel.app/api/ingest";
 static const char DATA_FILE[] PROGMEM = "/dati.txt";
 
-static constexpr uint8_t  PIN_SDA_SHT       = 4;     // D2 — Filo Verde Sensore SHT40
-static constexpr uint8_t  PIN_SCL_SHT       = 5;     // D1 — Filo Giallo Sensore SHT40
-static constexpr uint8_t  PIN_SDA_OLED      = 14;    // D5 — SDA interno schermo OLED
-static constexpr uint8_t  PIN_SCL_OLED      = 12;    // D6 — SCL interno schermo OLED
+static constexpr uint8_t  PIN_SDA_SHT       = 4;     // D2 — SDA SHT40
+static constexpr uint8_t  PIN_SCL_SHT       = 5;     // D1 — SCL SHT40
+static constexpr uint8_t  PIN_SDA_OLED      = 14;    // D5 — SDA OLED interno
+static constexpr uint8_t  PIN_SCL_OLED      = 12;    // D6 — SCL OLED interno
 static constexpr uint8_t  DISP_PRI          = 0x3C;
 static constexpr uint8_t  DISP_FALL         = 0x3D;
 static constexpr uint8_t  SCREEN_W          = 128;
 static constexpr uint8_t  SCREEN_H          = 64;
-static constexpr uint64_t SLEEP_US          = 5ULL * 1000000ULL; // 5 secondi di pausa
-static constexpr uint32_t READINGS_PER_SEND = 12; // 12 letture da 5 secondi = 60 secondi
-static constexpr uint32_t WIFI_TIMEOUT_MS   = 10000UL;
-static constexpr uint32_t DISP_TIMEOUT_MS   = 90000UL;
-static constexpr uint32_t FS_MAX_BYTES      = 65536UL; // guard LittleFS overflow
+static constexpr uint64_t SLEEP_US          = 5ULL * 1000000ULL;   // 5 secondi per test
+static constexpr uint32_t READINGS_PER_SEND = 12;                  // Invia ogni 12 misure = 1 minuto per test
+static constexpr uint32_t WIFI_TIMEOUT_MS   = 12000UL;
+static constexpr uint32_t FS_MAX_BYTES      = 65536UL;
+static constexpr uint32_t DISPLAY_WIN_MS    = 2000UL;  // Finestra doppio reset (ms)
 
 // Comandi SSD1306 per spegnimento charge pump
 static constexpr uint8_t CMD_CHARGEPUMP = 0x8D;
@@ -63,19 +70,28 @@ static constexpr uint8_t CMD_PUMP_OFF   = 0x10;
 static constexpr uint8_t CMD_DISPLAYOFF = 0xAE;
 
 // ─── §3  STRUTTURA RTC ────────────────────────────────────────────────────────
-struct __attribute__((packed)) RtcData {
+// IMPORTANTE: il CRC copre SOLO il campo counter (i 4 byte dopo il CRC stesso).
+// Il flag awaiting_double_reset è salvato a indirizzo RTC separato (offset 2)
+// per evitare che la sua modifica corrompa il CRC del counter.
+struct __attribute__((packed)) RtcCounter {
   uint32_t crc32;
   uint32_t counter;
 };
-static_assert(sizeof(RtcData) <= 512, "RtcData supera i 512 B di RAM RTC");
-static RtcData rtcData;
+static_assert(sizeof(RtcCounter) <= 8, "RtcCounter troppo grande");
+static RtcCounter rtcCounter;
+
+// Flag per il double-reset — salvato all'offset 2 (= 8 byte) della RAM RTC.
+// Non coperto dal CRC, quindi può essere modificato liberamente senza rompere nulla.
+static constexpr uint8_t  RTC_FLAG_OFFSET = 2;        // in unità di uint32_t
+static uint32_t rtcFlagWord = 0;                        // Caricato/scritto separatamente
+static constexpr uint32_t MAGIC_AWAIT    = 0xD0B1E55;  // Valore "magic" = aspetta secondo reset
 
 // ─── §4  OGGETTI GLOBALI ──────────────────────────────────────────────────────
 static Adafruit_SHT4x   sht4;
 static Adafruit_SSD1306 display(SCREEN_W, SCREEN_H, &Wire, -1);
 
 // =============================================================================
-//  UTILITA
+//  UTILITA  CRC
 // =============================================================================
 
 static uint32_t calcCRC32(const uint8_t *d, size_t n) {
@@ -88,19 +104,29 @@ static uint32_t calcCRC32(const uint8_t *d, size_t n) {
   return ~crc;
 }
 
-static inline const uint8_t *rtcPayload() {
-  return reinterpret_cast<const uint8_t *>(&rtcData) + sizeof(rtcData.crc32);
-}
-static constexpr size_t RTC_PAYLOAD_LEN = sizeof(RtcData) - sizeof(uint32_t);
-
+// Legge il contatore dalla RAM RTC. Ritorna true se CRC valido.
 static bool readRTC() {
-  ESP.rtcUserMemoryRead(0, reinterpret_cast<uint32_t *>(&rtcData), sizeof(rtcData));
-  return calcCRC32(rtcPayload(), RTC_PAYLOAD_LEN) == rtcData.crc32;
+  ESP.rtcUserMemoryRead(0, reinterpret_cast<uint32_t *>(&rtcCounter), sizeof(rtcCounter));
+  const uint8_t *payload = reinterpret_cast<const uint8_t *>(&rtcCounter.counter);
+  return calcCRC32(payload, sizeof(rtcCounter.counter)) == rtcCounter.crc32;
 }
 
+// Scrive il contatore nella RAM RTC con CRC aggiornato.
 static void writeRTC() {
-  rtcData.crc32 = calcCRC32(rtcPayload(), RTC_PAYLOAD_LEN);
-  ESP.rtcUserMemoryWrite(0, reinterpret_cast<uint32_t *>(&rtcData), sizeof(rtcData));
+  const uint8_t *payload = reinterpret_cast<const uint8_t *>(&rtcCounter.counter);
+  rtcCounter.crc32 = calcCRC32(payload, sizeof(rtcCounter.counter));
+  ESP.rtcUserMemoryWrite(0, reinterpret_cast<uint32_t *>(&rtcCounter), sizeof(rtcCounter));
+}
+
+// Legge il flag di double-reset dall'offset 2 della RAM RTC.
+static void readRTCFlag() {
+  ESP.rtcUserMemoryRead(RTC_FLAG_OFFSET, &rtcFlagWord, sizeof(rtcFlagWord));
+}
+
+// Scrive il flag di double-reset.
+static void writeRTCFlag(uint32_t value) {
+  rtcFlagWord = value;
+  ESP.rtcUserMemoryWrite(RTC_FLAG_OFFSET, &rtcFlagWord, sizeof(rtcFlagWord));
 }
 
 static inline bool isDeepSleepWake() {
@@ -139,7 +165,6 @@ static void scanI2C() {
   }
   if (!found) DBG_PRINTLN(F("  >> Nessun dispositivo I2C trovato!"));
   DBG_PRINTLN(F("[I2C SCAN] Fine.\n"));
-
   Wire.begin(PIN_SDA_SHT, PIN_SCL_SHT);
 }
 #endif
@@ -177,7 +202,7 @@ static void saveMeasurement(int16_t t10, int16_t h10) {
 
   if (f.size() < FS_MAX_BYTES) {
     f.print(t10); f.print(','); f.println(h10);
-    DBG_PRINTLN(F("[FS] Dato accodato"));
+    DBG_PRINTF("[FS] Dato accodato (file: %u byte)\n", (unsigned)f.size());
   } else {
     DBG_PRINTLN(F("[FS] WARN: file pieno, dato scartato"));
   }
@@ -208,13 +233,15 @@ static void sendWiFiData() {
 
   File f = LittleFS.open(FPSTR(DATA_FILE), "r");
   if (!f || f.size() == 0) {
-    DBG_PRINTLN(F("[FS] Nessun dato"));
+    DBG_PRINTLN(F("[FS] Nessun dato da inviare"));
     if (f) f.close();
     LittleFS.end(); wifiOff(); return;
   }
+  DBG_PRINTF("[WiFi] Invio %u byte di dati...\n", (unsigned)f.size());
 
-  WiFiClient client;
-  HTTPClient  http;
+  WiFiClientSecure client;
+  client.setInsecure();
+  HTTPClient http;
   bool sendOk = false;
 
   if (http.begin(client, FPSTR(HTTP_EP))) {
@@ -236,11 +263,11 @@ static void sendWiFiData() {
     LittleFS.begin();
     LittleFS.remove(FPSTR(DATA_FILE));
     LittleFS.end();
-    rtcData.counter = 0;
+    rtcCounter.counter = 0;
     writeRTC();
-    DBG_PRINTLN(F("[WiFi] OK — file eliminato"));
+    DBG_PRINTLN(F("[WiFi] OK — file eliminato, counter azzerato"));
   } else {
-    DBG_PRINTLN(F("[WiFi] FAIL — dati conservati"));
+    DBG_PRINTLN(F("[WiFi] FAIL — dati conservati per prossimo invio"));
   }
 
   wifiOff();
@@ -259,7 +286,6 @@ static void showError() {
   delay(10);
 
   display.clearDisplay();
-
   display.fillRect(0, 0, 128, 14, SSD1306_WHITE);
   display.setTextColor(SSD1306_BLACK);
   display.setTextSize(1);
@@ -292,64 +318,87 @@ static void showError() {
 }
 
 // =============================================================================
-//  DISPLAY UX DESIGN — Ottimizzato per OLED Bicolore (16px Gialli / 48px Azzurri)
+//  DISPLAY DATI LIVE — Aggiorna ogni secondo per durationMs millisecondi
 // =============================================================================
-static void showDisplay(int16_t t10, int16_t h10) {
+static void runDisplayCycle(uint32_t durationMs = 10000UL) {
   Wire.begin(PIN_SDA_OLED, PIN_SCL_OLED);
   if (!display.begin(SSD1306_SWITCHCAPVCC, DISP_PRI) &&
       !display.begin(SSD1306_SWITCHCAPVCC, DISP_FALL)) {
     DBG_PRINTLN(F("[OLED] ERR: init fallita")); return;
   }
 
-  display.clearDisplay();
+  DBG_PRINTF("[OLED] Avvio ciclo display %lu ms\n", durationMs);
+  uint32_t t0 = millis();
+  while (millis() - t0 < durationMs) {
+    int16_t t10 = 0, h10 = 0;
+    if (readSensor(t10, h10)) {
+      Wire.begin(PIN_SDA_OLED, PIN_SCL_OLED);
+      display.clearDisplay();
 
-  // ── 1. HEADER (Zona Gialla: y = 0 a 15) ──────────────────────────────────
-  display.fillRect(0, 0, 128, 16, SSD1306_WHITE);
-  display.setTextColor(SSD1306_BLACK);
-  display.setTextSize(1); // Testo 6x8 px
-  display.setCursor(22, 4); // y=4 per centrare verticalmente nei 16px
-  display.print(F("CLIMA AMBIENTE"));
+      // ── 1. HEADER (Zona Gialla) ──────────────────────────────────
+      display.fillRect(0, 0, 128, 16, SSD1306_WHITE);
+      display.setTextColor(SSD1306_BLACK);
+      display.setTextSize(1);
+      display.setCursor(22, 4);
+      display.print(F("CLIMA AMBIENTE"));
 
-  // ── 2. DATI (Zona Azzurra: y = 16 a 63) ──────────────────────────────────
-  display.setTextColor(SSD1306_WHITE);
+      // Disegna l'icona della batteria (x=110, y=4, w=15, h=8)
+      display.drawRect(110, 4, 15, 8, SSD1306_BLACK);
+      display.fillRect(125, 6, 2, 4, SSD1306_BLACK);
 
-  char tempStr[10];
-  char humStr[10];
+      uint16_t vcc = ESP.getVcc();
+      DBG_PRINTF("[BATTERY] VCC: %u mV\n", vcc);
 
-  if (t10 < 0) {
-    sprintf(tempStr, "-%d.%d\xF8" "C", (-t10) / 10, (-t10) % 10);
-  } else {
-    sprintf(tempStr, "%d.%d\xF8" "C", t10 / 10, t10 % 10);
+      uint8_t numBars = 0;
+      if (vcc >= 3000) numBars = 4;
+      else if (vcc >= 2800) numBars = 3;
+      else if (vcc >= 2600) numBars = 2;
+      else if (vcc >= 2450) numBars = 1;
+      else numBars = 0;
+
+      for (uint8_t i = 0; i < numBars; i++) {
+        display.fillRect(112 + (i * 3), 6, 2, 4, SSD1306_BLACK);
+      }
+
+      // ── 2. DATI (Zona Azzurra) ──────────────────────────────────
+      display.setTextColor(SSD1306_WHITE);
+
+      char tempStr[10];
+      char humStr[10];
+
+      if (t10 < 0) {
+        sprintf(tempStr, "-%d.%d\xF8" "C", (-t10) / 10, (-t10) % 10);
+      } else {
+        sprintf(tempStr, "%d.%d\xF8" "C", t10 / 10, t10 % 10);
+      }
+      sprintf(humStr, "%d.%d%% RH", h10 / 10, h10 % 10);
+
+      // Temperatura (centrata)
+      display.setTextSize(3);
+      int tempWidth = strlen(tempStr) * 18;
+      display.setCursor((128 - tempWidth) / 2, 22);
+      display.print(tempStr);
+
+      // Umidita (centrata)
+      display.setTextSize(2);
+      int humWidth = strlen(humStr) * 12;
+      display.setCursor((128 - humWidth) / 2, 48);
+      display.print(humStr);
+
+      display.display();
+    }
+
+    uint32_t delayStart = millis();
+    while (millis() - delayStart < 1000UL) {
+      yield();
+    }
   }
-  
-  sprintf(humStr, "%d.%d%% RH", h10 / 10, h10 % 10);
 
-  // Temperatura
-  display.setTextSize(3);
-  int tempLen = strlen(tempStr);
-  int tempWidth = tempLen * 18; 
-  int tempX = (128 - tempWidth) / 2;
-  display.setCursor(tempX, 22);
-  display.print(tempStr);
-
-  // Umidita
-  display.setTextSize(2);
-  int humLen = strlen(humStr);
-  int humWidth = humLen * 12; 
-  int humX = (128 - humWidth) / 2;
-  display.setCursor(humX, 48);
-  display.print(humStr);
-
-  display.display();
-  DBG_PRINTLN(F("[OLED] Attendo 90 s"));
-
-  const uint32_t t0 = millis();
-  while (millis() - t0 < DISP_TIMEOUT_MS) yield();
-
+  // Spegni lo schermo alla fine del ciclo
   display.ssd1306_command(CMD_CHARGEPUMP);
   display.ssd1306_command(CMD_PUMP_OFF);
   display.ssd1306_command(CMD_DISPLAYOFF);
-  DBG_PRINTLN(F("[OLED] Charge pump OFF"));
+  DBG_PRINTLN(F("[OLED] Display spento — standby"));
 }
 
 // =============================================================================
@@ -360,52 +409,108 @@ void setup() {
   WiFi.forceSleepBegin();
 
   DBG_BEGIN(115200);
-  DBG_PRINTLN(F("\n[BOOT] Termoigrometro ESP8266 v2.0 - FAST TEST"));
+  DBG_PRINTLN(F("\n[BOOT] Termoigrometro ESP8266 v2.0"));
 #ifdef DEBUG
   scanI2C();
 #endif
 
+  // ── Leggi contatore dalla RAM RTC ────────────────────────────────────────
   if (!readRTC()) {
-    DBG_PRINTLN(F("[RTC] CRC invalido — reset contatore"));
-    rtcData.counter = 0;
+    // CRC non valido = primo avvio o reset HW totale
+    DBG_PRINTLN(F("[RTC] CRC invalido — primo avvio, contatore azzerato"));
+    rtcCounter.counter = 0;
     writeRTC();
   }
-  if (rtcData.counter > READINGS_PER_SEND * 2u) rtcData.counter = READINGS_PER_SEND;
-  DBG_PRINTF("[RTC] Contatore: %lu / %u\n", rtcData.counter, READINGS_PER_SEND);
+  // Sanity check: evita overflow anomalo
+  if (rtcCounter.counter > 10000u) rtcCounter.counter = READINGS_PER_SEND;
+  DBG_PRINTF("[RTC] Contatore: %lu / %u\n", rtcCounter.counter, READINGS_PER_SEND);
+
+  // ── Leggi flag double-reset dalla RAM RTC (indirizzo separato) ───────────
+  readRTCFlag();
 
   const bool autoWake = isDeepSleepWake();
   DBG_PRINTF("[BOOT] Modalita: %s | SDK: %s\n",
              autoWake ? "AUTO" : "MANUALE", ESP.getResetReason().c_str());
 
+  // ── Rilevamento double-reset ─────────────────────────────────────────────
+  // Se il flag e' MAGIC_AWAIT, significa che al boot precedente (AUTO) abbiamo
+  // aperto la finestra di attesa e l'utente ha premuto RESET → attiva display.
+  bool manualOverride = false;
+  if (rtcFlagWord == MAGIC_AWAIT) {
+    DBG_PRINTLN(F("[BOOT] *** Double-Reset rilevato! Attivo display 10s ***"));
+    manualOverride = true;
+    writeRTCFlag(0);  // Cancella subito il flag
+  }
+
+  // ── Lettura sensore ───────────────────────────────────────────────────────
   int16_t t10, h10;
   if (!readSensor(t10, h10)) {
-    DBG_PRINTLN(F("[ERR] Sensore — mostro errore su display, poi sleep 5s"));
+    DBG_PRINTLN(F("[ERR] Sensore — mostro errore su display, poi sleep 60s"));
+    writeRTCFlag(0);  // Resetta flag in caso di errore
     showError();
     ESP.deepSleep(SLEEP_US, WAKE_RF_DISABLED);
     return;
   }
 
-  saveMeasurement(t10, h10);
-  ++rtcData.counter;
-  writeRTC();
-  DBG_PRINTF("[RTC] Aggiornato: %lu\n", rtcData.counter);
+  // ── Logica Principale ─────────────────────────────────────────────────────
+  if (!manualOverride) {
+    if (autoWake) {
+      // 1. Apri la finestra per il doppio reset PRIMA di salvare.
+      // Se l'utente preme reset ora, il riavvio annulla il salvataggio!
+      writeRTCFlag(MAGIC_AWAIT);
+      DBG_PRINTF("[BOOT] Finestra double-reset aperta (%lu ms)...\n", DISPLAY_WIN_MS);
 
-  if (autoWake) {
-    if (rtcData.counter >= READINGS_PER_SEND) {
-      DBG_PRINTLN(F("[AUTO] Soglia — trasmissione Wi-Fi"));
-      WiFi.forceSleepWake();
-      delay(1);
-      sendWiFiData();
+      const uint32_t t_win = millis();
+      while (millis() - t_win < DISPLAY_WIN_MS) {
+        yield();
+      }
+
+      // Nessun reset ricevuto: cancella il flag
+      writeRTCFlag(0);
+      DBG_PRINTLN(F("[BOOT] Finestra chiusa senza reset."));
+    }
+
+    // 2. Salva misurazione e aggiorna contatore (non era un double-reset)
+    saveMeasurement(t10, h10);
+    ++rtcCounter.counter;
+    writeRTC();
+    DBG_PRINTF("[RTC] Aggiornato: %lu\n", rtcCounter.counter);
+
+    if (autoWake) {
+      // 3a. Avvio automatico da timer: controllo invio Wi-Fi
+      if (rtcCounter.counter >= READINGS_PER_SEND) {
+        DBG_PRINTLN(F("[AUTO] Soglia raggiunta — trasmissione Wi-Fi"));
+        WiFi.forceSleepWake();
+        delay(1);
+        sendWiFiData();
+      } else {
+        DBG_PRINTF("[AUTO] %lu/%u — sleep RF_OFF\n", rtcCounter.counter, READINGS_PER_SEND);
+      }
     } else {
-      DBG_PRINTF("[AUTO] %lu/%u — sleep RF_OFF\n", rtcData.counter, READINGS_PER_SEND);
+      // 3b. Avvio manuale a freddo (USB o power-on): mostra schermo 10s
+      DBG_PRINTLN(F("[MAN] Avvio a freddo — Ciclo Display 10s"));
+      runDisplayCycle(10000UL);
     }
   } else {
-    DBG_PRINTLN(F("[MAN] Display 90s"));
-    showDisplay(t10, h10);
+    // DOUBLE-RESET (manualOverride == true)
+    DBG_PRINTLN(F("[RTC] Double-Reset: saltato salvataggio per evitare letture fittizie (timeline sfasata)"));
+
+    // Mostra schermo 10 secondi
+    DBG_PRINTLN(F("[MAN] Ciclo Display 10s (double-reset)"));
+    runDisplayCycle(10000UL);
   }
 
-  DBG_PRINTLN(F("[BOOT] → deepSleep 5s"));
-  ESP.deepSleep(SLEEP_US, WAKE_RF_DISABLED);
+  uint32_t elapsedMs = millis();
+  uint32_t sleepMs = SLEEP_US / 1000ULL;
+  uint64_t actualSleepUs;
+  if (elapsedMs < sleepMs) {
+    actualSleepUs = (sleepMs - elapsedMs) * 1000ULL;
+  } else {
+    actualSleepUs = 1000000ULL; // Minimo 1 secondo
+  }
+
+  DBG_PRINTF("[BOOT] → deepSleep %llu s (sveglio per %lu ms)\n", actualSleepUs / 1000000ULL, elapsedMs);
+  ESP.deepSleep(actualSleepUs, WAKE_RF_DISABLED);
 }
 
 void loop() { ESP.deepSleep(SLEEP_US, WAKE_RF_DISABLED); }

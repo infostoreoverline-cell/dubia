@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guida Saldatura: SHT40 → ESP8266 | D.U.B.I.A.</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0d1117;
+            --surface: #161b22;
+            --surface2: #21262d;
+            --border: #30363d;
+            --text: #e6edf3;
+            --text-muted: #7d8590;
+            --accent: #f0883e;
+            --accent-blue: #388bfd;
+            --accent-green: #3fb950;
+            --accent-red: #f85149;
+            --accent-yellow: #d29922;
+            --accent-purple: #bc8cff;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+
+        .hero {
+            background: linear-gradient(135deg, #0d1117 0%, #1a1f2e 50%, #0d1117 100%);
+            border-bottom: 1px solid var(--border);
+            padding: 3rem 2rem 2.5rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at 50% 0%, rgba(240,136,62,0.12) 0%, transparent 60%);
+        }
+        .hero-badge {
+            display: inline-block;
+            background: rgba(240,136,62,0.15);
+            border: 1px solid rgba(240,136,62,0.4);
+            color: var(--accent);
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            padding: 0.3rem 1rem;
+            border-radius: 100px;
+            margin-bottom: 1rem;
+            position: relative;
+        }
+        .hero h1 {
+            font-size: clamp(1.8rem, 4vw, 2.8rem);
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent) 0%, #f5c16c 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+            position: relative;
+        }
+        .hero .subtitle { font-size: 1rem; color: var(--text-muted); position: relative; }
+        .hero .subtitle strong { color: var(--text); }
+
+        .alert {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+            padding: 1.2rem 1.5rem;
+            border-radius: 10px;
+            margin: 1.5rem 0;
+        }
+        .alert-danger { background: rgba(248,81,73,0.1); border: 1px solid rgba(248,81,73,0.4); }
+        .alert-warning { background: rgba(210,153,34,0.1); border: 1px solid rgba(210,153,34,0.4); }
+        .alert-success { background: rgba(63,185,80,0.1); border: 1px solid rgba(63,185,80,0.4); }
+        .alert-info { background: rgba(56,139,253,0.1); border: 1px solid rgba(56,139,253,0.4); }
+        .alert-icon { font-size: 1.5rem; flex-shrink: 0; margin-top: 0.1rem; }
+        .alert-body { flex: 1; }
+        .alert-title { font-weight: 700; font-size: 0.9rem; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 0.3rem; }
+        .alert-danger .alert-title { color: var(--accent-red); }
+        .alert-warning .alert-title { color: var(--accent-yellow); }
+        .alert-success .alert-title { color: var(--accent-green); }
+        .alert-info .alert-title { color: var(--accent-blue); }
+        .alert p { font-size: 0.9rem; color: var(--text-muted); }
+        .alert p strong { color: var(--text); }
+
+        .container { max-width: 960px; margin: 0 auto; padding: 2.5rem 2rem; }
+        .section { margin-bottom: 3.5rem; }
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.8rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .step-number {
+            width: 2.2rem; height: 2.2rem;
+            background: linear-gradient(135deg, var(--accent), #f5c16c);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 0.95rem; color: #0d1117; flex-shrink: 0;
+        }
+        .section-header h2 { font-size: 1.3rem; font-weight: 700; color: var(--text); }
+
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; }
+        .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+
+        .component-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+        .component-header { background: var(--surface2); padding: 1rem 1.2rem; border-bottom: 1px solid var(--border); }
+        .component-header h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.2rem; }
+        .component-header .chip { font-size: 0.75rem; color: var(--text-muted); }
+        .component-body { padding: 1rem 1.2rem; }
+        .spec-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0.4rem 0; border-bottom: 1px solid rgba(48,54,61,0.5); font-size: 0.85rem;
+        }
+        .spec-row:last-child { border-bottom: none; }
+        .spec-label { color: var(--text-muted); }
+        .spec-value { font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+        .spec-value.green { color: var(--accent-green); }
+        .spec-value.orange { color: var(--accent); }
+        .spec-value.blue { color: var(--accent-blue); }
+
+        .wiring-diagram { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 2rem; margin: 1.5rem 0; }
+        .wire-connection {
+            display: flex; align-items: stretch; margin-bottom: 1rem;
+            border-radius: 10px; overflow: hidden; border: 1px solid var(--border); transition: transform 0.2s;
+        }
+        .wire-connection:hover { transform: translateX(4px); }
+        .wire-pin {
+            padding: 1rem 1.2rem; font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 0.9rem;
+            min-width: 160px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .wire-pin.sht40 { background: rgba(56,139,253,0.15); color: var(--accent-blue); border-right: 2px solid var(--border); }
+        .wire-pin.esp { background: rgba(240,136,62,0.15); color: var(--accent); border-left: 2px solid var(--border); }
+        .wire-center {
+            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 0.8rem 1rem; gap: 0.3rem; background: var(--surface2);
+        }
+        .wire-color-dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
+        .wire-label { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
+        .wire-desc { font-size: 0.8rem; color: var(--text-muted); text-align: center; }
+        .red-wire { background: #e74c3c; }
+        .black-wire { background: #555; border: 1px solid #888; }
+        .blue-wire { background: #3498db; }
+        .yellow-wire { background: #f1c40f; }
+
+        .i2c-diagram { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin: 1rem 0; }
+        .i2c-boxes { display: flex; align-items: center; justify-content: center; gap: 1rem; flex-wrap: wrap; }
+        .i2c-device {
+            background: var(--surface2); border: 2px solid var(--border); border-radius: 8px;
+            padding: 1rem 1.5rem; min-width: 130px; text-align: center;
+        }
+        .i2c-device.master { border-color: var(--accent); }
+        .i2c-device.slave { border-color: var(--accent-blue); }
+        .i2c-device-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.3rem; }
+        .i2c-device.master .i2c-device-label { color: var(--accent); }
+        .i2c-device.slave .i2c-device-label { color: var(--accent-blue); }
+        .i2c-device-name { font-weight: 700; font-size: 1rem; }
+        .i2c-lines { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; padding: 0 0.5rem; }
+        .i2c-line { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; font-weight: 600; }
+        .i2c-line-bar { width: 60px; height: 3px; border-radius: 2px; }
+        .scl-bar { background: #d29922; }
+        .sda-bar { background: #bc8cff; }
+
+        .steps-list { list-style: none; }
+        .steps-list li { display: flex; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid rgba(48,54,61,0.5); align-items: flex-start; }
+        .steps-list li:last-child { border-bottom: none; }
+        .step-bullet {
+            width: 2rem; height: 2rem; border-radius: 50%;
+            background: var(--surface2); border: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.8rem; font-weight: 700; flex-shrink: 0; color: var(--accent); margin-top: 0.1rem;
+        }
+        .step-content { flex: 1; }
+        .step-content strong { display: block; color: var(--text); margin-bottom: 0.3rem; font-size: 0.95rem; }
+        .step-content p { font-size: 0.85rem; color: var(--text-muted); }
+
+        .tool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.75rem; }
+        .tool-item { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.8rem 1rem; display: flex; align-items: center; gap: 0.7rem; font-size: 0.85rem; }
+        .tool-icon { font-size: 1.3rem; }
+        .tool-name { font-weight: 600; color: var(--text); }
+        .tool-note { font-size: 0.75rem; color: var(--text-muted); }
+
+        .code-block {
+            background: #010409; border: 1px solid var(--border); border-radius: 8px;
+            padding: 1.2rem 1.5rem; font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem; line-height: 1.8; overflow-x: auto; margin: 1rem 0; white-space: pre;
+        }
+        .c { color: #6e7681; }
+        .k { color: #ff7b72; }
+        .s { color: #a5d6ff; }
+        .n { color: #79c0ff; }
+        .f { color: #d2a8ff; }
+        .p { color: #3fb950; font-weight: 600; }
+
+        .pinout-board { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 2rem; margin: 1rem 0; overflow-x: auto; }
+        .board-visual { display: flex; justify-content: center; align-items: flex-start; gap: 3rem; flex-wrap: wrap; }
+        .board-chip { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+        .chip-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 0.3rem; }
+        .chip-body { background: #1c3557; border: 2px solid #2d5a8e; border-radius: 8px; padding: 0.8rem 1.5rem; text-align: center; }
+        .chip-body span { font-weight: 800; color: #7ec8e3; font-size: 0.9rem; }
+        .pin-list { list-style: none; }
+        .pin-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0; font-size: 0.82rem; }
+        .pin-box {
+            background: var(--surface2); border: 1px solid var(--border); border-radius: 4px;
+            padding: 0.25rem 0.6rem; font-family: 'JetBrains Mono', monospace; font-weight: 600;
+            font-size: 0.78rem; min-width: 90px; text-align: center;
+        }
+        .pin-box.vcc { border-color: #e74c3c; color: #e74c3c; background: rgba(231,76,60,0.1); }
+        .pin-box.gnd { border-color: #888; color: #aaa; background: rgba(85,85,85,0.1); }
+        .pin-box.sda { border-color: #3498db; color: #3498db; background: rgba(52,152,219,0.1); }
+        .pin-box.scl { border-color: #f1c40f; color: #f1c40f; background: rgba(241,196,15,0.1); }
+        .pin-arrow { color: var(--text-muted); }
+        .pin-desc { color: var(--text-muted); font-size: 0.78rem; }
+
+        .checklist { list-style: none; }
+        .checklist li { display: flex; align-items: flex-start; gap: 0.7rem; padding: 0.55rem 0; font-size: 0.88rem; border-bottom: 1px solid rgba(48,54,61,0.4); color: var(--text-muted); }
+        .checklist li:last-child { border-bottom: none; }
+        .check-icon { font-size: 1rem; flex-shrink: 0; }
+
+        .highlight { color: var(--accent); font-weight: 600; }
+        .hl-blue { color: var(--accent-blue); font-weight: 600; }
+        .hl-green { color: var(--accent-green); font-weight: 600; }
+        .hl-red { color: var(--accent-red); font-weight: 600; }
+        .hl-yellow { color: var(--accent-yellow); font-weight: 600; }
+
+        footer { background: var(--surface); border-top: 1px solid var(--border); padding: 1.5rem 2rem; text-align: center; color: var(--text-muted); font-size: 0.8rem; }
+
+        @media (max-width: 600px) {
+            .wire-pin { min-width: 90px; font-size: 0.78rem; }
+            .board-visual { gap: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="hero">
+    <div class="hero-badge">📋 Guida Hardware D.U.B.I.A. v1.0</div>
+    <h1>Guida Completa alla Saldatura</h1>
+    <p class="subtitle">Collegamento <strong>Sensore SHT40</strong> → <strong>ESP8266 (NodeMCU / Wemos D1 Mini)</strong><br>
+    Ogni passo spiegato nel dettaglio. Nessuna assunzione. Nessuna omissione.</p>
+</div>
+
+<div class="container">
+
+    <div class="alert alert-danger">
+        <div class="alert-icon">⚡</div>
+        <div class="alert-body">
+            <div class="alert-title">Regola Zero — Leggi Prima di Toccare Qualsiasi Cosa</div>
+            <p><strong>Non collegare mai l'ESP8266 al computer tramite USB mentre stai saldando o costruendo il circuito.</strong>
+            Il sensore SHT40 è un componente delicato. Una tensione sbagliata o un cortocircuito anche per un solo secondo
+            può bruciarlo istantaneamente e in modo irreparabile. La corrente non perdona e non avvisa.</p>
+        </div>
+    </div>
+
+    <!-- SEZIONE 0 -->
+    <div class="section">
+        <div class="section-header">
+            <div class="step-number">0</div>
+            <h2>Chi sono i protagonisti — Conosci i tuoi componenti</h2>
+        </div>
+        <p style="color:var(--text-muted);margin-bottom:1.5rem;font-size:0.9rem;">
+            Prima di collegare qualsiasi filo, è fondamentale sapere con precisione cosa hai in mano.
+        </p>
+        <div class="card-grid">
+            <div class="component-card">
+                <div class="component-header">
+                    <h3>🌡️ Sensore SHT40</h3>
+                    <div class="chip">Produttore: Sensirion — Protocollo: I2C</div>
+                </div>
+                <div class="component-body">
+                    <div class="spec-row"><span class="spec-label">Funzione</span><span class="spec-value orange">Temperatura + Umidità</span></div>
+                    <div class="spec-row"><span class="spec-label">Tensione alimentazione</span><span class="spec-value green">3.3V (massimo 3.6V)</span></div>
+                    <div class="spec-row"><span class="spec-label">Tensione logica I/O</span><span class="spec-value green">3.3V ✓ compatibile ESP</span></div>
+                    <div class="spec-row"><span class="spec-label">Corrente assorbita</span><span class="spec-value blue">~0.4 µA (sleep) / 1 mA (misura)</span></div>
+                    <div class="spec-row"><span class="spec-label">Protocollo</span><span class="spec-value">I2C (2 fili di dati)</span></div>
+                    <div class="spec-row"><span class="spec-label">Indirizzo I2C</span><span class="spec-value blue">0x44 (default) / 0x45</span></div>
+                    <div class="spec-row"><span class="spec-label">Pin fisici totali</span><span class="spec-value">4: VCC, GND, SDA, SCL</span></div>
+                </div>
+            </div>
+            <div class="component-card">
+                <div class="component-header">
+                    <h3>📡 ESP8266 (es. Wemos D1 Mini)</h3>
+                    <div class="chip">Produttore: Espressif — Scheda: Wemos / NodeMCU</div>
+                </div>
+                <div class="component-body">
+                    <div class="spec-row"><span class="spec-label">Funzione</span><span class="spec-value orange">Microcontrollore WiFi</span></div>
+                    <div class="spec-row"><span class="spec-label">Tensione alimentazione</span><span class="spec-value green">5V via USB / 3.3V via pin</span></div>
+                    <div class="spec-row"><span class="spec-label">Tensione uscita 3.3V</span><span class="spec-value green">Pin "3V3" → 3.3V regolati</span></div>
+                    <div class="spec-row"><span class="spec-label">Tensione logica I/O</span><span class="spec-value green">3.3V (NON è 5V-tolerant!)</span></div>
+                    <div class="spec-row"><span class="spec-label">Pin I2C SDA (default)</span><span class="spec-value blue">D2 (GPIO 4)</span></div>
+                    <div class="spec-row"><span class="spec-label">Pin I2C SCL (default)</span><span class="spec-value blue">D1 (GPIO 5)</span></div>
+                    <div class="spec-row"><span class="spec-label">Pin massa</span><span class="spec-value">GND (ne hai più di uno)</span></div>
+                </div>
+            </div>
+        </div>
+        <div class="alert alert-info">
+            <div class="alert-icon">ℹ️</div>
+            <div class="alert-body">
+                <div class="alert-title">Nota Fondamentale sulla Tensione</div>
+                <p>Il pin <strong>"5V"</strong> (o "VIN") dell'ESP esce direttamente dall'USB: fornisce 5 Volt.
+                Il pin <strong>"3V3"</strong> è connesso a un regolatore di tensione interno che converte quei 5V in 3.3V stabili.
+                <strong>Devi usare SEMPRE e SOLO il pin 3V3</strong> per alimentare l'SHT40.
+                Collegarlo al 5V lo brucia istantaneamente in modo permanente.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SEZIONE 1 -->
+    <div class="section">
+        <div class="section-header">
+            <div class="step-number">1</div>
+            <h2>Materiali e Strumenti — Cosa ti serve prima di iniziare</h2>
+        </div>
+        <div class="tool-grid">
+            <div class="tool-item"><div class="tool-icon">🔧</div><div><div class="tool-name">Saldatore</div><div class="tool-note">Punta fine, circa 330-350°C</div></div></div>
+            <div class="tool-item"><div class="tool-icon">🪡</div><div><div class="tool-name">Stagno per saldature</div><div class="tool-note">Con flux integrato, diametro 0.6–1mm</div></div></div>
+            <div class="tool-item"><div class="tool-icon">✂️</div><div><div class="tool-name">Tronchesino</div><div class="tool-note">Per tagliare le piedine in eccesso</div></div></div>
+            <div class="tool-item"><div class="tool-icon">🔌</div><div><div class="tool-name">4 fili jumper</div><div class="tool-note">Consigliati: rosso, nero, blu, giallo</div></div></div>
+            <div class="tool-item"><div class="tool-icon">🧲</div><div><div class="tool-name">Terza mano / morsa</div><div class="tool-note">Per tenere ferma la scheda</div></div></div>
+            <div class="tool-item"><div class="tool-icon">🔍</div><div><div class="tool-name">Lente di ingrandimento</div><div class="tool-note">Opzionale ma consigliata vivamente</div></div></div>
+            <div class="tool-item"><div class="tool-icon">🧹</div><div><div class="tool-name">Alcool isopropilico</div><div class="tool-note">Per pulire i residui di flux</div></div></div>
+            <div class="tool-item"><div class="tool-icon">🖥️</div><div><div class="tool-name">PC con Arduino IDE</div><div class="tool-note">Per la verifica finale del collegamento</div></div></div>
+        </div>
+        <div class="alert alert-warning" style="margin-top:1.2rem;">
+            <div class="alert-icon">⚠️</div>
+            <div class="alert-body">
+                <div class="alert-title">Sicurezza Termica</div>
+                <p>Usa il saldatore il tempo strettamente necessario.
+                <strong>Non tenere la punta a contatto con un pad per più di 3-4 secondi consecutivi.</strong>
+                Il calore eccessivo può staccare il pad dal circuito stampato o danneggiare il componente.
+                Se non riesci a fare la saldatura in tempo, aspetta che si raffreddi e riprova.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SEZIONE 2 -->
+    <div class="section">
+        <div class="section-header">
+            <div class="step-number">2</div>
+            <h2>Perché solo 4 fili? — Capire il protocollo I2C</h2>
+        </div>
+        <p style="color:var(--text-muted);margin-bottom:1.2rem;font-size:0.9rem;">
+            Il sensore SHT40 comunica con l'ESP8266 tramite un protocollo chiamato <span class="highlight">I2C</span>
+            (si pronuncia "I-squared-C" o "I-due-C"). Capire come funziona ti chiarirà il perché di ogni filo.
+        </p>
+        <div class="card">
+            <p style="font-size:0.9rem;color:var(--text-muted);margin-bottom:1.2rem;">
+                Invece di un filo separato per ogni tipo di informazione, I2C usa solo
+                <strong style="color:var(--text)">2 fili di dati</strong> per far comunicare insieme molti sensori.
+                I quattro fili totali hanno questi ruoli precisi:
+            </p>
+            <div class="i2c-diagram">
+                <div class="i2c-boxes">
+                    <div class="i2c-device master">
+                        <div class="i2c-device-label">Master (Comanda)</div>
+                        <div class="i2c-device-name">ESP8266</div>
+                    </div>
+                    <div class="i2c-lines">
+                        <div class="i2c-line">
+                            <div class="i2c-line-bar scl-bar"></div>
+                            <span style="color:#d29922;font-size:0.75rem;">SCL</span>
+                            <div class="i2c-line-bar scl-bar"></div>
+                        </div>
+                        <div class="i2c-line">
+                            <div class="i2c-line-bar sda-bar"></div>
+                            <span style="color:#bc8cff;font-size:0.75rem;">SDA</span>
+                            <div class="i2c-line-bar sda-bar"></div>
+                        </div>
+                    </div>
+                    <div class="i2c-device slave">
+                        <div class="i2c-device-label">Slave (Risponde)</div>
+                        <div class="i2c-device-name">SHT40</div>
+                    </div>
+                </div>
+                <p style="margin-top:1rem;font-size:0.78rem;color:var(--text-muted);text-align:center;">+ 2 fili di alimentazione: VCC e GND (corrono paralleli, non trasportano dati)</p>
+            </div>
+            <div class="spec-row"><span class="spec-label">🔴 VCC (Power)</span><span class="spec-value" style="color:var(--text);font-family:inherit;">Alimentazione elettrica. Porta la corrente al sensore. Senza di lui l'SHT40 è completamente spento.</span></div>
+            <div class="spec-row"><span class="spec-label">⚫ GND (Ground)</span><span class="spec-value" style="color:var(--text);font-family:inherit;">Massa / terra. È il ritorno della corrente e il punto di riferimento comune. È INDISPENSABILE.</span></div>
+            <div class="spec-row"><span class="spec-label" style="color:#d29922;">🟡 SCL (Clock) — filo GIALLO</span><span class="spec-value" style="color:var(--text);font-family:inherit;">Orologio. L'ESP "batte il tempo" su questo filo per sincronizzare ogni scambio di dati.</span></div>
+            <div class="spec-row"><span class="spec-label" style="color:#3fb950;">🟢 SDA (Data) — filo VERDE</span><span class="spec-value" style="color:var(--text);font-family:inherit;">Dati. Su questo filo viaggiano temperatura e umidità, in entrambe le direzioni.</span></div>
+        </div>
+        <div class="alert alert-info">
+            <div class="alert-icon">💡</div>
+            <div class="alert-body">
+                <div class="alert-title">Resistori di Pull-Up — Non devi preoccupartene</div>
+                <p>Il protocollo I2C richiede tecnicamente dei resistori da 4.7kΩ sulle linee SDA e SCL.
+                <strong>Se stai usando un breakout board (la piccola PCB verde) con l'SHT40, questi resistori sono già
+                saldati sulla scheda dal produttore.</strong> Non devi aggiungere assolutamente nulla.
+                Se invece hai il chip SHT40 nudo (il minuscolo componente SMD senza scheda PCB), allora sì, dovresti aggiungerli —
+                ma è un caso molto raro nei progetti maker.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SEZIONE 3 -->
+    <div class="section">
+        <div class="section-header">
+            <div class="step-number">3</div>
+            <h2>Schema dei Collegamenti — Il cuore della guida</h2>
+        </div>
+        <p style="color:var(--text-muted);margin-bottom:1.2rem;font-size:0.9rem;">
+            Questa è la tabella di verità del tuo circuito. Ogni riga = un filo fisico.
+            Leggi da sinistra (pin del sensore) a destra (pin dove va collegato sull'ESP).
+        </p>
+        <div class="wiring-diagram">
+            <div style="display:flex;justify-content:space-between;margin-bottom:1.2rem;padding:0 0.5rem;flex-wrap:wrap;gap:0.5rem;">
+                <span style="font-size:0.85rem;font-weight:700;color:var(--accent-blue);">🔵 FILO SONDA SHT40</span>
+                <span style="font-size:0.85rem;font-weight:700;color:var(--text-muted);">COLORE CONFERMATO DAL PRODUTTORE</span>
+                <span style="font-size:0.85rem;font-weight:700;color:var(--accent);">🟠 PIN ESP8266 (Versione con Display OLED)</span>
+            </div>
+
+            <div class="wire-connection">
+                <div class="wire-pin sht40">VCC<br><small style="font-weight:400;opacity:0.7;">Alimentazione +</small></div>
+                <div class="wire-center">
+                    <div class="wire-color-dot red-wire"></div>
+                    <span class="wire-label">Filo ROSSO ✓ confermato</span>
+                    <span class="wire-desc">3.3 Volt di alimentazione<br><strong style="color:var(--accent-red);">NON usare il pin VU!</strong></span>
+                </div>
+                <div class="wire-pin esp">3V<br><small style="font-weight:400;opacity:0.7;">Lato SINISTRO — 1° buco in alto<br>(Quello più vicino alla Type-C)</small></div>
+            </div>
+
+            <div class="wire-connection">
+                <div class="wire-pin sht40">GND<br><small style="font-weight:400;opacity:0.7;">Massa</small></div>
+                <div class="wire-center">
+                    <div class="wire-color-dot black-wire"></div>
+                    <span class="wire-label">Filo NERO ✓ confermato</span>
+                    <span class="wire-desc">Massa comune — terra elettrica</span>
+                </div>
+                <div class="wire-pin esp">G<br><small style="font-weight:400;opacity:0.7;">Lato SINISTRO — 2° buco in alto<br>(Subito sotto al filo rosso)</small></div>
+            </div>
+
+            <div class="wire-connection">
+                <div class="wire-pin sht40">SDA<br><small style="font-weight:400;opacity:0.7;">Serial Data</small></div>
+                <div class="wire-center">
+                    <div class="wire-color-dot" style="background:#27ae60;"></div>
+                    <span class="wire-label">Filo VERDE ✓ confermato</span>
+                    <span class="wire-desc">Dati bidirezionali I2C</span>
+                </div>
+                <div class="wire-pin esp">D2<br><small style="font-weight:400;opacity:0.7;">Lato SINISTRO — 13° buco contando dalla Type-C</small></div>
+            </div>
+
+            <div class="wire-connection">
+                <div class="wire-pin sht40">SCL<br><small style="font-weight:400;opacity:0.7;">Serial Clock</small></div>
+                <div class="wire-center">
+                    <div class="wire-color-dot yellow-wire"></div>
+                    <span class="wire-label">Filo GIALLO ✓ confermato</span>
+                    <span class="wire-desc">Segnale di clock / sincronismo</span>
+                </div>
+                <div class="wire-pin esp">D1<br><small style="font-weight:400;opacity:0.7;">Lato SINISTRO — 14° buco contando dalla Type-C</small></div>
+            </div>
+        </div>
+
+        <div class="alert alert-danger">
+            <div class="alert-icon">🚨</div>
+            <div class="alert-body">
+                <div class="alert-title">Filo ROSSO all'ESP: usa 3V, MAI VU!</div>
+                <p>Sulla tua scheda specifica, l'alimentazione a 3.3V è etichettata come <strong>3V</strong> (lato sinistro).
+                Il pin <strong>VU</strong> (che si trova in basso a destra) fornisce i 5V diretti dell'USB:
+                <strong>collegare lì il filo rosso brucia l'SHT40 istantaneamente e in modo permanente.</strong></p>
+            </div>
+        </div>
+        
+        <div class="alert alert-info" style="margin-top: 1rem;">
+            <div class="alert-icon">📺</div>
+            <div class="alert-body">
+                <div class="alert-title">Nota sul Display OLED integrato</div>
+                <p>La tua scheda ha un piccolo schermo OLED integrato. Anche lo schermo comunica tramite i pin D1 e D2! 
+                <strong>È un problema? Assolutamente NO.</strong> Il protocollo I2C è fatto apposta per collegare più sensori agli stessi due cavi, basta che abbiano "indirizzi" diversi.
+                Puoi saldare tranquillamente i fili verde e giallo su D1 e D2: il sensore e lo schermo convivranno pacificamente.</p>
+            </div>
+        </div>
+
+        <div class="alert alert-warning" style="margin-top: 1rem; border-left: 5px solid #d29922; background: rgba(210, 153, 34, 0.1);">
+            <div class="alert-icon">⚠️</div>
+            <div class="alert-body">
+                <div class="alert-title" style="color: #d29922;">Perché ci sono due scritte "3V"?</div>
+                <p>Sul lato sinistro vedrai due scritte <strong>3V</strong> (al 1° buco e al 10° buco). Sono collegate internamente sulla scheda. 
+                Per semplicità, salda il filo <strong>ROSSO</strong> sul <strong>1° buco in alto</strong> (quello più vicino alla porta USB Type-C).</p>
+            </div>
+        </div>
+
+        <div class="pinout-board">
+            <h3 style="font-size:0.85rem;font-weight:700;margin-bottom:1.5rem;color:var(--text-muted);text-align:center;text-transform:uppercase;letter-spacing:0.1em;">Riferimento Rapido — Pin Fisici Scheda OLED</h3>
+            <div class="board-visual">
+                <div class="board-chip">
+                    <div class="chip-label">Cavo Sonda SHT40</div>
+                    <div class="chip-body"><span>SHT40 🌡️</span></div>
+                    <ul class="pin-list" style="margin-top:0.8rem;">
+                        <li class="pin-row"><div class="pin-box vcc" style="min-width:110px;">🔴 ROSSO = VCC</div><span class="pin-arrow">→</span><span class="pin-desc">Alimentazione 3.3V</span></li>
+                        <li class="pin-row"><div class="pin-box gnd" style="min-width:110px;">⚫ NERO = GND</div><span class="pin-arrow">→</span><span class="pin-desc">Massa</span></li>
+                        <li class="pin-row"><div class="pin-box sda" style="min-width:110px;border-color:#27ae60;color:#27ae60;background:rgba(39,174,96,0.1);">🟢 VERDE = SDA</div><span class="pin-arrow">→</span><span class="pin-desc">Serial Data</span></li>
+                        <li class="pin-row"><div class="pin-box scl" style="min-width:110px;">🟡 GIALLO = SCL</div><span class="pin-arrow">→</span><span class="pin-desc">Serial Clock</span></li>
+                    </ul>
+                </div>
+                <div style="font-size:2rem;color:var(--text-muted);align-self:center;">⟷</div>
+                <div class="board-chip">
+                    <div class="chip-label">ESP8266 OLED (HW-364A)</div>
+                    <div class="chip-body"><span>ESP + OLED 📺</span></div>
+                    <ul class="pin-list" style="margin-top:0.8rem;">
+                        <li class="pin-row"><div class="pin-box vcc" style="min-width:90px;">3V</div><span class="pin-arrow">←</span><span class="pin-desc">Lato SX, 1° buco (più vicino a USB)</span></li>
+                        <li class="pin-row"><div class="pin-box gnd" style="min-width:90px;">G</div><span class="pin-arrow">←</span><span class="pin-desc">Lato SX, 2° buco dall'alto</span></li>
+                        <li class="pin-row"><div class="pin-box sda" style="min-width:90px;border-color:#27ae60;color:#27ae60;background:rgba(39,174,96,0.1);">D2</div><span class="pin-arrow">←</span><span class="pin-desc">Lato SX, 13° buco dall'alto</span></li>
+                        <li class="pin-row"><div class="pin-box scl" style="min-width:90px;">D1</div><span class="pin-arrow">←</span><span class="pin-desc">Lato SX, 14° buco dall'alto</span></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div style="margin-top: 2rem; background: var(--surface2); padding: 1.5rem; border-radius: 8px; border: 1px dashed var(--border);">
+                <h4 style="margin-bottom: 1rem; color: var(--accent); text-align: center; font-size: 1.2rem;">SCHEMA COMPLETO SCHEDA (ESP8266 + OLED)</h4>
+                <p style="font-size: 0.9rem; margin-bottom: 2rem; text-align: center; color: var(--text-muted);">
+                    Ecco la mappa di <strong>tutti</strong> i pin presenti sulla tua scheda.<br>
+                    Tieni la scheda con lo <strong>schermo nero verso di te</strong> e la <strong>porta USB Type-C in ALTO</strong>.
+                </p>
+
+                <div style="display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap;">
+                    
+                    <!-- LATO SINISTRO -->
+                    <div style="flex: 1; min-width: 300px;">
+                        <h5 style="text-align: center; margin-bottom: 1rem; color: white; background: #30363d; padding: 0.5rem; border-radius: 4px;">LATO SINISTRO<br><small style="font-weight: 400; opacity: 0.7;">(Colonna dove devi saldare)</small></h5>
+                        <ul style="list-style: none; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; padding: 0;">
+                            
+                            <li style="display: flex; align-items: center; justify-content: space-between; padding: 0.5rem; border-bottom: 1px solid var(--border); background: rgba(248, 81, 73, 0.1);">
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <span style="color: var(--text-muted); width: 20px;">1</span>
+                                    <strong style="color: white; width: 30px;">3V</strong>
+                                    <span style="color: var(--text-muted); font-size: 0.75rem;">Alimentazione 3.3V</span>
+                                </div>
+                                <strong style="color: var(--accent-red);">← 🔴 FILO ROSSO</strong>
+                            </li>
+                            
+                            <li style="display: flex; align-items: center; justify-content: space-between; padding: 0.5rem; border-bottom: 1px solid var(--border); background: rgba(255, 255, 255, 0.05);">
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <span style="color: var(--text-muted); width: 20px;">2</span>
+                                    <strong style="color: white; width: 30px;">G</strong>
+                                    <span style="color: var(--text-muted); font-size: 0.75rem;">Massa (GND)</span>
+                                </div>
+                                <strong>← ⚫ FILO NERO</strong>
+                            </li>
+
+                            <li style="display: flex; align-items: center; justify-content: space-between; padding: 0.5rem; border-bottom: 1px solid var(--border); opacity: 0.6;">
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <span style="color: var(--text-muted); width: 20px;">3</span>
+                                    <strong style="color: white; width: 30px;">TX</strong>
+                                    <span style="color: var(--text-muted); font-size: 0.75rem;">Trasmissione Dati Seriale</span>
+                                </div>
+                                <span style="font-size: 0.75rem;">(Vuoto)</span>
+                            </li>
+                            <li style="display: flex; align-items: center; justify-content: space-between; padding: 0.5rem; border-bottom: 1px solid var(--border); opacity: 0.6;">
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <span style="color: var(--text-muted); width: 20px;">4</span>
+                                    <strong style="color: white; width: 30px;">RX</strong>
+                                    <span style="color: var(--text-muted); font-size: 0.75rem;">Ricezione Dati Seriale</span>
+                                </div>
+                                <span style="font-size: 0.75rem;">(Vuoto)</span>
+                            </li>
+                            <li style="display: flex; align-items: center; justify-content: space-between; padding: 0.5rem; border-bottom: 1px solid var(--border); opacity: 0.6;">
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <span style="color: var(--text-muted); width: 20px;">5</span>
+                                    <strong style="color: white; width: 30px;">D8</strong>
+                                    <span style="color: var(--text-muted); font-size: 0.75rem;">GPIO 15</span>
+                                </div>
+                                <span style="font-size: 0.75rem;">(Vuoto)</span>
+                            </li>
+                            <li style="display: flex; align-items: center; justify-content: space-between; padding: 0.5rem; border-bottom: 1px solid var(--border); opacity: 0.6;">
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <span style="color: var(--text-muted); width: 20px;">6</span>
+                                    <strong style="color: white; width: 30px;">D7</strong>
+                                    <span style="color: var(--text-muted); font-size: 0.75rem;">GPIO 13</span>
+                                </div>
+                                <span style="font-size: 0.75rem;">(Vuoto)</span>
+                            </li>
+                            <li style="display: flex; align-items: center; justify-content: space-between; padding: 0.5rem; border-bottom: 1px solid var(--border); opacity: 0.6;">
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <span style="color: var(--text-muted); width: 20px;">7</span>
+                                    <strong style="color: white; width: 30px;">D6</strong>
+                                    <span style="color: var(--text-muted); font-size: 0.75rem;">GPIO 12</span>
+                                </div>
+                                <span style="font-size: 0.75rem;">(Vuoto)</span>
+                            </li>
+                            <li style="display: flex; align-items: center; justify-content: space-between; padding: 0.5rem; border-bottom: 1px solid var(--border); opacity: 0.6;">
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <span style="color: var(--text-muted); width: 20px;">8</span>
+                                    <strong style="color: white; width: 30px;">D5</strong>
+                                    <span style="color: var(--text-muted); font-size: 0.75rem;">GPIO 14</span>
+                                </div>
+                                <span style="font-size: 0.75rem;">(Vuoto)</span>
+                            </li>
+                            <li style="display: flex; align-items: center; justify-content: space-between; padding: 0.5rem; border-bottom: 1px solid var(--border); opacity: 0.6;">
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <span style="color: var(--text-muted); width: 20px;">9</span>
+                                    <strong style="color: white; width: 30px;">G</strong>
+                                    <span style="color: var(--text-muted); font-size: 0.75rem;">Massa (GND)</span>
+                                </div>
+                                <span style="font-size: 0.75rem;">(Vuoto)</span>
+                            </li>
+                            <li style="display: flex; align-items: center; justify-content: space-between; padding: 0.5rem; border-bottom: 1px solid var(--border); opacity: 0.6;">
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <span style="color: var(--text-muted); width: 20px;">10</span>
+                                    <strong style="color: white; width: 30px;">3V</strong>
+                                    <span style="color: var(--text-muted); font-size: 0.75rem;">Alimentazione 3.3V</span>
+                                </div>
+                                <span style="font-size: 0.75rem;">(Vuoto)</span>
+                            </li>
+                            <li style="display: flex; align-items: center; justify-content: space-between; padding: 0.5rem; border-bottom: 1px solid var(--border); opacity: 0.6;">
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <span style="color: var(--text-muted); width: 20px;">11</span>
+                                    <strong style="color: white; width: 30px;">D4</strong>
+                                    <span style="color: var(--text-muted); font-size: 0.75rem;">GPIO 2</span>
+                                </div>
+                                <span style="font-size: 0.75rem;">(Vuoto)</span>
+                            </li>
+                            <li style="display: flex; align-items: center; justify-content: space-between; padding: 0.5rem; border-bottom: 1px solid var(--border); opacity: 0.6;">
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <span style="color: var(--text-muted); width: 20px;">12</span>
+                                    <strong style="color: white; width: 30px;">D3</strong>
+                                    <span style="color: var(--text-muted); font-size: 0.75rem;">GPIO 0 (Pulsante FLASH)</span>
+                                </div>
+                                <span style="font-size: 0.75rem;">(Vuoto)</span>
+                            </li>
+                            
+                            <li style="display: flex; align-items: center; justify-content: space-between; padding: 0.5rem; border-bottom: 1px solid var(--border); background: rgba(39, 174, 96, 0.1);">
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <span style="color: var(--text-muted); width: 20px;">13</span>
+                                    <strong style="color: white; width: 30px;">D2</strong>
+                                    <span style="color: var(--text-muted); font-size: 0.75rem;">I2C SDA (Dati)</span>
+                                </div>
+                                <strong style="color: var(--accent-green);">← 🟢 FILO VERDE</strong>
+                            </li>
+                            
+                            <li style="display: flex; align-items: center; justify-content: space-between; padding: 0.5rem; border-bottom: 1px solid var(--border); background: rgba(210, 153, 34, 0.1);">
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <span style="color: var(--text-muted); width: 20px;">14</span>
+                                    <strong style="color: white; width: 30px;">D1</strong>
+                                    <span style="color: var(--text-muted); font-size: 0.75rem;">I2C SCL (Clock)</span>
+                                </div>
+                                <strong style="color: var(--accent-yellow);">← 🟡 FILO GIALLO</strong>
+                            </li>
+
+                            <li style="display: flex; align-items: center; justify-content: space-between; padding: 0.5rem; opacity: 0.6;">
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <span style="color: var(--text-muted); width: 20px;">15</span>
+                                    <strong style="color: white; width: 30px;">D0</strong>
+                                    <span style="color: var(--text-muted); font-size: 0.75rem;">GPIO 16 (Wake)</span>
+                                </div>
+                                <span style="font-size: 0.75rem;">(Vuoto)</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- LATO DESTRO -->
+                    <div style="flex: 1; min-width: 300px; opacity: 0.7;">
+                        <h5 style="text-align: center; margin-bottom: 1rem; color: var(--text-muted); background: #21262d; padding: 0.5rem; border-radius: 4px;">LATO DESTRO<br><small style="font-weight: 400; opacity: 0.7;">(Lascia tutto vuoto)</small></h5>
+                        <ul style="list-style: none; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; padding: 0;">
+                            <li style="display: flex; gap: 10px; padding: 0.5rem; border-bottom: 1px solid var(--border);">
+                                <strong style="color: white; width: 30px;">VIN</strong>
+                                <span style="color: var(--text-muted); font-size: 0.75rem;">Alimentazione 5V generica</span>
+                            </li>
+                            <li style="display: flex; gap: 10px; padding: 0.5rem; border-bottom: 1px solid var(--border);">
+                                <strong style="color: white; width: 30px;">G</strong>
+                                <span style="color: var(--text-muted); font-size: 0.75rem;">Massa (GND)</span>
+                            </li>
+                            <li style="display: flex; gap: 10px; padding: 0.5rem; border-bottom: 1px solid var(--border);">
+                                <strong style="color: white; width: 30px;">RST</strong>
+                                <span style="color: var(--text-muted); font-size: 0.75rem;">Reset della scheda</span>
+                            </li>
+                            <li style="display: flex; gap: 10px; padding: 0.5rem; border-bottom: 1px solid var(--border);">
+                                <strong style="color: white; width: 30px;">EN</strong>
+                                <span style="color: var(--text-muted); font-size: 0.75rem;">Chip Enable (Accensione)</span>
+                            </li>
+                            <li style="display: flex; gap: 10px; padding: 0.5rem; border-bottom: 1px solid var(--border);">
+                                <strong style="color: white; width: 30px;">SK</strong>
+                                <span style="color: var(--text-muted); font-size: 0.75rem;">Memoria Flash Interna (Non usare)</span>
+                            </li>
+                            <li style="display: flex; gap: 10px; padding: 0.5rem; border-bottom: 1px solid var(--border);">
+                                <strong style="color: white; width: 30px;">S0</strong>
+                                <span style="color: var(--text-muted); font-size: 0.75rem;">Memoria Flash Interna (Non usare)</span>
+                            </li>
+                            <li style="display: flex; gap: 10px; padding: 0.5rem; border-bottom: 1px solid var(--border);">
+                                <strong style="color: white; width: 30px;">SC</strong>
+                                <span style="color: var(--text-muted); font-size: 0.75rem;">Memoria Flash Interna (Non usare)</span>
+                            </li>
+                            <li style="display: flex; gap: 10px; padding: 0.5rem; border-bottom: 1px solid var(--border);">
+                                <strong style="color: white; width: 30px;">S1</strong>
+                                <span style="color: var(--text-muted); font-size: 0.75rem;">Memoria Flash Interna (Non usare)</span>
+                            </li>
+                            <li style="display: flex; gap: 10px; padding: 0.5rem; border-bottom: 1px solid var(--border);">
+                                <strong style="color: white; width: 30px;">S2</strong>
+                                <span style="color: var(--text-muted); font-size: 0.75rem;">Memoria Flash Interna (Non usare)</span>
+                            </li>
+                            <li style="display: flex; gap: 10px; padding: 0.5rem; border-bottom: 1px solid var(--border);">
+                                <strong style="color: white; width: 30px;">S3</strong>
+                                <span style="color: var(--text-muted); font-size: 0.75rem;">Memoria Flash Interna (Non usare)</span>
+                            </li>
+                            <li style="display: flex; gap: 10px; padding: 0.5rem; border-bottom: 1px solid var(--border); color: var(--accent-red);">
+                                <strong style="color: var(--accent-red); width: 30px;">VU</strong>
+                                <span style="font-size: 0.75rem;">5 Volts Diretti dalla porta USB (BRUCIA IL SENSORE!)</span>
+                            </li>
+                            <li style="display: flex; gap: 10px; padding: 0.5rem; border-bottom: 1px solid var(--border);">
+                                <strong style="color: white; width: 30px;">G</strong>
+                                <span style="color: var(--text-muted); font-size: 0.75rem;">Massa (GND)</span>
+                            </li>
+                            <li style="display: flex; gap: 10px; padding: 0.5rem;">
+                                <strong style="color: white; width: 30px;">A0</strong>
+                                <span style="color: var(--text-muted); font-size: 0.75rem;">Input Analogico (es. per misurare voltaggi)</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SEZIONE 4 -->
+    <div class="section">
+        <div class="section-header">
+            <div class="step-number">4</div>
+            <h2>Procedura di Saldatura — Passo dopo Passo</h2>
+        </div>
+        <ul class="steps-list">
+            <li>
+                <div class="step-bullet">A</div>
+                <div class="step-content">
+                    <strong>Stacca tutto e lavora a freddo</strong>
+                    <p>Assicurati che l'ESP8266 <strong>NON sia collegato al computer</strong> né a nessuna fonte di alimentazione.
+                    Il sensore SHT40 deve essere sul banco di lavoro, completamente inerte. Non c'è fretta.</p>
+                </div>
+            </li>
+            <li>
+                <div class="step-bullet">B</div>
+                <div class="step-content">
+                    <strong>Identifica i pin fisici sul breakout dell'SHT40</strong>
+                    <p>Sul bordo della piccola PCB del sensore troverai 4 pad o fori etichettati:
+                    <span class="highlight">VCC</span>, <span class="highlight">GND</span>,
+                    <span class="hl-blue">SDA</span>, <span class="hl-yellow">SCL</span>.
+                    La serigrafia bianca sul PCB verde è la tua mappa. Se la scritta è piccola, usa la lente. Non indovinare mai.</p>
+                </div>
+            </li>
+            <li>
+                <div class="step-bullet">C</div>
+                <div class="step-content">
+                    <strong>Salda i pin header (se non sono già presenti)</strong>
+                    <p>Se la breakout board ha già i pin metallici saldati, salta questo punto. Se ha solo i fori nudi,
+                    inserisci dei pin header dritti nei fori, scalda ogni foro per 2-3 secondi col saldatore e aggiungi un tocco di stagno.
+                    Una saldatura perfetta è <strong>lucida e a forma di cono</strong>. Se è opaca o sferica è una "saldatura fredda": rifalla.</p>
+                </div>
+            </li>
+            <li>
+                <div class="step-bullet">D</div>
+                <div class="step-content">
+                    <strong>Prepara i 4 fili con le lunghezze giuste</strong>
+                    <p>Taglia i 4 fili jumper alla stessa lunghezza (10–15 cm vanno benissimo per iniziare).
+                    Se i fili sono jumper "femmina-femmina", puoi inserirli direttamente sui pin header di entrambe le schede
+                    senza saldare nulla sull'ESP: è il modo più sicuro, economico e reversibile per iniziare e testare.</p>
+                </div>
+            </li>
+            <li>
+                <div class="step-bullet">E</div>
+                <div class="step-content">
+                    <strong>Collega nell'ordine corretto: prima GND, poi VCC, poi i dati</strong>
+                    <p>È una best practice elettronica. Collegare prima la <strong>massa (GND)</strong> stabilisce un riferimento
+                    elettrico comune e protegge dai danni da scariche statiche. Poi collega <strong>VCC (3V3)</strong>,
+                    e infine i fili dati <strong>SDA (D2) e SCL (D1)</strong>.
+                    Segui la tabella della sezione 3 alla lettera.</p>
+                </div>
+            </li>
+            <li>
+                <div class="step-bullet">F</div>
+                <div class="step-content">
+                    <strong>Ispezione visiva finale PRIMA di collegare il cavo USB</strong>
+                    <p>Con il circuito ancora spento, controlla ogni singolo collegamento con gli occhi.
+                    Cerca <strong>"ponti di stagno"</strong>: sottili filamenti di stagno che cortocircuitano accidentalmente due pin adiacenti.
+                    Sono la causa numero uno dei componenti bruciati. Se ne trovi uno, usa il saldatore e la treccia dissaldante per rimuoverlo.</p>
+                </div>
+            </li>
+        </ul>
+    </div>
+
+    <!-- SEZIONE 5 -->
+    <div class="section">
+        <div class="section-header">
+            <div class="step-number">5</div>
+            <h2>Verifica del Collegamento — Il Test con i2c_scanner</h2>
+        </div>
+        <p style="color:var(--text-muted);margin-bottom:1.2rem;font-size:0.9rem;">
+            Prima di caricare il firmware definitivo, verifica il collegamento con il classico
+            <span class="highlight">i2c_scanner</span>: un piccolo programma che rileva tutti i dispositivi I2C
+            collegati all'ESP8266. Se trova l'SHT40, il circuito è corretto al 100%.
+        </p>
+
+        <div class="code-block"><span class="c">// ─── i2c_scanner.ino ────────────────────────────────────────
+// Carica questo sketch PRIMA del firmware definitivo.
+// Ti dirà se l'SHT40 è collegato correttamente.
+// Apri: Strumenti → Monitor Seriale → velocità 115200</span>
+
+<span class="k">#include</span> &lt;Wire.h&gt;
+
+<span class="k">void</span> <span class="f">setup</span>() {
+  Serial.<span class="f">begin</span>(<span class="n">115200</span>);
+  <span class="c">// D2 = SDA (GPIO 4), D1 = SCL (GPIO 5)</span>
+  Wire.<span class="f">begin</span>(<span class="p">D2</span>, <span class="p">D1</span>);
+  Serial.<span class="f">println</span>(<span class="s">"\n[I2C Scanner] Avvio scansione..."</span>);
+}
+
+<span class="k">void</span> <span class="f">loop</span>() {
+  byte error, address;
+  <span class="k">int</span> nDevices = <span class="n">0</span>;
+
+  Serial.<span class="f">println</span>(<span class="s">"Scansione bus I2C..."</span>);
+
+  <span class="k">for</span> (address = <span class="n">1</span>; address &lt; <span class="n">127</span>; address++) {
+    Wire.<span class="f">beginTransmission</span>(address);
+    error = Wire.<span class="f">endTransmission</span>();
+
+    <span class="k">if</span> (error == <span class="n">0</span>) {
+      Serial.<span class="f">print</span>(<span class="s">"✓ Dispositivo trovato all'indirizzo 0x"</span>);
+      <span class="k">if</span> (address &lt; <span class="n">16</span>) Serial.<span class="f">print</span>(<span class="s">"0"</span>);
+      Serial.<span class="f">println</span>(address, HEX);
+      nDevices++;
+    }
+  }
+
+  <span class="k">if</span> (nDevices == <span class="n">0</span>) {
+    Serial.<span class="f">println</span>(<span class="s">"✗ Nessun dispositivo trovato. Controlla i collegamenti!"</span>);
+  } <span class="k">else</span> {
+    Serial.<span class="f">println</span>(<span class="s">"Scansione completata."</span>);
+  }
+
+  <span class="f">delay</span>(<span class="n">3000</span>);
+}</div>
+
+        <div class="alert alert-success">
+            <div class="alert-icon">✅</div>
+            <div class="alert-body">
+                <div class="alert-title">Risposta Attesa: Successo</div>
+                <p>Se il circuito è corretto, nel Monitor Seriale vedrai:<br>
+                <strong style="font-family:'JetBrains Mono';color:var(--accent-green);">✓ Dispositivo trovato all'indirizzo 0x44</strong><br>
+                L'indirizzo <strong>0x44</strong> è l'indirizzo I2C di default dell'SHT40. Significa che l'ESP lo vede e la comunicazione funziona perfettamente.</p>
+            </div>
+        </div>
+        <div class="alert alert-danger">
+            <div class="alert-icon">❌</div>
+            <div class="alert-body">
+                <div class="alert-title">Risposta Inattesa: Nessun dispositivo trovato</div>
+                <p>Se vedi <strong>"Nessun dispositivo trovato"</strong>, segui questa diagnosi nell'ordine:<br><br>
+                <strong>1.</strong> Controlla che VCC sia collegato a <strong>3V3</strong> e non a 5V.<br>
+                <strong>2.</strong> Controlla che GND sia collegato a un pin GND dell'ESP.<br>
+                <strong>3.</strong> Verifica che SDA sia su <strong>D2</strong> e SCL su <strong>D1</strong> (e non invertiti!).<br>
+                <strong>4.</strong> Controlla la qualità delle saldature: una saldatura fredda non conduce.<br>
+                <strong>5.</strong> Prova a scambiare i fili SDA e SCL tra loro: potresti averli invertiti.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SEZIONE 6 -->
+    <div class="section">
+        <div class="section-header">
+            <div class="step-number">6</div>
+            <h2>Configurazione nel Codice Firmware — Le righe chiave</h2>
+        </div>
+        <p style="color:var(--text-muted);margin-bottom:1.2rem;font-size:0.9rem;">
+            Ecco le parti del firmware che corrispondono ai tuoi collegamenti fisici. Se cambierai i pin fisici,
+            dovrai aggiornare queste righe di conseguenza.
+        </p>
+        <div class="code-block"><span class="c">// Nel firmware definitivo dell'SHT40 (es. termoigrometro.ino)
+// Queste righe dicono al codice DOVE hai messo i fili dati.</span>
+
+<span class="k">#include</span> &lt;Wire.h&gt;
+<span class="k">#include</span> &lt;SensirionI2cSht4x.h&gt;
+
+<span class="c">// Inizializzazione del bus I2C
+// Primo argomento = pin SDA → D2 (GPIO 4)  ← filo BLU
+// Secondo argomento = pin SCL → D1 (GPIO 5) ← filo GIALLO</span>
+Wire.<span class="f">begin</span>(<span class="p">D2</span>, <span class="p">D1</span>);
+
+<span class="c">// L'indirizzo I2C dell'SHT40 è rilevato automaticamente dalla libreria.
+// Se vuoi specificarlo manualmente:</span>
+sht4x.<span class="f">begin</span>(Wire, <span class="n">0x44</span>);  <span class="c">// 0x44 = indirizzo default SHT40</span></div>
+
+        <div class="alert alert-warning">
+            <div class="alert-icon">📦</div>
+            <div class="alert-body">
+                <div class="alert-title">Librerie da Installare nell'Arduino IDE</div>
+                <p>Per far leggere i dati al codice, installa la libreria ufficiale Sensirion:<br>
+                <strong>Strumenti → Gestione Librerie → Cerca "Sensirion I2C SHT4x" → Installa</strong>.<br>
+                Installa anche le sue dipendenze se richiesto (solitamente "Sensirion Arduino Core").<br>
+                Senza questa libreria il codice non compilerà.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SEZIONE 7 -->
+    <div class="section">
+        <div class="section-header">
+            <div class="step-number">7</div>
+            <h2>Checklist Pre-Alimentazione — Leggi prima di collegare l'USB</h2>
+        </div>
+        <div class="card">
+            <ul class="checklist">
+                <li><span class="check-icon">☐</span>Il filo <strong>ROSSO</strong> collega <strong>SHT40 VCC</strong> → <strong>ESP 3V3</strong> (non 5V, non VIN, non qualsiasi altro pin)</li>
+                <li><span class="check-icon">☐</span>Il filo <strong>NERO</strong> collega <strong>SHT40 GND</strong> → <strong>ESP GND</strong></li>
+                <li><span class="check-icon">☐</span>Il filo <strong>BLU</strong> collega <strong>SHT40 SDA</strong> → <strong>ESP D2 (GPIO 4)</strong></li>
+                <li><span class="check-icon">☐</span>Il filo <strong>GIALLO</strong> collega <strong>SHT40 SCL</strong> → <strong>ESP D1 (GPIO 5)</strong></li>
+                <li><span class="check-icon">☐</span>Nessun filo tocca un pin che non dovrebbe (ispezione visiva completata)</li>
+                <li><span class="check-icon">☐</span>Nessun "ponte di stagno" tra pin adiacenti del sensore o dell'ESP</li>
+                <li><span class="check-icon">☐</span>Tutte le saldature sono lucide e a forma di cono (non opache o sferiche)</li>
+                <li><span class="check-icon">☐</span>Ho caricato il sketch i2c_scanner e confermato l'indirizzo <strong>0x44</strong> nel Monitor Seriale</li>
+                <li><span class="check-icon">☐</span>Ho installato la libreria <strong>"Sensirion I2C SHT4x"</strong> nell'Arduino IDE</li>
+                <li><span class="check-icon">☐</span>Sono pronto a caricare il firmware definitivo del progetto D.U.B.I.A.</li>
+            </ul>
+        </div>
+        <div class="alert alert-success">
+            <div class="alert-icon">🎉</div>
+            <div class="alert-body">
+                <div class="alert-title">Sei Pronto!</div>
+                <p>Se tutti i punti della checklist sono spuntati e l'i2c_scanner restituisce <strong>0x44</strong>,
+                il tuo sensore è correttamente collegato e pronto per ricevere il firmware definitivo del progetto D.U.B.I.A.
+                Il circuito che hai appena costruito è esattamente quello che verrà usato in produzione.</p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<footer>
+    <p>Guida Hardware D.U.B.I.A. v1.0 — Progetto Termoigrometri ESP8266 + SHT40&nbsp;&nbsp;·&nbsp;&nbsp;
+    Tensione sensore: 3.3V&nbsp;&nbsp;·&nbsp;&nbsp;Protocollo: I2C&nbsp;&nbsp;·&nbsp;&nbsp;
+    SDA: D2 (GPIO4)&nbsp;&nbsp;·&nbsp;&nbsp;SCL: D1 (GPIO5)</p>
+</footer>
+
+</body>
+</html>

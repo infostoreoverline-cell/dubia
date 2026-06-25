@@ -4720,6 +4720,7 @@ document.addEventListener('DOMContentLoaded', () => {
 const ClimateModule = (() => {
     /* ─── Stato interno ─────────────────────────────────────────── */
     let _allData     = [];       // Array grezzo completo dal GAS
+    let _mappings    = {};       // Dizionario seriale -> nome terrario
     let _histChart   = null;     // Istanza Chart.js storico
     let _tempSpark   = null;     // Istanza sparkline temperatura
     let _humSpark    = null;     // Istanza sparkline umidità
@@ -5039,18 +5040,14 @@ const ClimateModule = (() => {
         // Estrai i device_id unici
         const devices = [...new Set(data.map(r => r.device_id).filter(id => id && id !== 'unknown' && id !== ''))];
         
-        // Se il selettore ha già tutte le opzioni necessarie, evita di ridisegnare per evitare sfarfallio
-        if (selector.options.length - 1 === devices.length) {
-            return;
-        }
-
         const prevValue = selector.value;
         selector.innerHTML = '<option value="all">Tutti i Terrari</option>';
 
-        devices.forEach((dev, idx) => {
+        devices.forEach((dev) => {
             const opt = document.createElement('option');
             opt.value = dev;
-            opt.textContent = `Terrario ${idx + 1} (${dev})`;
+            const mappedName = _mappings[dev];
+            opt.textContent = mappedName ? mappedName : `Sensore non configurato (${dev})`;
             selector.appendChild(opt);
         });
 
@@ -5107,8 +5104,162 @@ const ClimateModule = (() => {
         }
     }
 
+    /* ─── Fetch mappature sensori dal GAS ───────────────────────── */
+    async function fetchSensorMappings() {
+        try {
+            const raw = await cloudGet('Sensori');
+            return Array.isArray(raw) ? raw : [];
+        } catch (e) {
+            console.warn('[ClimateModule] fetchSensorMappings errore:', e.message);
+            return [];
+        }
+    }
+
+    /* ─── Rendering della lista di configurazione sensori ──────── */
+    function renderConfigList() {
+        const listEl = document.getElementById('climaConfigList');
+        if (!listEl) return;
+
+        // Estrai device_id dallo storico
+        const uniqueDevices = [...new Set(_allData.map(r => r.device_id).filter(id => id && id !== 'unknown' && id !== ''))];
+        
+        // E aggiungi quelli mappati che magari non sono ancora nello storico
+        Object.keys(_mappings).forEach(devId => {
+            if (!uniqueDevices.includes(devId)) {
+                uniqueDevices.push(devId);
+            }
+        });
+
+        if (uniqueDevices.length === 0) {
+            listEl.innerHTML = `
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                        Nessun sensore rilevato o configurato.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        listEl.innerHTML = '';
+
+        uniqueDevices.forEach(devId => {
+            const deviceData = _allData.filter(r => r.device_id === devId);
+            let isOnline = false;
+            let lastUpdateStr = 'Nessun dato';
+            if (deviceData.length > 0) {
+                const lastRow = deviceData[deviceData.length - 1];
+                const lastDate = parseTimestamp(lastRow.timestamp);
+                if (lastDate) {
+                    const diffMs = Date.now() - lastDate.getTime();
+                    // 2 ore = 7200000 ms
+                    if (diffMs < 7200000) {
+                        isOnline = true;
+                    }
+                    lastUpdateStr = fmtTimestamp(lastDate);
+                }
+            }
+
+            const mappedName = _mappings[devId] || '';
+
+            const row = document.createElement('tr');
+            row.className = 'clima-config-row';
+            row.innerHTML = `
+                <td>
+                    <span class="clima-status-badge ${isOnline ? 'online' : 'offline'}">
+                        <span class="${isOnline ? 'clima-pulse-green' : 'clima-pulse-gray'}"></span>
+                        ${isOnline ? 'Online' : 'Offline'}
+                    </span>
+                </td>
+                <td style="font-family: monospace; font-size: 0.9rem;">${devId}</td>
+                <td style="color: var(--text-muted); font-size: 0.85rem;">${lastUpdateStr}</td>
+                <td>
+                    <input type="text" class="clima-config-input" id="cfg-input-${devId.replace(/:/g, '-')}" value="${mappedName}" placeholder="es. Terrario Pitone" />
+                </td>
+                <td style="text-align: right; gap: 0.5rem; display: inline-flex; justify-content: flex-end; align-items: center;">
+                    <button class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.8rem; background-color: var(--accent-green); color: white;" onclick="ClimateModule.saveMapping('${devId}')">Salva</button>
+                    ${mappedName ? `<button class="btn btn-danger" style="padding: 0.3rem 0.6rem; font-size: 0.8rem; background-color: var(--alert-red); color: white;" onclick="ClimateModule.deleteMapping('${devId}')">Scollega</button>` : ''}
+                </td>
+            `;
+            listEl.appendChild(row);
+        });
+    }
+
+    /* ─── Salva associazione sensore ────────────────────────────── */
+    async function saveMapping(devId) {
+        const inputId = `cfg-input-${devId.replace(/:/g, '-')}`;
+        const inputEl = document.getElementById(inputId);
+        if (!inputEl) return;
+        const name = inputEl.value.trim();
+        if (!name) {
+            showNotification('Errore', 'Inserisci un nome valido per il terrario.', 'alert');
+            return;
+        }
+
+        try {
+            showNotification('Salvataggio', 'Salvataggio associazione in corso...', 'success');
+            const payload = {
+                event_type: 'sensore_sync',
+                dati: {
+                    id: devId,
+                    nome: name,
+                    is_deleted: false
+                }
+            };
+            
+            const res = await cloudPostWithQueue(payload);
+            if (res && res.ok) {
+                showNotification('Successo', `Sensore ${devId} associato a "${name}"`, 'success');
+                await refresh();
+            } else {
+                showNotification('Errore', 'Errore durante il salvataggio: ' + (res ? res.error : 'connessione fallita'), 'alert');
+            }
+        } catch (e) {
+            console.error('[ClimateModule] saveMapping errore:', e);
+            showNotification('Errore', 'Errore durante il salvataggio: ' + e.message, 'alert');
+        }
+    }
+
+    /* ─── Rimuovi associazione sensore ──────────────────────────── */
+    async function deleteMapping(devId) {
+        if (!confirm(`Sei sicuro di voler scollegare il sensore ${devId}?`)) {
+            return;
+        }
+
+        try {
+            showNotification('Rimozione', 'Rimozione associazione in corso...', 'success');
+            const payload = {
+                event_type: 'sensore_delete',
+                dati: {
+                    id: devId
+                }
+            };
+            
+            const res = await cloudPostWithQueue(payload);
+            if (res && res.ok) {
+                showNotification('Successo', `Sensore ${devId} scollegato con successo.`, 'success');
+                await refresh();
+            } else {
+                showNotification('Errore', 'Errore durante la disassociazione: ' + (res ? res.error : 'connessione fallita'), 'alert');
+            }
+        } catch (e) {
+            console.error('[ClimateModule] deleteMapping errore:', e);
+            showNotification('Errore', 'Errore durante la disassociazione: ' + e.message, 'alert');
+        }
+    }
+
     /* ─── Refresh completo (fetch + render tutto) ───────────────── */
     async function refresh() {
+        const rawMappings = await fetchSensorMappings();
+        _mappings = {};
+        if (Array.isArray(rawMappings)) {
+            rawMappings.forEach(m => {
+                if (m.id && m.nome && m.is_deleted !== true && m.is_deleted !== "true") {
+                    _mappings[m.id] = m.nome;
+                }
+            });
+        }
+
         _allData = await fetchClimateData();
         populateDeviceSelector(_allData);
         
@@ -5119,19 +5270,37 @@ const ClimateModule = (() => {
         renderSparklines(devData);    // Sparkline usano gli ultimi SPARKLINE_POINTS punti
         renderHistoryChart(filtered);  // Storico usa il range selezionato del device selezionato
         renderStatsStrip(filtered);    // Stats usano il range selezionato del device selezionato
+        
+        renderConfigList();
     }
 
     /* ─── Inizializzazione (chiamata al primo click sulla tab) ──── */
     async function init() {
         if (_initialized) {
-            // Se già inizializzato, aggiorna solo se sono passati > 60s
-            // (evita re-fetch ad ogni click sulla tab)
             return;
         }
         _initialized = true;
 
         setupRangeButtons();
         setupDeviceSelector();
+        
+        // Setup toggle per pannello collassabile
+        const configHeader = document.getElementById('climaConfigHeader');
+        const configBody = document.getElementById('climaConfigBody');
+        const configToggleBtn = document.getElementById('climaConfigToggleBtn');
+
+        if (configHeader && configBody && configToggleBtn) {
+            configHeader.addEventListener('click', () => {
+                if (configBody.style.display === 'none') {
+                    configBody.style.display = 'block';
+                    configToggleBtn.textContent = 'Riduci';
+                } else {
+                    configBody.style.display = 'none';
+                    configToggleBtn.textContent = 'Espandi';
+                }
+            });
+        }
+
         await refresh();
 
         // Auto-refresh ogni 5 minuti
@@ -5141,7 +5310,7 @@ const ClimateModule = (() => {
     }
 
     /* ─── API pubblica ──────────────────────────────────────────── */
-    return { init, refresh };
+    return { init, refresh, saveMapping, deleteMapping };
 
 })();
 

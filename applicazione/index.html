@@ -747,6 +747,40 @@
             </div>
         </div>
 
+        <!-- ── STRUMENTO DI CONFIGURAZIONE SENSORI ──────────────── -->
+        <div class="card clima-config-card" style="margin-top: 2rem;">
+            <div class="clima-config-header" id="climaConfigHeader" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: 1.2rem;">
+                <div>
+                    <h3 style="margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">⚙️ Gestione Termoigrometri</h3>
+                    <p class="subtitle-text" style="margin: 0; font-size: 0.8rem;">Collega i seriali hardware (MAC) a nomi di terrari leggibili</p>
+                </div>
+                <button class="btn btn-secondary" id="climaConfigToggleBtn" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" type="button">Espandi</button>
+            </div>
+            
+            <div class="clima-config-body collapsed" id="climaConfigBody" style="display: none; border-top: 1px solid var(--border-color); padding: 1.2rem;">
+                <div style="overflow-x: auto;">
+                    <table class="table" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--border-color); text-align: left;">
+                                <th style="padding: 0.8rem 0.5rem; font-size: 0.85rem; color: var(--text-muted);">Stato</th>
+                                <th style="padding: 0.8rem 0.5rem; font-size: 0.85rem; color: var(--text-muted);">Seriale (MAC)</th>
+                                <th style="padding: 0.8rem 0.5rem; font-size: 0.85rem; color: var(--text-muted);">Ultima Attività</th>
+                                <th style="padding: 0.8rem 0.5rem; font-size: 0.85rem; color: var(--text-muted);">Nome Terrario Associato</th>
+                                <th style="padding: 0.8rem 0.5rem; font-size: 0.85rem; color: var(--text-muted); text-align: right;">Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody id="climaConfigList">
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                                    Caricamento termoigrometri...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <div style="height: 4rem;"></div>
     </section>
 

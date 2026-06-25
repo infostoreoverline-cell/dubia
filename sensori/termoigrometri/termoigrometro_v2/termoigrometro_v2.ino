@@ -41,6 +41,9 @@
 #include <Wire.h>
 #include <user_interface.h>  // REASON_DEEP_SLEEP_AWAKE
 
+ADC_MODE(ADC_VCC);
+
+
 // ─── §2  CONFIGURAZIONE ───────────────────────────────────────────────────────
 static const char WIFI_SSID[] PROGMEM = "ASUS";
 static const char WIFI_PASS[] PROGMEM = "24no1998";
@@ -55,8 +58,8 @@ static constexpr uint8_t  DISP_PRI          = 0x3C;
 static constexpr uint8_t  DISP_FALL         = 0x3D;
 static constexpr uint8_t  SCREEN_W          = 128;
 static constexpr uint8_t  SCREEN_H          = 64;
-static constexpr uint64_t SLEEP_US          = 5ULL * 1000000ULL;   // 5 secondi per test
-static constexpr uint32_t READINGS_PER_SEND = 12;                  // Invia ogni 12 misure = 1 minuto per test
+static constexpr uint64_t SLEEP_US          = 60ULL * 1000000ULL;  // 60 secondi (1 minuto)
+static constexpr uint32_t READINGS_PER_SEND = 60;                  // Invia ogni 60 misure = 1 ora
 static constexpr uint32_t WIFI_TIMEOUT_MS   = 12000UL;
 static constexpr uint32_t FS_MAX_BYTES      = 65536UL;
 static constexpr uint32_t DISPLAY_WIN_MS    = 2000UL;  // Finestra doppio reset (ms)
@@ -339,6 +342,24 @@ static void runDisplayCycle(uint32_t durationMs = 10000UL) {
       display.setCursor(22, 4);
       display.print(F("CLIMA AMBIENTE"));
 
+      // Disegna l'icona della batteria (x=110, y=4, w=15, h=8)
+      display.drawRect(110, 4, 15, 8, SSD1306_BLACK);
+      display.fillRect(125, 6, 2, 4, SSD1306_BLACK);
+
+      uint16_t vcc = ESP.getVcc();
+      DBG_PRINTF("[BATTERY] VCC: %u mV\n", vcc);
+
+      uint8_t numBars = 0;
+      if (vcc >= 3000) numBars = 4;
+      else if (vcc >= 2800) numBars = 3;
+      else if (vcc >= 2600) numBars = 2;
+      else if (vcc >= 2450) numBars = 1;
+      else numBars = 0;
+
+      for (uint8_t i = 0; i < numBars; i++) {
+        display.fillRect(112 + (i * 3), 6, 2, 4, SSD1306_BLACK);
+      }
+
       // ── 2. DATI (Zona Azzurra) ──────────────────────────────────
       display.setTextColor(SSD1306_WHITE);
 
@@ -401,7 +422,7 @@ void setup() {
     writeRTC();
   }
   // Sanity check: evita overflow anomalo
-  if (rtcCounter.counter > READINGS_PER_SEND * 2u) rtcCounter.counter = READINGS_PER_SEND;
+  if (rtcCounter.counter > 10000u) rtcCounter.counter = READINGS_PER_SEND;
   DBG_PRINTF("[RTC] Contatore: %lu / %u\n", rtcCounter.counter, READINGS_PER_SEND);
 
   // ── Leggi flag double-reset dalla RAM RTC (indirizzo separato) ───────────
@@ -415,7 +436,7 @@ void setup() {
   // Se il flag e' MAGIC_AWAIT, significa che al boot precedente (AUTO) abbiamo
   // aperto la finestra di attesa e l'utente ha premuto RESET → attiva display.
   bool manualOverride = false;
-  if (autoWake && rtcFlagWord == MAGIC_AWAIT) {
+  if (rtcFlagWord == MAGIC_AWAIT) {
     DBG_PRINTLN(F("[BOOT] *** Double-Reset rilevato! Attivo display 10s ***"));
     manualOverride = true;
     writeRTCFlag(0);  // Cancella subito il flag
@@ -431,54 +452,57 @@ void setup() {
     return;
   }
 
-  // ── Salva misurazione e aggiorna contatore ────────────────────────────────
-  saveMeasurement(t10, h10);
-  ++rtcCounter.counter;
-  writeRTC();
-  DBG_PRINTF("[RTC] Aggiornato: %lu\n", rtcCounter.counter);
+  // ── Logica Principale ─────────────────────────────────────────────────────
+  if (!manualOverride) {
+    if (autoWake) {
+      // 1. Apri la finestra per il doppio reset PRIMA di salvare.
+      // Se l'utente preme reset ora, il riavvio annulla il salvataggio!
+      writeRTCFlag(MAGIC_AWAIT);
+      DBG_PRINTF("[BOOT] Finestra double-reset aperta (%lu ms)...\n", DISPLAY_WIN_MS);
 
-  // ── Logica principale ─────────────────────────────────────────────────────
-  if (manualOverride) {
-    // Doppio reset: mostra schermo 10 secondi
-    DBG_PRINTLN(F("[MAN] Ciclo Display 10s (double-reset)"));
-    runDisplayCycle(10000UL);
+      const uint32_t t_win = millis();
+      while (millis() - t_win < DISPLAY_WIN_MS) {
+        yield();
+      }
 
-    // Forza la trasmissione immediata dei dati dopo il display
-    DBG_PRINTLN(F("[MAN] Invio dati immediato post-display..."));
-    WiFi.forceSleepWake();
-    delay(1);
-    sendWiFiData();
+      // Nessun reset ricevuto: cancella il flag
+      writeRTCFlag(0);
+      DBG_PRINTLN(F("[BOOT] Finestra chiusa senza reset."));
+    }
 
-  } else if (autoWake) {
-    // Avvio automatico da timer
-    if (rtcCounter.counter >= READINGS_PER_SEND) {
-      DBG_PRINTLN(F("[AUTO] Soglia raggiunta — trasmissione Wi-Fi"));
+    // 2. Salva misurazione e aggiorna contatore (non era un double-reset)
+    saveMeasurement(t10, h10);
+    ++rtcCounter.counter;
+    writeRTC();
+    DBG_PRINTF("[RTC] Aggiornato: %lu\n", rtcCounter.counter);
+
+    if (autoWake) {
+      // 3a. Avvio automatico da timer: controllo invio Wi-Fi
+      if (rtcCounter.counter >= READINGS_PER_SEND) {
+        DBG_PRINTLN(F("[AUTO] Soglia raggiunta — trasmissione Wi-Fi"));
+        WiFi.forceSleepWake();
+        delay(1);
+        sendWiFiData();
+      } else {
+        DBG_PRINTF("[AUTO] %lu/%u — sleep RF_OFF\n", rtcCounter.counter, READINGS_PER_SEND);
+      }
+    } else {
+      // 3b. Avvio manuale a freddo (USB o power-on): mostra schermo 10s
+      DBG_PRINTLN(F("[MAN] Avvio a freddo — Ciclo Display 10s"));
+      runDisplayCycle(10000UL);
+
+      // Forza la trasmissione immediata dei dati dopo il display
+      DBG_PRINTLN(F("[MAN] Invio dati immediato post-display..."));
       WiFi.forceSleepWake();
       delay(1);
       sendWiFiData();
-    } else {
-      DBG_PRINTF("[AUTO] %lu/%u — sleep RF_OFF\n", rtcCounter.counter, READINGS_PER_SEND);
     }
-
-    // Apri la finestra per il doppio reset:
-    // Imposta il flag magic e aspetta DISPLAY_WIN_MS.
-    // Se l'utente preme reset in questa finestra, al prossimo boot
-    // trovera' il flag MAGIC_AWAIT e accendera' lo schermo.
-    writeRTCFlag(MAGIC_AWAIT);
-    DBG_PRINTF("[BOOT] Finestra double-reset aperta (%lu ms)...\n", DISPLAY_WIN_MS);
-
-    const uint32_t t_win = millis();
-    while (millis() - t_win < DISPLAY_WIN_MS) {
-      yield();
-    }
-
-    // Nessun reset ricevuto: cancella il flag e vai a dormire
-    writeRTCFlag(0);
-    DBG_PRINTLN(F("[BOOT] Finestra chiusa"));
-
   } else {
-    // Avvio manuale a freddo (USB o power-on): mostra schermo 10s
-    DBG_PRINTLN(F("[MAN] Avvio freddo — Ciclo Display 10s"));
+    // DOUBLE-RESET (manualOverride == true)
+    DBG_PRINTLN(F("[RTC] Double-Reset: saltato salvataggio per evitare letture fittizie (timeline sfasata)"));
+
+    // Mostra schermo 10 secondi
+    DBG_PRINTLN(F("[MAN] Ciclo Display 10s (double-reset)"));
     runDisplayCycle(10000UL);
 
     // Forza la trasmissione immediata dei dati dopo il display
@@ -488,8 +512,17 @@ void setup() {
     sendWiFiData();
   }
 
-  DBG_PRINTF("[BOOT] → deepSleep %llu s\n", SLEEP_US / 1000000ULL);
-  ESP.deepSleep(SLEEP_US, WAKE_RF_DISABLED);
+  uint32_t elapsedMs = millis();
+  uint32_t sleepMs = SLEEP_US / 1000ULL;
+  uint64_t actualSleepUs;
+  if (elapsedMs < sleepMs) {
+    actualSleepUs = (sleepMs - elapsedMs) * 1000ULL;
+  } else {
+    actualSleepUs = 1000000ULL; // Minimo 1 secondo
+  }
+
+  DBG_PRINTF("[BOOT] → deepSleep %llu s (sveglio per %lu ms)\n", actualSleepUs / 1000000ULL, elapsedMs);
+  ESP.deepSleep(actualSleepUs, WAKE_RF_DISABLED);
 }
 
 void loop() { ESP.deepSleep(SLEEP_US, WAKE_RF_DISABLED); }

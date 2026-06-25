@@ -27,7 +27,8 @@ var SHEET_NAMES = {
   COLONIE:         'Colonie',
   CLIENTI:         'Clienti',
   CESSIONI:        'Cessioni',
-  TERMOIGROMETRI:  'Termoigrometri'
+  TERMOIGROMETRI:  'Termoigrometri',
+  SENSORI:         'Sensori'
 };
 
 // ── Schema Rigido ──────────────────────────────────────────────
@@ -100,6 +101,11 @@ var SCHEMAS = {
     'device_id',
     'temperature',
     'humidity'
+  ],
+  Sensori: [
+    'id',
+    'nome',
+    'is_deleted'
   ]
 };
 
@@ -118,7 +124,9 @@ var VALID_EVENT_TYPES = {
   'cliente_delete':       'entity_delete',
   'cessione_sync':        'entity_upsert',
   'cessione_delete':      'entity_delete',
-  'termoigrometro_data':  'termoigrometro'  // Batch letture T/U da ESP8266
+  'termoigrometro_data':  'termoigrometro', // Batch letture T/U da ESP8266
+  'sensore_sync':         'entity_upsert',
+  'sensore_delete':       'entity_delete'
 };
 
 // ── Cache Config ───────────────────────────────────────────────
@@ -752,6 +760,7 @@ function doPost(e) {
       if (eventType === 'colonia_delete')  targetSheetName = SHEET_NAMES.COLONIE;
       if (eventType === 'cliente_delete')  targetSheetName = SHEET_NAMES.CLIENTI;
       if (eventType === 'cessione_delete') targetSheetName = SHEET_NAMES.CESSIONI;
+      if (eventType === 'sensore_delete')  targetSheetName = SHEET_NAMES.SENSORI;
       
       var sheet = ss.getSheetByName(targetSheetName);
       var n = 0;
@@ -777,6 +786,7 @@ function doPost(e) {
       if (eventType === 'colonia_sync')  targetSheetName = SHEET_NAMES.COLONIE;
       if (eventType === 'cliente_sync')  targetSheetName = SHEET_NAMES.CLIENTI;
       if (eventType === 'cessione_sync') targetSheetName = SHEET_NAMES.CESSIONI;
+      if (eventType === 'sensore_sync')   targetSheetName = SHEET_NAMES.SENSORI;
       
       var sheet = ss.getSheetByName(targetSheetName);
       if (!sheet) {
