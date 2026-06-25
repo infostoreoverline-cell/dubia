@@ -5015,11 +5015,67 @@ const ClimateModule = (() => {
         });
     }
 
+    /* ─── Ottieni dati filtrati per dispositivo ─────────────────── */
+    function getFilteredData() {
+        if (_currentDevice === 'all') {
+            return _allData;
+        }
+        return _allData.filter(row => row.device_id === _currentDevice);
+    }
+
     /* ─── Applica range corrente ai grafici e stats ─────────────── */
     function applyRange() {
-        const filtered = filterByRange(_allData, _currentRange);
+        const devData = getFilteredData();
+        const filtered = filterByRange(devData, _currentRange);
         renderHistoryChart(filtered);
         renderStatsStrip(filtered);
+    }
+
+    /* ─── Popola il selettore dispositivi ──────────────────────── */
+    function populateDeviceSelector(data) {
+        const selector = document.getElementById('climaDeviceSelector');
+        if (!selector) return;
+
+        // Estrai i device_id unici
+        const devices = [...new Set(data.map(r => r.device_id).filter(id => id && id !== 'unknown' && id !== ''))];
+        
+        // Se il selettore ha già tutte le opzioni necessarie, evita di ridisegnare per evitare sfarfallio
+        if (selector.options.length - 1 === devices.length) {
+            return;
+        }
+
+        const prevValue = selector.value;
+        selector.innerHTML = '<option value="all">Tutti i Terrari</option>';
+
+        devices.forEach((dev, idx) => {
+            const opt = document.createElement('option');
+            opt.value = dev;
+            opt.textContent = `Terrario ${idx + 1} (${dev})`;
+            selector.appendChild(opt);
+        });
+
+        if (devices.includes(prevValue)) {
+            selector.value = prevValue;
+        } else {
+            selector.value = 'all';
+            _currentDevice = 'all';
+        }
+    }
+
+    /* ─── Setup selettore dispositivo ───────────────────────────── */
+    function setupDeviceSelector() {
+        const selector = document.getElementById('climaDeviceSelector');
+        if (!selector) return;
+
+        selector.addEventListener('change', () => {
+            _currentDevice = selector.value;
+            applyRange();
+            
+            // Aggiorna anche le card live e le sparkline per il device specifico
+            const devData = getFilteredData();
+            renderLiveCards(devData);
+            renderSparklines(devData);
+        });
     }
 
     /* ─── Fetch dati dal GAS ────────────────────────────────────── */
@@ -5054,12 +5110,15 @@ const ClimateModule = (() => {
     /* ─── Refresh completo (fetch + render tutto) ───────────────── */
     async function refresh() {
         _allData = await fetchClimateData();
-        const filtered = filterByRange(_allData, _currentRange);
+        populateDeviceSelector(_allData);
+        
+        const devData = getFilteredData();
+        const filtered = filterByRange(devData, _currentRange);
 
-        renderLiveCards(_allData);     // Card live usano sempre l'ultimo dato
-        renderSparklines(_allData);    // Sparkline usano gli ultimi SPARKLINE_POINTS punti
-        renderHistoryChart(filtered);  // Storico usa il range selezionato
-        renderStatsStrip(filtered);    // Stats usano il range selezionato
+        renderLiveCards(devData);     // Card live usano sempre l'ultimo dato del device selezionato
+        renderSparklines(devData);    // Sparkline usano gli ultimi SPARKLINE_POINTS punti
+        renderHistoryChart(filtered);  // Storico usa il range selezionato del device selezionato
+        renderStatsStrip(filtered);    // Stats usano il range selezionato del device selezionato
     }
 
     /* ─── Inizializzazione (chiamata al primo click sulla tab) ──── */
@@ -5072,6 +5131,7 @@ const ClimateModule = (() => {
         _initialized = true;
 
         setupRangeButtons();
+        setupDeviceSelector();
         await refresh();
 
         // Auto-refresh ogni 5 minuti
