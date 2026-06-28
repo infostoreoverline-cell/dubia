@@ -4885,12 +4885,32 @@ const ClimateModule = (() => {
             pts = pts.filter((_, i) => i % step === 0);
         }
 
+        const getMovingAverage = (arr, windowSize) => {
+            const result = [];
+            const half = Math.floor(windowSize / 2);
+            for (let i = 0; i < arr.length; i++) {
+                let sum = 0;
+                let count = 0;
+                for (let j = i - half; j <= i + half; j++) {
+                    if (j >= 0 && j < arr.length && !isNaN(arr[j]) && arr[j] !== null) {
+                        sum += arr[j];
+                        count++;
+                    }
+                }
+                result.push(count > 0 ? sum / count : arr[i]);
+            }
+            return result;
+        };
+
         const labels = pts.map(r => {
             const d = parseTimestamp(r.timestamp);
             return d ? fmtTimestamp(d) : '';
         });
-        const temps = pts.map(r => parseFloat(r.temperature));
-        const hums  = pts.map(r => parseFloat(r.humidity));
+        const tempsRaw = pts.map(r => parseFloat(r.temperature));
+        const humsRaw  = pts.map(r => parseFloat(r.humidity));
+
+        const temps = getMovingAverage(tempsRaw, 5);
+        const hums  = getMovingAverage(humsRaw, 5);
 
         // Calcolo span minimo (per evitare grafici troppo frastagliati)
         const validTemps = temps.filter(t => !isNaN(t));

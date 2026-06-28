@@ -1739,9 +1739,9 @@ button, input[type="text"], input[type="number"], input[type="date"], select, te
 
 /* Sezione clima come main tab — padding coerente */
 .clima-section {
-    padding: 1rem 1.5rem;
-    max-width: 900px;
-    margin: 0 auto;
+    padding: 1.5rem;
+    padding-bottom: 6rem;
+    max-width: 100%;
 }
 
 /* ─── Header bar ──────────────────────────────────────────────── */
