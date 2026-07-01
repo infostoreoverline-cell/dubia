@@ -461,6 +461,11 @@ const syncWithCloud = async () => {
         if (typeof updateUI === 'function') updateUI();
         if (typeof updateColoniesUI === 'function') updateColoniesUI();
         if (typeof updateClientiUI === 'function') updateClientiUI();
+        
+        // Avvia il precaricamento del clima in background
+        if (typeof ClimateModule !== 'undefined' && typeof ClimateModule.preload === 'function') {
+            ClimateModule.preload();
+        }
     }
 };
 
@@ -5376,43 +5381,87 @@ const ClimateModule = (() => {
         renderConfigList();
     }
 
+    /* ─── Pre-caricamento dati in background ────────────────────── */
+    async function preload() {
+        if (_initialized) return;
+        try {
+            console.log('[ClimateModule] Avvio precaricamento dati clima...');
+            const rawMappings = await fetchSensorMappings();
+            _mappings = {};
+            if (Array.isArray(rawMappings)) {
+                rawMappings.forEach(m => {
+                    if (m.id && m.nome && m.is_deleted !== true && m.is_deleted !== "true") {
+                        _mappings[m.id] = m.nome;
+                    }
+                });
+            }
+            _allData = await fetchClimateData();
+            console.info(`[ClimateModule] Precaricamento completato. ${_allData.length} record trovati.`);
+        } catch (e) {
+            console.warn('[ClimateModule] Preload fallito:', e.message);
+        }
+    }
+
     /* ─── Inizializzazione (chiamata al primo click sulla tab) ──── */
     async function init() {
-        if (_initialized) {
+        const domAlreadySetup = _initialized;
+        
+        if (domAlreadySetup && _refreshTimer) {
             return;
         }
-        _initialized = true;
 
-        setupRangeButtons();
-        setupDeviceSelector();
-        
-        // Setup toggle per pannello collassabile
-        const configHeader = document.getElementById('climaConfigHeader');
-        const configBody = document.getElementById('climaConfigBody');
-        const configToggleBtn = document.getElementById('climaConfigToggleBtn');
+        if (!domAlreadySetup) {
+            _initialized = true;
+            setupRangeButtons();
+            setupDeviceSelector();
+            
+            // Setup toggle per pannello collassabile
+            const configHeader = document.getElementById('climaConfigHeader');
+            const configBody = document.getElementById('climaConfigBody');
+            const configToggleBtn = document.getElementById('climaConfigToggleBtn');
 
-        if (configHeader && configBody && configToggleBtn) {
-            configHeader.addEventListener('click', () => {
-                if (configBody.style.display === 'none') {
-                    configBody.style.display = 'block';
-                    configToggleBtn.textContent = 'Riduci';
-                } else {
-                    configBody.style.display = 'none';
-                    configToggleBtn.textContent = 'Espandi';
-                }
-            });
+            if (configHeader && configBody && configToggleBtn) {
+                configHeader.addEventListener('click', () => {
+                    if (configBody.style.display === 'none') {
+                        configBody.style.display = 'block';
+                        configToggleBtn.textContent = 'Riduci';
+                    } else {
+                        configBody.style.display = 'none';
+                        configToggleBtn.textContent = 'Espandi';
+                    }
+                });
+            }
         }
 
-        await refresh();
+        // Se abbiamo già dati in memoria, li renderizziamo all'istante!
+        if (_allData && _allData.length > 0) {
+            populateDeviceSelector(_allData);
+            
+            const devData = getFilteredData();
+            const filtered = filterByRange(devData, _currentRange);
+
+            renderLiveCards(devData);
+            renderSparklines(devData);
+            renderHistoryChart(filtered);
+            renderStatsStrip(filtered);
+            renderConfigList();
+            console.log('[ClimateModule] UI clima renderizzata all\'istante dai dati precaricati.');
+
+            // Esegui refresh asincrono silenzioso
+            refresh().catch(() => {});
+        } else {
+            await refresh();
+        }
 
         // Auto-refresh ogni 5 minuti
-        if (_refreshTimer) clearInterval(_refreshTimer);
-        _refreshTimer = setInterval(refresh, REFRESH_MS);
-        console.log('[ClimateModule] Inizializzato. Auto-refresh ogni', REFRESH_MS / 60000, 'minuti.');
+        if (!_refreshTimer) {
+            _refreshTimer = setInterval(refresh, REFRESH_MS);
+            console.log('[ClimateModule] Inizializzato. Auto-refresh ogni', REFRESH_MS / 60000, 'minuti.');
+        }
     }
 
     /* ─── API pubblica ──────────────────────────────────────────── */
-    return { init, refresh, saveMapping, deleteMapping };
+    return { init, refresh, saveMapping, deleteMapping, preload };
 
 })();
 
