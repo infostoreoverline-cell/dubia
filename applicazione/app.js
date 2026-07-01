@@ -203,6 +203,7 @@ let appState = {
     cessioni: [],
     customPrices: { ...DEFAULT_PRICES },
     colonies: [],
+    isSyncing: false,
     // Auto-Tuning: storico delle misurazioni di massa per categoria (media mobile 3x)
     calibrationHistory: {},
     // Auto-Tuning: costanti biologiche personalizzate (override di MASS)
@@ -348,6 +349,121 @@ const rebuildParamsFromMeasurements = (measurements) => {
     return { theta1, theta2 };
 };
 
+const syncWithCloud = async () => {
+    if (!navigator.onLine) {
+        startBackgroundSync();
+        return;
+    }
+
+    appState.isSyncing = true;
+    if (typeof showNotification === 'function') {
+        showNotification("Sincronizzazione", "Download dati dal cloud...", "success");
+    }
+
+    // Aggiorna la UI per mostrare eventuale stato di caricamento
+    if (typeof updateColoniesUI === 'function') updateColoniesUI();
+    if (typeof updateClientiUI === 'function') updateClientiUI();
+
+    try {
+        const [timelineResult, clientiResult, cessioniResult, colonieResult] = await Promise.allSettled([
+            cloudGet("Timeline", 10000),
+            cloudGet("Clienti",  8000),
+            cloudGet("Cessioni", 8000),
+            cloudGet("Colonie",  8000)
+        ]);
+
+        // Timeline → misure principali
+        const timelineData = timelineResult.status === "fulfilled" ? timelineResult.value : [];
+        if (timelineData.length > 0) {
+            appState.measurements = mapTimelineData(timelineData);
+            console.info(`[D.U.B.I.A.] Timeline: ${appState.measurements.length} record.`);
+
+            // Salva su DB locale
+            const tx = db.transaction("measurements", "readwrite");
+            const store = tx.objectStore("measurements");
+            store.clear();
+            appState.measurements.forEach(m => store.put(m));
+
+            // Ricostruisce theta1/theta2 deterministicamente
+            if (appState.measurements.length > 1) {
+                const rebuilt = rebuildParamsFromMeasurements(appState.measurements);
+                appState.params.theta1 = rebuilt.theta1;
+                appState.params.theta2 = rebuilt.theta2;
+                saveParams(appState.params);
+                console.info(`[D.U.B.I.A.] Params ricostruiti: th1=${rebuilt.theta1.toFixed(6)}, th2=${rebuilt.theta2.toFixed(6)}`);
+            }
+        } else {
+            console.info("[D.U.B.I.A.] Timeline cloud vuota o non raggiungibile.");
+        }
+
+        // Clienti cloud → merge con locale
+        const clientiData = clientiResult.status === "fulfilled" ? clientiResult.value : [];
+        if (clientiData.length > 0) {
+            const tx = db.transaction("clients", "readwrite");
+            const store = tx.objectStore("clients");
+            clientiData.forEach(c => { if (c.id) store.put({ ...c, id: Number(c.id) }); });
+            appState.clients = clientiData.map(c => ({ ...c, id: Number(c.id) }));
+            console.info(`[D.U.B.I.A.] Clienti cloud: ${clientiData.length}.`);
+        }
+
+        // Cessioni cloud → merge con locale
+        const cessioniData = cessioniResult.status === "fulfilled" ? cessioniResult.value : [];
+        if (cessioniData.length > 0) {
+            const tx = db.transaction("cessioni", "readwrite");
+            const store = tx.objectStore("cessioni");
+            cessioniData.forEach(c => { if (c.id) store.put({ ...c, id: Number(c.id) }); });
+            appState.cessioni = cessioniData
+                .map(c => ({ ...c, id: Number(c.id), cliente_id: Number(c.cliente_id) }))
+                .sort((a, b) => new Date(b.data) - new Date(a.data));
+            console.info(`[D.U.B.I.A.] Cessioni cloud: ${cessioniData.length}.`);
+        }
+
+        // Colonie cloud → merge con locale
+        const colonieData = colonieResult.status === "fulfilled" ? colonieResult.value : [];
+        if (colonieData.length > 0) {
+            const coloniesMap = new Map();
+            colonieData.forEach(c => { if (c.id) coloniesMap.set(Number(c.id), c); });
+            const tx = db.transaction("colonies", "readwrite");
+            const store = tx.objectStore("colonies");
+            coloniesMap.forEach((c, id) => {
+                const isDeleted = c.is_deleted === true || c.is_deleted === 'true' || c.is_deleted === 1;
+                const mapped = {
+                    id, name: c.name || `Colonia ${id}`, type: c.type || "Pasto",
+                    creation_date: c.date || c.creation_date || new Date().toISOString().split("T")[0],
+                    current_weight: parseFloat(c.current_weight) || 0,
+                    males_count: parseInt(c.males_count) || 0, females_count: parseInt(c.females_count) || 0,
+                    subadults_count: parseInt(c.subadults_count) || 0, medium_count: parseInt(c.medium_count) || 0,
+                    small_count: parseInt(c.small_count) || 0, baby_count: parseInt(c.baby_count) || 0,
+                    notes: c.notes || "",
+                    is_deleted: isDeleted
+                };
+                store.put(mapped);
+                const idx = appState.colonies.findIndex(x => x.id === id);
+                if (idx >= 0) appState.colonies[idx] = mapped;
+                else appState.colonies.push(mapped);
+            });
+            console.info(`[D.U.B.I.A.] Colonie cloud: ${coloniesMap.size}.`);
+        }
+
+        if (typeof showNotification === 'function') {
+            showNotification("Sincronizzazione", "Dati cloud caricati con successo.", "success");
+        }
+        flushOfflineQueue();
+        startBackgroundSync();
+
+    } catch (e) {
+        console.warn("[D.U.B.I.A.] syncWithCloud error:", e.message);
+        if (typeof showNotification === 'function') {
+            showNotification("Errore di Sincronizzazione", "Impossibile sincronizzare con il cloud. Caricamento dati locali.", "warning");
+        }
+    } finally {
+        appState.isSyncing = false;
+        if (typeof updateUI === 'function') updateUI();
+        if (typeof updateColoniesUI === 'function') updateColoniesUI();
+        if (typeof updateClientiUI === 'function') updateClientiUI();
+    }
+};
+
 const loadInitialData = async () => {
     // ── STEP 1: Parametri da IndexedDB ──────────────────────────────────
     const storedParams = await new Promise((resolve) => {
@@ -375,114 +491,26 @@ const loadInitialData = async () => {
     await loadClientsAndCessioni();
     await loadColonies();
 
-    // ── STEP 2: Download parallelo dal cloud (V2 — cloudGet con timeout) ─
-    if (navigator.onLine) {
-        showNotification("Sincronizzazione", "Download dati dal cloud...", "success");
-        try {
-            const [timelineResult, clientiResult, cessioniResult, colonieResult] = await Promise.allSettled([
-                cloudGet("Timeline", 10000),
-                cloudGet("Clienti",  8000),
-                cloudGet("Cessioni", 8000),
-                cloudGet("Colonie",  8000)
-            ]);
-
-            // Timeline → misure principali
-            const timelineData = timelineResult.status === "fulfilled" ? timelineResult.value : [];
-            if (timelineData.length > 0) {
-                appState.measurements = mapTimelineData(timelineData);
-                console.info(`[D.U.B.I.A.] Timeline: ${appState.measurements.length} record.`);
-
-                // Ricostruisce theta1/theta2 deterministicamente
-                if (appState.measurements.length > 1) {
-                    const rebuilt = rebuildParamsFromMeasurements(appState.measurements);
-                    appState.params.theta1 = rebuilt.theta1;
-                    appState.params.theta2 = rebuilt.theta2;
-                    saveParams(appState.params);
-                    console.info(`[D.U.B.I.A.] Params ricostruiti: th1=${rebuilt.theta1.toFixed(6)}, th2=${rebuilt.theta2.toFixed(6)}`);
-                }
-            } else {
-                console.info("[D.U.B.I.A.] Timeline cloud vuota o non raggiungibile.");
-            }
-
-            // Clienti cloud → merge con locale
-            const clientiData = clientiResult.status === "fulfilled" ? clientiResult.value : [];
-            if (clientiData.length > 0) {
-                const tx = db.transaction("clients", "readwrite");
-                const store = tx.objectStore("clients");
-                clientiData.forEach(c => { if (c.id) store.put({ ...c, id: Number(c.id) }); });
-                appState.clients = clientiData.map(c => ({ ...c, id: Number(c.id) }));
-                console.info(`[D.U.B.I.A.] Clienti cloud: ${clientiData.length}.`);
-            }
-
-            // Cessioni cloud → merge con locale
-            const cessioniData = cessioniResult.status === "fulfilled" ? cessioniResult.value : [];
-            if (cessioniData.length > 0) {
-                const tx = db.transaction("cessioni", "readwrite");
-                const store = tx.objectStore("cessioni");
-                cessioniData.forEach(c => { if (c.id) store.put({ ...c, id: Number(c.id) }); });
-                appState.cessioni = cessioniData
-                    .map(c => ({ ...c, id: Number(c.id), cliente_id: Number(c.cliente_id) }))
-                    .sort((a, b) => new Date(b.data) - new Date(a.data));
-                console.info(`[D.U.B.I.A.] Cessioni cloud: ${cessioniData.length}.`);
-            }
-
-            // Colonie cloud → merge con locale
-            const colonieData = colonieResult.status === "fulfilled" ? colonieResult.value : [];
-            if (colonieData.length > 0) {
-                const coloniesMap = new Map();
-                colonieData.forEach(c => { if (c.id) coloniesMap.set(Number(c.id), c); });
-                const tx = db.transaction("colonies", "readwrite");
-                const store = tx.objectStore("colonies");
-                coloniesMap.forEach((c, id) => {
-                    // Normalizza is_deleted: stringa vuota e null → false
-                    const isDeleted = c.is_deleted === true || c.is_deleted === 'true' || c.is_deleted === 1;
-                    const mapped = {
-                        id, name: c.name || `Colonia ${id}`, type: c.type || "Pasto",
-                        creation_date: c.date || c.creation_date || new Date().toISOString().split("T")[0],
-                        current_weight: parseFloat(c.current_weight) || 0,
-                        males_count: parseInt(c.males_count) || 0, females_count: parseInt(c.females_count) || 0,
-                        subadults_count: parseInt(c.subadults_count) || 0, medium_count: parseInt(c.medium_count) || 0,
-                        small_count: parseInt(c.small_count) || 0, baby_count: parseInt(c.baby_count) || 0,
-                        notes: c.notes || "",
-                        is_deleted: isDeleted  // ← Fix: era mancante, causava colonie zombie
-                    };
-                    store.put(mapped);
-                    const idx = appState.colonies.findIndex(x => x.id === id);
-                    if (idx >= 0) appState.colonies[idx] = mapped;
-                    else appState.colonies.push(mapped);
-                });
-                console.info(`[D.U.B.I.A.] Colonie cloud: ${coloniesMap.size}.`);
-            }
-
-            showNotification("Sincronizzazione", "Dati cloud caricati con successo.", "success");
-            // Flush eventuali POST offline in coda
-            flushOfflineQueue();
-            // Avvia background sync
-            startBackgroundSync();
-            return;
-
-        } catch (e) {
-            console.warn("[D.U.B.I.A.] loadInitialData cloud error:", e.message);
-            showNotification("Errore di Rete", "Caricamento dati locali.", "warning");
-        }
-    } else {
-        showNotification("Offline", "Nessuna connessione. Caricamento dati locali.", "warning");
-    }
-
-    // ── STEP 3 (fallback): Misure da IndexedDB locale ────────────────────
-    return new Promise((resolve) => {
+    // Carica misure locali (IndexedDB)
+    await new Promise((resolve) => {
         const tx = db.transaction("measurements", "readonly");
         const req = tx.objectStore("measurements").getAll();
         req.onsuccess = () => {
-            if (appState.measurements.length === 0) {
-                appState.measurements = (req.result || []).sort((a, b) => new Date(a.date) - new Date(b.date));
-            }
-            if (appState.measurements.length === 0) {
-                showNotification("Nessun Dato", "Cloud e DB locale vuoti. Inserisci la tua prima rilevazione.", "warning");
-            }
+            appState.measurements = (req.result || []).sort((a, b) => new Date(a.date) - new Date(b.date));
             resolve();
         };
+        req.onerror = () => resolve();
     });
+
+    // Forza render iniziale immediato con i dati locali
+    if (typeof updateUI === 'function') updateUI();
+    if (typeof updateColoniesUI === 'function') updateColoniesUI();
+    if (typeof updateClientiUI === 'function') updateClientiUI();
+
+    // Avvia sync cloud in background in modo asincrono
+    syncWithCloud();
+
+    return; // Ritorna immediatamente risolvendo la promise per sbloccare l'avvio dell'app!
 };
 
 const saveParams = (params) => {
@@ -676,12 +704,21 @@ const updateClientiUI = (filterClientId = null) => {
     );
 
     if (filtered.length === 0) {
-        listEl.innerHTML = `
-            <div class="clienti-empty">
-                <span class="clienti-empty-icon">👥</span>
-                <p>Nessun cliente trovato.</p>
-                <p class="subtitle-text">Clicca su <strong>+ Nuovo Cliente</strong> per aggiungerne uno.</p>
-            </div>`;
+        if (appState.isSyncing) {
+            listEl.innerHTML = `
+                <div class="clienti-empty">
+                    <span class="clienti-empty-icon loading-spin">⏳</span>
+                    <p>Sincronizzazione clienti in corso...</p>
+                    <p class="subtitle-text">Attendere prego, caricamento dei dati dal cloud.</p>
+                </div>`;
+        } else {
+            listEl.innerHTML = `
+                <div class="clienti-empty">
+                    <span class="clienti-empty-icon">👥</span>
+                    <p>Nessun cliente trovato.</p>
+                    <p class="subtitle-text">Clicca su <strong>+ Nuovo Cliente</strong> per aggiungerne uno.</p>
+                </div>`;
+        }
     } else {
         listEl.innerHTML = filtered.map(c => {
             const badge = ANIMAL_BADGES[c.animale] || ANIMAL_BADGES.altro;
@@ -2578,11 +2615,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             tabs.forEach(t => t.classList.remove('active'));
             contents.forEach(c => c.classList.remove('active'));
             
+            const target = tab.dataset.target;
             tab.classList.add('active');
-            document.getElementById(tab.dataset.target).classList.add('active');
+            document.getElementById(target).classList.add('active');
 
-            // Hook: inizializza il modulo clima alla prima apertura della tab
-            if (tab.dataset.target === 'clima') {
+            // Hook: aggiorna la UI specifica alla selezione della tab
+            if (target === 'dashboard') {
+                updateUI();
+            } else if (target === 'colonies') {
+                updateColoniesUI();
+            } else if (target === 'clienti') {
+                updateClientiUI();
+            } else if (target === 'clima') {
                 ClimateModule.init();
             }
         });
@@ -3881,12 +3925,21 @@ const updateColoniesUI = () => {
     if (!listEl) return;
 
     if (appState.colonies.length === 0) {
-        listEl.innerHTML = `
-            <div class="clienti-empty">
-                <span class="clienti-empty-icon">📦</span>
-                <p>Nessun contenitore registrato.</p>
-                <p class="subtitle-text">Clicca su <strong>+ Nuova Colonia</strong> per iniziare.</p>
-            </div>`;
+        if (appState.isSyncing) {
+            listEl.innerHTML = `
+                <div class="clienti-empty">
+                    <span class="clienti-empty-icon loading-spin">⏳</span>
+                    <p>Sincronizzazione colonie in corso...</p>
+                    <p class="subtitle-text">Attendere prego, caricamento dei dati dal cloud.</p>
+                </div>`;
+        } else {
+            listEl.innerHTML = `
+                <div class="clienti-empty">
+                    <span class="clienti-empty-icon">📦</span>
+                    <p>Nessun contenitore registrato.</p>
+                    <p class="subtitle-text">Clicca su <strong>+ Nuova Colonia</strong> per iniziare.</p>
+                </div>`;
+        }
     } else {
         listEl.innerHTML = appState.colonies.map(c => {
             const isBaby = c.type === 'Baby';

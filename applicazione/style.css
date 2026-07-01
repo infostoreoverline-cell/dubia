@@ -2127,3 +2127,9 @@ button, input[type="text"], input[type="number"], input[type="date"], select, te
     vertical-align: middle;
     border-bottom: 1px solid var(--border-color);
 }
+
+.loading-spin {
+    display: inline-block;
+    animation: spin 1.2s linear infinite;
+}
+
