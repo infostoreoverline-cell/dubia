@@ -129,6 +129,19 @@ static void writeRTCFlag(uint32_t value) {
   ESP.rtcUserMemoryWrite(RTC_FLAG_OFFSET, &rtcFlagWord, sizeof(rtcFlagWord));
 }
 
+// Flag per la preparazione della radio (reboot RF_DEFAULT) — offset 3.
+static constexpr uint8_t  RTC_RF_OFFSET = 3;          // in unità di uint32_t
+static uint32_t rtcRfPrepared = 0;
+
+static void readRTCRfPrepared() {
+  ESP.rtcUserMemoryRead(RTC_RF_OFFSET, &rtcRfPrepared, sizeof(rtcRfPrepared));
+}
+
+static void writeRTCRfPrepared(uint32_t value) {
+  rtcRfPrepared = value;
+  ESP.rtcUserMemoryWrite(RTC_RF_OFFSET, &rtcRfPrepared, sizeof(rtcRfPrepared));
+}
+
 static inline bool isDeepSleepWake() {
   return ESP.getResetInfoPtr()->reason == REASON_DEEP_SLEEP_AWAKE;
 }
@@ -265,6 +278,7 @@ static void sendWiFiData() {
     LittleFS.end();
     rtcCounter.counter = 0;
     writeRTC();
+    writeRTCRfPrepared(0);
     DBG_PRINTLN(F("[WiFi] OK — file eliminato, counter azzerato"));
   } else {
     DBG_PRINTLN(F("[WiFi] FAIL — dati conservati per prossimo invio"));
@@ -425,10 +439,14 @@ void setup() {
   if (rtcCounter.counter > 10000u) rtcCounter.counter = READINGS_PER_SEND;
   DBG_PRINTF("[RTC] Contatore: %lu / %u\n", rtcCounter.counter, READINGS_PER_SEND);
 
-  // ── Leggi flag double-reset dalla RAM RTC (indirizzo separato) ───────────
+  // ── Leggi flag dalla RAM RTC ───────────────────────────
   readRTCFlag();
+  readRTCRfPrepared();
 
   const bool autoWake = isDeepSleepWake();
+  if (!autoWake && rtcRfPrepared != 0) {
+    writeRTCRfPrepared(0);
+  }
   DBG_PRINTF("[BOOT] Modalita: %s | SDK: %s\n",
              autoWake ? "AUTO" : "MANUALE", ESP.getResetReason().c_str());
 
@@ -479,11 +497,23 @@ void setup() {
     if (autoWake) {
       // 3a. Avvio automatico da timer: controllo invio Wi-Fi
       if (rtcCounter.counter >= READINGS_PER_SEND) {
-        DBG_PRINTLN(F("[AUTO] Soglia raggiunta — trasmissione Wi-Fi"));
-        WiFi.forceSleepWake();
-        delay(1);
-        sendWiFiData();
+        if (rtcRfPrepared == 1) {
+          DBG_PRINTLN(F("[AUTO] Radio calibrata — avvio trasmissione Wi-Fi"));
+          writeRTCRfPrepared(0); // Resetta subito il flag
+          WiFi.forceSleepWake();
+          delay(1);
+          sendWiFiData();
+        } else {
+          DBG_PRINTLN(F("[AUTO] Soglia raggiunta — riavvio rapido con RF_DEFAULT per calibrazione..."));
+          writeRTCRfPrepared(1);
+          // Riavvio rapido (10ms) per riaccendere ed eseguire la calibrazione RF prima dell'invio
+          ESP.deepSleep(10000ULL, WAKE_RF_DEFAULT);
+          return;
+        }
       } else {
+        if (rtcRfPrepared != 0) {
+          writeRTCRfPrepared(0);
+        }
         DBG_PRINTF("[AUTO] %lu/%u — sleep RF_OFF\n", rtcCounter.counter, READINGS_PER_SEND);
       }
     } else {
