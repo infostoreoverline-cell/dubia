@@ -58,6 +58,7 @@ export default async function handler(req, res) {
   }
 
   const deviceId = (req.headers['x-device-id'] || '').trim() || 'unknown';
+  const readingInterval = parseInt(req.headers['x-reading-interval'], 10) || 60;
 
   // Leggi body raw (il firmware invia text/csv come stream)
   let rawBody = '';
@@ -109,7 +110,8 @@ export default async function handler(req, res) {
   const payload = {
     event_type: 'termoigrometro_data',
     device_id:  deviceId,
-    readings:   readings
+    readings:   readings,
+    interval:   readingInterval
   };
 
   const result = await postToGAS(payload);

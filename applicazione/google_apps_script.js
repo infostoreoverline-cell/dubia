@@ -343,6 +343,7 @@ function readSheetAsObjects(sheet) {
   var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
   
   var result = [];
+  var tz = sheet.getParent().getSpreadsheetTimeZone();
   for (var r = 0; r < data.length; r++) {
     var row = data[r];
     // Salta righe completamente vuote
@@ -358,7 +359,14 @@ function readSheetAsObjects(sheet) {
     var obj = {};
     for (var c = 0; c < headers.length; c++) {
       var h = String(headers[c]).trim();
-      if (h) obj[h] = row[c];
+      if (h) {
+        var val = row[c];
+        if (val instanceof Date) {
+          obj[h] = Utilities.formatDate(val, tz, "yyyy-MM-dd'T'HH:mm:ss");
+        } else {
+          obj[h] = val;
+        }
+      }
     }
     result.push(obj);
   }
@@ -908,18 +916,42 @@ function doPost(e) {
       }
       
       var deviceId = dati.device_id ? String(dati.device_id).trim() : 'unknown';
+      
+      // Auto-registrazione sensore se non presente nel foglio Sensori
+      if (deviceId !== 'unknown' && deviceId !== '') {
+        var sensoriSheet = ss.getSheetByName(SHEET_NAMES.SENSORI);
+        if (!sensoriSheet) {
+          ensureHeaders(ss, SHEET_NAMES.SENSORI);
+          sensoriSheet = ss.getSheetByName(SHEET_NAMES.SENSORI);
+        }
+        var sensoriData = readSheetAsObjects(sensoriSheet);
+        var exists = sensoriData.some(function(s) {
+          return String(s.id).toLowerCase() === deviceId.toLowerCase();
+        });
+        if (!exists) {
+          var newSensor = {
+            id: deviceId,
+            nome: 'Nuovo Sensore (' + deviceId + ')',
+            is_deleted: 'FALSE'
+          };
+          writeRowStrict(sensoriSheet, SHEET_NAMES.SENSORI, newSensor);
+          cacheInvalidate(cache, 'sheet_' + SHEET_NAMES.SENSORI);
+        }
+      }
+      
       var readings = dati.readings;
+      var interval = dati.interval ? parseInt(dati.interval, 10) : 60; // in secondi
       
       if (!readings || !Array.isArray(readings) || readings.length === 0) {
         throw new Error('termoigrometro_data: campo "readings" mancante o vuoto.');
       }
       
       // Calcola un timestamp base: ora del server GAS.
-      // Le letture sono spaziate di ~60s (SLEEP_US del firmware).
+      // Le letture sono spaziate di interval secondi (SLEEP_US del firmware).
       // Distribuiamo i timestamp a ritroso: l'ultima lettura = adesso,
-      // la prima = adesso - (N-1) * 60s.
+      // la prima = adesso - (N-1) * interval.
       var nowMs = Date.now();
-      var INTERVAL_MS = 60 * 1000; // 60 secondi tra le letture
+      var INTERVAL_MS = interval * 1000; // in millisecondi
       var n = readings.length;
       
       var schema = SCHEMAS[SHEET_NAMES.TERMOIGROMETRI];
