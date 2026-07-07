@@ -473,37 +473,11 @@ static void runDisplayCycle(uint32_t durationMs = 10000UL) {
   DBG_PRINTLN(F("[OLED] Display spento"));
 }
 
-// Variabile globale per tracciare se il flag AWAIT è stato scritto in questo specifico boot
-static volatile bool flagJustWritten = false;
-
-extern "C" {
-  #include <user_interface.h>
-}
-
-// preinit() viene eseguita dall'SDK prima dell'inizializzazione del core Arduino (entro 10-20ms)
-extern "C" void preinit(void) {
-  struct rst_info *rtc_info = system_get_rst_info();
-  if (rtc_info && rtc_info->reason != REASON_DEEP_SLEEP_AWAKE) {
-    // È un reset manuale. Leggiamo il flag RTC direttamente al blocco 66 (64 + RTC_FLAG_OFFSET, offset 2)
-    uint32_t flag = 0;
-    if (system_rtc_mem_read(66, &flag, 4)) {
-      if (flag == 0xD0B1E55 || flag == 0xC0DF16 || flag == 0xC0DF0B) {
-        // Flag già valido presente, non sovrascrivere
-      } else {
-        // Primo reset manuale: scrive IMMEDIATAMENTE MAGIC_AWAIT
-        flag = 0xD0B1E55; // MAGIC_AWAIT
-        system_rtc_mem_write(66, &flag, 4);
-        flagJustWritten = true;
-      }
-    }
-  }
-}
-
 // =============================================================================
 //  SETUP E LOOP
 // =============================================================================
 void setup() {
-  // 1. LETTURA IMMEDIATA STATO RTC (Ottimizzazione doppio click ultra-veloce)
+  // 1. LETTURA IMMEDIATA STATO RTC
   const bool autoWake = isDeepSleepWake();
   readRTCFlag();
 
@@ -513,23 +487,20 @@ void setup() {
   bool isFirstManualReset = false;
 
   if (!autoWake) {
-    // Se rtcFlagWord è MAGIC_AWAIT, ma flagJustWritten è false, significa che il flag 
-    // era già presente in RTC prima del boot: è a tutti gli effetti il SECONDO reset!
-    if (rtcFlagWord == MAGIC_AWAIT && !flagJustWritten) {
-      enterDisplayCycle = true;
+    if (rtcFlagWord == MAGIC_AWAIT) {
+      enterDisplayCycle  = true;
       writeRTCFlag(0);
     } else if (rtcFlagWord == MAGIC_CONFIG_PORTAL) {
       enterConfigConfirm = true;
       writeRTCFlag(0);
     } else if (rtcFlagWord == MAGIC_CONFIG_CONFIRM) {
-      enterConfigPortal = true;
+      enterConfigPortal  = true;
       writeRTCFlag(0);
     } else {
-      // Primo reset manuale (il flag è già stato pre-scritto in preinit(), o lo scriviamo qui per sicurezza)
+      // È un reset manuale e non ci sono flag in attesa.
+      // SCRIVIAMO SUBITO IL FLAG MAGIC_AWAIT!
+      writeRTCFlag(MAGIC_AWAIT);
       isFirstManualReset = true;
-      if (rtcFlagWord != MAGIC_AWAIT) {
-        writeRTCFlag(MAGIC_AWAIT);
-      }
     }
   } else {
     // Se è un risveglio automatico, pulisce i flag sporchi
