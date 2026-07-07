@@ -478,8 +478,6 @@ static volatile bool flagJustWritten = false;
 
 extern "C" {
   #include <user_interface.h>
-  bool system_rtc_mem_read(uint32 src_addr, void *des_addr, uint32 save_size);
-  bool system_rtc_mem_write(uint32 des_addr, const void *src_addr, uint32 save_size);
 }
 
 // preinit() viene eseguita dall'SDK prima dell'inizializzazione del core Arduino (entro 10-20ms)

@@ -40,9 +40,9 @@
 #define DBG_PRINTF(...)
 #endif
 
-// --- �1  LIBRERIE ---
+// --- 1  LIBRERIE ---
 #include <Adafruit_GFX.h>
-// NON incluso: #include <Adafruit_SHT4x.h>  <- non serve, usiamo dati simulati
+// Rimosso per test senza sensore: #include <Adafruit_SHT4x.h>
 #include <Adafruit_SSD1306.h>
 #include <ESP8266HTTPClient.h>
 #include <ESP8266WiFi.h>
@@ -54,7 +54,7 @@
 #include <DNSServer.h>
 #include <ESP8266WebServer.h>
 
-// --- �2  CONFIGURAZIONE ---
+// --- 2  CONFIGURAZIONE ---
 static const char WIFI_SSID[]   PROGMEM = "ASUS";
 static const char WIFI_PASS[]   PROGMEM = "24no1998";
 static const char HTTP_EP[]     PROGMEM = "https://okopipo-junglelab-vg32.vercel.app/api/ingest";
@@ -76,8 +76,8 @@ static constexpr uint8_t  SCREEN_H     = 64;
 
 // --- PARAMETRI DI TEST (intervallo ridotto per velocizzare le prove) ---
 // In produzione: SLEEP_US = 15ULL*60ULL*1000000ULL, READINGS_PER_SEND = 12
-static constexpr uint64_t SLEEP_US          = 30ULL * 1000000ULL; // 30 secondi (TEST)
-static constexpr uint32_t READINGS_PER_SEND = 4;                   // Invia ogni 4 letture (TEST)
+static constexpr uint64_t SLEEP_US          = 30ULL * 1000000ULL;           // 30 secondi (TEST)
+static constexpr uint32_t READINGS_PER_SEND = 4;                             // Invia dopo 4 letture (TEST: ogni ~2 min)
 
 static constexpr uint32_t WIFI_TIMEOUT_MS   = 12000UL;
 static constexpr uint32_t FS_MAX_BYTES      = 65536UL;
@@ -87,7 +87,7 @@ static constexpr uint8_t CMD_CHARGEPUMP = 0x8D;
 static constexpr uint8_t CMD_PUMP_OFF   = 0x10;
 static constexpr uint8_t CMD_DISPLAYOFF = 0xAE;
 
-// --- �3  STRUTTURA RTC ---
+// --- 3  STRUTTURA RTC ---
 struct __attribute__((packed)) RtcCounter {
   uint32_t crc32;
   uint32_t counter;
@@ -117,7 +117,8 @@ static_assert(RTC_FLAG_OFFSET * 4u >= sizeof(RtcCounter),  "RTC Flag sovrapposto
 static_assert(RTC_RF_OFFSET * 4u >= (RTC_FLAG_OFFSET * 4u + 4u), "RTC RF sovrapposto a Flag!");
 static_assert(RTC_WIFI_OFFSET * 4u >= (RTC_RF_OFFSET * 4u + 4u), "RTC WiFi sovrapposto a RF!");
 
-// --- �4  OGGETTI GLOBALI ---
+// ─── §4  OGGETTI GLOBALI ──────────────────────────────────────────────────────
+// Rimosso per test senza sensore: static Adafruit_SHT4x   sht4;
 static Adafruit_SSD1306 display(SCREEN_W, SCREEN_H, &Wire, -1);
 
 // =============================================================================
@@ -298,12 +299,12 @@ static void runWifiPortal() {
 
   display.ssd1306_command(CMD_CHARGEPUMP); display.ssd1306_command(CMD_PUMP_OFF); display.ssd1306_command(CMD_DISPLAYOFF);
   WiFi.mode(WIFI_OFF);
-  DBG_PRINTLN(F("[PORTAL] Timeout � deepSleep..."));
+  DBG_PRINTLN(F("[PORTAL] Timeout  deepSleep..."));
   ESP.deepSleep(SLEEP_US, WAKE_RF_DISABLED);
 }
 
 // =============================================================================
-//  LETTURA SENSORE � *** VERSIONE SIMULATA (NESSUN SHT40) ***
+//  LETTURA SENSORE  *** VERSIONE SIMULATA (NESSUN SHT40) ***
 // =============================================================================
 // Restituisce dati sintetici che variano ogni 10 secondi (basati su millis()).
 // Temperatura base: 24.5 gradi C  |  Umidita' base: 65.0% RH
@@ -477,8 +478,6 @@ static volatile bool flagJustWritten = false;
 
 extern "C" {
   #include <user_interface.h>
-  bool system_rtc_mem_read(uint32 src_addr, void *des_addr, uint32 save_size);
-  bool system_rtc_mem_write(uint32 des_addr, const void *src_addr, uint32 save_size);
 }
 
 // preinit() viene eseguita dall'SDK prima dell'inizializzazione del core Arduino (entro 10-20ms)
