@@ -419,13 +419,16 @@ static void sendWiFiData() {
   wifiOff();
 }
 
+// Mostra un messaggio di errore sul display per ~3s poi lo spegne.
+// Fix B1: yield-loop invece di delay(3000) per non bloccare il watchdog.
 static void showError() {
   Wire.begin(PIN_SDA_OLED, PIN_SCL_OLED);
   if (!display.begin(SSD1306_SWITCHCAPVCC, DISP_PRI) && !display.begin(SSD1306_SWITCHCAPVCC, DISP_FALL)) return;
   display.clearDisplay(); display.fillRect(0,0,128,14,SSD1306_WHITE);
-  display.setTextColor(SSD1306_BLACK); display.setCursor(22,3); display.print(F("[ ERRORE ]"));
+  display.setTextColor(SSD1306_BLACK); display.setCursor(22,3); display.print(F("[  ERRORE  ]"));
   display.setTextColor(SSD1306_WHITE); display.setTextSize(2); display.setCursor(34,18); display.print(F("ERRORE"));
-  display.display(); delay(3000);
+  display.display();
+  { const uint32_t _t = millis(); while (millis() - _t < 3000UL) yield(); }
   display.ssd1306_command(CMD_CHARGEPUMP); display.ssd1306_command(CMD_PUMP_OFF); display.ssd1306_command(CMD_DISPLAYOFF);
 }
 
