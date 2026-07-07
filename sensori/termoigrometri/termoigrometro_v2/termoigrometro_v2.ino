@@ -1,9 +1,9 @@
 /*
  * ╔══════════════════════════════════════════════════════════════════╗
- * ║     TERMOIGROMETRO ESP8266 — ULTRA LOW-POWER MOCK v2.0           ║
+ * ║     TERMOIGROMETRO ESP8266 — ULTRA LOW-POWER v2.0                 ║
  * ╠══════════════════════════════════════════════════════════════════╣
  * ║  MCU      : ESP8266 (ESP-12F / NodeMCU)                         ║
- * ║  Sensore  : SIMULATO/FITTIZIO (Senza sensore fisico collegato)   ║
+ * ║  Sensore  : SHT40 (I2C su D2/D1)                                ║
  * ║  Display  : SSD1306 0.96" OLED — I2C su D5 (SDA=14) e D6(12)  ║
  * ║  Storage  : LittleFS (Flash interna)                             ║
  * ║  REQUISITO HW: collegare GPIO16 (D0) a RST per il wake-up       ║
@@ -45,6 +45,8 @@
 
 
 // ─── §2  CONFIGURAZIONE ───────────────────────────────────────────────────────
+// NOTA SICUREZZA: credenziali fallback hardcoded — usate solo se config.txt è assente.
+// Non distribuire il binario compilato con queste credenziali in ambienti pubblici.
 static const char WIFI_SSID[] PROGMEM = "ASUS";
 static const char WIFI_PASS[] PROGMEM = "24no1998";
 static const char HTTP_EP[]   PROGMEM = "https://okopipo-junglelab-vg32.vercel.app/api/ingest";
@@ -104,6 +106,14 @@ static RtcWifiCache rtcWifi;
 
 static constexpr uint8_t RTC_WIFI_OFFSET = 4; // offset in unità di uint32_t (occupa word 4, 5, 6)
 
+// Verifica a compile-time che i blocchi RTC non si sovrappongano.
+static_assert(RTC_FLAG_OFFSET * 4u >= sizeof(RtcCounter),
+              "RTC Flag sovrapposto a RtcCounter!");
+static_assert(RTC_RF_OFFSET * 4u >= (RTC_FLAG_OFFSET * 4u + 4u),
+              "RTC RF sovrapposto a Flag!");
+static_assert(RTC_WIFI_OFFSET * 4u >= (RTC_RF_OFFSET * 4u + 4u),
+              "RTC WiFi sovrapposto a RF!");
+
 // ─── §4  OGGETTI GLOBALI ──────────────────────────────────────────────────────
 static Adafruit_SHT4x   sht4;
 static Adafruit_SSD1306 display(SCREEN_W, SCREEN_H, &Wire, -1);
@@ -145,6 +155,41 @@ static void readRTCFlag() {
 static void writeRTCFlag(uint32_t value) {
   rtcFlagWord = value;
   ESP.rtcUserMemoryWrite(RTC_FLAG_OFFSET, &rtcFlagWord, sizeof(rtcFlagWord));
+}
+
+// Ripristina un bus I2C bloccato (SDA tenuto LOW da uno slave) inviando impulsi di clock.
+static void recoverI2C(uint8_t sdaPin, uint8_t sclPin) {
+  pinMode(sdaPin, INPUT_PULLUP);
+  pinMode(sclPin, OUTPUT);
+  
+  if (digitalRead(sdaPin) == HIGH) {
+    pinMode(sdaPin, INPUT);
+    pinMode(sclPin, INPUT);
+    return;
+  }
+  
+  for (uint8_t i = 0; i < 9; i++) {
+    digitalWrite(sclPin, LOW);
+    delayMicroseconds(5);
+    digitalWrite(sclPin, HIGH);
+    delayMicroseconds(5);
+    
+    if (digitalRead(sdaPin) == HIGH) {
+      break;
+    }
+  }
+  
+  // Genera condizione di STOP
+  pinMode(sdaPin, OUTPUT);
+  digitalWrite(sdaPin, LOW);
+  delayMicroseconds(5);
+  digitalWrite(sclPin, HIGH);
+  delayMicroseconds(5);
+  digitalWrite(sdaPin, HIGH);
+  delayMicroseconds(5);
+  
+  pinMode(sdaPin, INPUT);
+  pinMode(sclPin, INPUT);
 }
 
 // Flag per la preparazione della radio (reboot RF_DEFAULT) — offset 3.
@@ -222,16 +267,17 @@ static void runWifiPortal() {
   char apName[32];
   sprintf(apName, "Termoigrometro_%02X%02X", mac[4], mac[5]);
   
+  // Mostra messaggio "Scansione reti..." prima dello scan
   Wire.begin(PIN_SDA_OLED, PIN_SCL_OLED);
-  if (display.begin(SSD1306_SWITCHCAPVCC, DISP_PRI) ||
-      display.begin(SSD1306_SWITCHCAPVCC, DISP_FALL)) {
+  bool dispOk = display.begin(SSD1306_SWITCHCAPVCC, DISP_PRI) ||
+                display.begin(SSD1306_SWITCHCAPVCC, DISP_FALL);
+  if (dispOk) {
     display.clearDisplay();
     display.fillRect(0, 0, 128, 14, SSD1306_WHITE);
     display.setTextColor(SSD1306_BLACK);
     display.setTextSize(1);
     display.setCursor(16, 3);
     display.print(F("CONFIGURAZIONE"));
-    
     display.setTextColor(SSD1306_WHITE);
     display.setCursor(0, 24);
     display.print(F("Scansione reti..."));
@@ -253,21 +299,19 @@ static void runWifiPortal() {
   
   ESP8266WebServer webServer(80);
   
-  if (display.begin(SSD1306_SWITCHCAPVCC, DISP_PRI) ||
-      display.begin(SSD1306_SWITCHCAPVCC, DISP_FALL)) {
+  // Aggiorna il display con le istruzioni di connessione (senza reinizializzare)
+  if (dispOk) {
     display.clearDisplay();
     display.fillRect(0, 0, 128, 14, SSD1306_WHITE);
     display.setTextColor(SSD1306_BLACK);
     display.setTextSize(1);
     display.setCursor(16, 3);
     display.print(F("CONFIGURAZIONE"));
-    
     display.setTextColor(SSD1306_WHITE);
     display.setCursor(0, 20);
     display.print(F("Connettiti al Wi-Fi:"));
     display.setCursor(0, 32);
     display.print(apName);
-    
     display.setCursor(0, 48);
     display.print(F("Apri nel browser:"));
     display.setCursor(0, 56);
@@ -307,7 +351,8 @@ static void runWifiPortal() {
     wifiListHtml += F("</div>");
   }
   
-  webServer.on("/", [&webServer, wifiListHtml]() {
+  // M3: cattura wifiListHtml by-ref per evitare copia ~2KB di HTML sul heap dell'ESP8266.
+  webServer.on("/", [&webServer, &wifiListHtml]() {
     String html = F("<!DOCTYPE html><html><head><meta name='viewport' content='width=device-width, initial-scale=1.0'><title>Termoigrometro Config</title><style>body{background:linear-gradient(135deg, #0f172a, #1e1b4b);color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;padding:20px;box-sizing:border-box}.card{background:rgba(255,255,255,0.05);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:30px;width:100%;max-width:400px;box-shadow:0 10px 25px -5px rgba(0,0,0,0.3)}h2{margin-top:0;margin-bottom:24px;text-align:center;font-weight:700;background:linear-gradient(to right,#60a5fa,#3b82f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent}.group{margin-bottom:20px}label{display:block;font-size:14px;font-weight:500;margin-bottom:6px;color:#94a3b8}input{width:100%;padding:12px;background:rgba(15,23,42,0.6);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:white;font-size:16px;box-sizing:border-box}input:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 2px rgba(59,130,246,0.3)}button{width:100%;padding:14px;background:linear-gradient(to right,#3b82f6,#2563eb);color:white;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;box-shadow:0 4px 6px -1px rgba(59,130,246,0.3)}.footer{text-align:center;margin-top:24px;font-size:12px;color:#64748b}.wifi-list{max-height:130px;overflow-y:auto;border:1px solid rgba(255,255,255,0.1);border-radius:8px;background:rgba(15,23,42,0.4);margin-bottom:15px;padding:5px}.wifi-item{display:flex;justify-content:space-between;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.05);cursor:pointer;border-radius:6px;transition:background 0.2s;font-size:14px}.wifi-item:last-child{border-bottom:none}.wifi-item:hover{background:rgba(59,130,246,0.15)}.wifi-ssid{font-weight:500;color:#f8fafc}.wifi-rssi{font-size:12px}.sig-strong{color:#10b981}.sig-medium{color:#f59e0b}.sig-weak{color:#ef4444}</style><script>function selectWifi(ssid){document.getElementById('ssid').value=ssid;document.getElementById('pass').focus();}</script></head><body><div class='card'><h2>Configurazione Wi-Fi</h2><form action='/save' method='POST'><div class='group'><label>Reti Wi-Fi Rilevate</label>{WIFI_LIST}</div><div class='group'><label for='ssid'>SSID della rete Wi-Fi</label><input type='text' id='ssid' name='ssid' placeholder='Nome rete o seleziona sopra' required value='{SSID}'></div><div class='group'><label for='pass'>Password Wi-Fi</label><input type='password' id='pass' name='pass' placeholder='••••••••' value='{PASS}'></div><div class='group'><label for='ep'>Endpoint API Ingest</label><input type='text' id='ep' name='ep' placeholder='https://...' required value='{EP}'></div><button type='submit'>Salva Configurazione</button></form><div class='footer'>D.U.B.I.A. &bull; Termoigrometro ESP8266</div></div></body></html>");
     html.replace("{WIFI_LIST}", wifiListHtml);
     html.replace("{SSID}", wifiSsid);
@@ -334,7 +379,8 @@ static void runWifiPortal() {
       String html = F("<!DOCTYPE html><html><head><meta name='viewport' content='width=device-width, initial-scale=1.0'><title>Configurazione Salvata</title><style>body{background:linear-gradient(135deg, #0f172a, #1e1b4b);color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;padding:20px;box-sizing:border-box}.card{background:rgba(255,255,255,0.05);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:30px;width:100%;max-width:400px;text-align:center;box-shadow:0 10px 25px -5px rgba(0,0,0,0.3)}h2{color:#10b981;margin-top:0}p{color:#94a3b8;line-height:1.5}</style></head><body><div class='card'><h2>Configurazione Salvata!</h2><p>Il dispositivo si riavvierà tra pochi secondi per connettersi alla nuova rete Wi-Fi.</p><p>Puoi chiudere questa pagina.</p></div></body></html>");
       webServer.send(200, "text/html", html);
       
-      delay(2000);
+      // Usa yield loop invece di delay() per non bloccare il watchdog durante l'attesa
+      { const uint32_t _t = millis(); while (millis() - _t < 2000UL) yield(); }
       ESP.restart();
     } else {
       webServer.send(400, "text/plain", "SSID e Endpoint sono obbligatori.");
@@ -428,7 +474,9 @@ static bool readSensor(int16_t &t10, int16_t &h10) {
 
   t10 = static_cast<int16_t>(tEv.temperature      * 10.0f + 0.5f);
   h10 = static_cast<int16_t>(hEv.relative_humidity * 10.0f + 0.5f);
-  DBG_PRINTF("[SHT40] T=%d.%d C  H=%d.%d%%\n", t10/10, t10%10, h10/10, h10%10);
+  // Fix Q4: abs() evita formato errato con temperatura negativa (es. "-5.3°C" non "0.-3°C")
+  DBG_PRINTF("[SHT40] T=%s%d.%d C  H=%d.%d%%\n",
+             (t10 < 0 ? "-" : ""), abs(t10)/10, abs(t10)%10, h10/10, h10%10);
   return true;
 }
 
@@ -442,7 +490,7 @@ static void saveMeasurement(int16_t t10, int16_t h10) {
 
   if (f.size() < FS_MAX_BYTES) {
     f.print(t10); f.print(','); f.println(h10);
-    DBG_PRINTF("[FS] Dato fittizio accodato (file: %u byte)\n", (unsigned)f.size());
+    DBG_PRINTF("[FS] Dato accodato (file: %u byte)\n", (unsigned)f.size());
   } else {
     DBG_PRINTLN(F("[FS] WARN: file pieno, dato scartato"));
   }
@@ -481,7 +529,7 @@ static void sendWiFiData() {
       DBG_PRINTLN(F("[WiFi] Connessione veloce fallita (timeout 4s), provo scansione completa..."));
       WiFi.disconnect();
       delay(50);
-      WiFi.begin(FPSTR(WIFI_SSID), FPSTR(WIFI_PASS));
+      WiFi.begin(wifiSsid.c_str(), wifiPass.c_str());
       fallbackTried = true;
     }
     
@@ -515,6 +563,8 @@ static void sendWiFiData() {
   DBG_PRINTF("[WiFi] Heap libero: %u byte\n", ESP.getFreeHeap());
 
   WiFiClientSecure client;
+  // NOTA SICUREZZA: setInsecure() disabilita la verifica del certificato TLS (no CA check).
+  // Accettabile per dispositivo IoT privato. Per produzione considerare fingerprint o CA bundle.
   client.setInsecure();
   // Buffer rx 16KB (necessario per ricevere la catena certificati Cloudflare/Vercel)
   // Buffer tx 512 byte (sufficiente per il nostro piccolo POST CSV)
@@ -532,7 +582,8 @@ static void sendWiFiData() {
     
     // Invia l'intervallo di misura in secondi come header
     char intervalStr[16];
-    sprintf(intervalStr, "%llu", SLEEP_US / 1000000ULL);
+    // Fix B4: snprintf per sicurezza buffer; cast esplicito a unsigned (valore max 3600 s, no overflow)
+    snprintf(intervalStr, sizeof(intervalStr), "%u", (unsigned)(SLEEP_US / 1000000ULL));
     http.addHeader(F("X-Reading-Interval"), intervalStr);
     
     DBG_PRINTF("[WiFi] Heap prima di sendRequest: %u byte\n", ESP.getFreeHeap());
@@ -570,7 +621,7 @@ static void sendWiFiData() {
   wifiOff();
 }
 
-// Spegne il display in caso di errore (Non usato nel mock visto che non può esserci errore sensore)
+// Mostra un messaggio di errore sul display per durationMs, poi lo spegne.
 static void showError() {
   Wire.begin(PIN_SDA_OLED, PIN_SCL_OLED);
   if (!display.begin(SSD1306_SWITCHCAPVCC, DISP_PRI) &&
@@ -594,7 +645,7 @@ static void showError() {
 }
 
 // =============================================================================
-//  DISPLAY DATI LIVE — Mostra i valori fittizi per durationMs millisecondi
+//  DISPLAY DATI LIVE — Mostra i valori del sensore per durationMs millisecondi
 // =============================================================================
 static void runDisplayCycle(uint32_t durationMs = 10000UL) {
   Wire.begin(PIN_SDA_OLED, PIN_SCL_OLED);
@@ -604,6 +655,10 @@ static void runDisplayCycle(uint32_t durationMs = 10000UL) {
   }
 
   DBG_PRINTF("[OLED] Avvio ciclo display %lu ms\n", durationMs);
+
+  // M5: scrivi il flag RTC UNA SOLA VOLTA prima del loop (non ad ogni iterazione ~1s)
+  writeRTCFlag(MAGIC_CONFIG_PORTAL);
+
   uint32_t t0 = millis();
   while (millis() - t0 < durationMs) {
     int16_t t10 = 0, h10 = 0;
@@ -624,12 +679,13 @@ static void runDisplayCycle(uint32_t durationMs = 10000UL) {
       char tempStr[10];
       char humStr[10];
 
+      // Usiamo abs() per gestire correttamente le temperature negative
       if (t10 < 0) {
-        sprintf(tempStr, "-%d.%d\xF8" "C", (-t10) / 10, (-t10) % 10);
+        snprintf(tempStr, sizeof(tempStr), "-%d.%d\xF8" "C", abs(t10) / 10, abs(t10) % 10);
       } else {
-        sprintf(tempStr, "%d.%d\xF8" "C", t10 / 10, t10 % 10);
+        snprintf(tempStr, sizeof(tempStr), "%d.%d\xF8" "C", t10 / 10, t10 % 10);
       }
-      sprintf(humStr, "%d.%d%% RH", h10 / 10, h10 % 10);
+      snprintf(humStr, sizeof(humStr), "%d.%d%% RH", h10 / 10, h10 % 10);
 
       // Temperatura
       display.setTextSize(3);
@@ -651,8 +707,6 @@ static void runDisplayCycle(uint32_t durationMs = 10000UL) {
       display.display();
     }
 
-    writeRTCFlag(MAGIC_CONFIG_PORTAL);
-
     uint32_t delayStart = millis();
     while (millis() - delayStart < 1000UL) {
       yield();
@@ -671,8 +725,46 @@ static void runDisplayCycle(uint32_t durationMs = 10000UL) {
 //  SETUP E LOOP
 // =============================================================================
 void setup() {
-  readRTCRfPrepared();
+  // 1. LETTURA IMMEDIATA STATO RTC (Ottimizzazione doppio click ultra-veloce)
   const bool autoWake = isDeepSleepWake();
+  readRTCFlag();
+
+  bool enterConfigPortal = false;
+  bool enterConfigConfirm = false;
+  bool enterDisplayCycle = false;
+  bool isFirstManualReset = false;
+
+  if (!autoWake) {
+    if (rtcFlagWord == MAGIC_AWAIT) {
+      enterDisplayCycle = true;
+      writeRTCFlag(0);
+    } else if (rtcFlagWord == MAGIC_CONFIG_PORTAL) {
+      enterConfigConfirm = true;
+      writeRTCFlag(0);
+    } else if (rtcFlagWord == MAGIC_CONFIG_CONFIRM) {
+      enterConfigPortal = true;
+      writeRTCFlag(0);
+    } else {
+      // È un reset manuale e non ci sono flag in attesa.
+      // SCRIVIAMO SUBITO IL FLAG MAGIC_AWAIT!
+      // In questo modo, se l'utente preme di nuovo il reset in pochi millisecondi
+      // (mentre esegue recoverI2C o Serial.begin), il flag è GIÀ SALVATO in RAM!
+      writeRTCFlag(MAGIC_AWAIT);
+      isFirstManualReset = true;
+    }
+  } else {
+    // Se è un risveglio automatico, pulisce i flag sporchi
+    if (rtcFlagWord != 0) {
+      writeRTCFlag(0);
+    }
+  }
+
+  // 2. RIPRISTINO HARDWARE (Lento)
+  // Ripristina eventuali bus I2C bloccati (OLED o Sensore)
+  recoverI2C(PIN_SDA_SHT, PIN_SCL_SHT);
+  recoverI2C(PIN_SDA_OLED, PIN_SCL_OLED);
+
+  readRTCRfPrepared();
 
   // Spegni la radio all'avvio se non è un invio automatico programmato
   if (!(autoWake && rtcRfPrepared == 1)) {
@@ -681,7 +773,7 @@ void setup() {
   }
 
   DBG_BEGIN(115200);
-  DBG_PRINTLN(F("\n[BOOT] Termoigrometro ESP8266 v2.0 [SIMULATION MOCK]"));
+  DBG_PRINTLN(F("\n[BOOT] Termoigrometro ESP8266 v2.0"));
 
   // Inizializza contatore in RAM RTC
   if (!readRTC()) {
@@ -689,10 +781,9 @@ void setup() {
     rtcCounter.counter = 0;
     writeRTC();
   }
-  if (rtcCounter.counter > 10000u) rtcCounter.counter = READINGS_PER_SEND;
+  // Fix B1: reset a 0 (non a READINGS_PER_SEND) per evitare invio immediato con file vuoto.
+  if (rtcCounter.counter > 10000u) rtcCounter.counter = 0;
   DBG_PRINTF("[RTC] Contatore: %lu / %u\n", rtcCounter.counter, READINGS_PER_SEND);
-
-  readRTCFlag();
 
   if (!autoWake && rtcRfPrepared != 0) {
     writeRTCRfPrepared(0);
@@ -700,23 +791,32 @@ void setup() {
   DBG_PRINTF("[BOOT] Modalita: %s | SDK: %s\n",
              autoWake ? "AUTO" : "MANUALE", ESP.getResetReason().c_str());
 
-  // Rilevamento reset per modalita' configurazione o double-reset
-  bool manualOverride = false;
-  bool enterConfigPortal = false;
-  bool enterConfigConfirm = false;
-
-  if (rtcFlagWord == MAGIC_AWAIT) {
-    DBG_PRINTLN(F("[BOOT] *** Double-Reset rilevato! Attivo display 5s ***"));
-    manualOverride = true;
-    writeRTCFlag(0);
-  } else if (rtcFlagWord == MAGIC_CONFIG_PORTAL) {
+  // Logiche di debug per lo stato individuato a inizio setup
+  if (enterDisplayCycle) {
+    DBG_PRINTLN(F("[BOOT] *** Secondo Reset: attivo display! ***"));
+  } else if (enterConfigConfirm) {
     DBG_PRINTLN(F("[BOOT] *** Reset durante display: attesa conferma per Config Portal ***"));
-    enterConfigConfirm = true;
-    writeRTCFlag(0);
-  } else if (rtcFlagWord == MAGIC_CONFIG_CONFIRM) {
+  } else if (enterConfigPortal) {
     DBG_PRINTLN(F("[BOOT] *** Reset confermato: entro in Config Portal! ***"));
-    enterConfigPortal = true;
+  }
+
+  // Gestione primo reset manuale: standby silenzioso per attendere il secondo reset
+  if (isFirstManualReset) {
+    DBG_PRINTLN(F("[BOOT] Primo Reset Manuale. Standby 2s per rilevare secondo reset..."));
+    // Nota: il flag MAGIC_AWAIT è già stato scritto in cima al setup()
+    
+    // Attendi 2 secondi in standby
+    const uint32_t t_win = millis();
+    while (millis() - t_win < DISPLAY_WIN_MS) {
+      yield();
+    }
+    
+    // Timeout scaduto senza secondo reset
     writeRTCFlag(0);
+    WiFi.mode(WIFI_OFF);
+    DBG_PRINTLN(F("[BOOT] Primo reset scaduto — deepSleep..."));
+    ESP.deepSleep(SLEEP_US, WAKE_RF_DISABLED);
+    return;
   }
 
   // Logica conferma configurazione
@@ -771,15 +871,18 @@ void setup() {
     sendWiFiData();
 
     uint32_t elapsedMs = millis();
-    uint32_t sleepMs = SLEEP_US / 1000ULL;
-    uint64_t actualSleepUs = (elapsedMs < sleepMs) ? (sleepMs - elapsedMs) * 1000ULL : 1000000ULL;
+    uint64_t sleepMs   = SLEEP_US / 1000ULL;  // uint64_t per evitare overflow con sleep >70 min
+    // Fix B2: se elapsed >= sleepMs il ciclo è già in ritardo → sleep 0 (risveglio immediato)
+    uint64_t actualSleepUs = (sleepMs > (uint64_t)elapsedMs)
+                             ? (sleepMs - (uint64_t)elapsedMs) * 1000ULL
+                             : 0ULL;
     DBG_PRINTF("[BOOT] → deepSleep %llu s (sveglio per %lu ms)\n", actualSleepUs / 1000000ULL, elapsedMs);
     ESP.deepSleep(actualSleepUs, WAKE_RF_DISABLED);
     return;
   }
 
   // ── Lettura sensore ───────────────────────────────────────────────────────
-  int16_t t10, h10;
+  int16_t t10 = 0, h10 = 0;
   if (!readSensor(t10, h10)) {
     DBG_PRINTLN(F("[ERR] Sensore — mostro errore su display, poi sleep"));
     writeRTCFlag(0);  // Resetta flag in caso di errore
@@ -788,58 +891,40 @@ void setup() {
     return;
   }
 
-  // Logica Principale
-  if (!manualOverride) {
-    if (!autoWake) {
-      writeRTCFlag(MAGIC_AWAIT);
-      DBG_PRINTF("[BOOT] Avvio manuale: finestra double-reset aperta (%lu ms)...\n", DISPLAY_WIN_MS);
-
-      const uint32_t t_win = millis();
-      while (millis() - t_win < DISPLAY_WIN_MS) {
-        yield();
-      }
-
-      writeRTCFlag(0);
-      DBG_PRINTLN(F("[BOOT] Finestra chiusa senza reset."));
-    }
-
+  // Logica Principale: Salvataggio e Trasmissione SOLO se Auto-Wake
+  if (autoWake) {
     // Salva misurazione reale e aggiorna contatore
     saveMeasurement(t10, h10);
     ++rtcCounter.counter;
     writeRTC();
     DBG_PRINTF("[RTC] Aggiornato: %lu\n", rtcCounter.counter);
 
-    if (autoWake) {
-      if (rtcCounter.counter >= READINGS_PER_SEND) {
-        DBG_PRINTLN(F("[AUTO] Soglia raggiunta — riavvio rapido con RF_DEFAULT per calibrazione..."));
-        writeRTCRfPrepared(1);
-        ESP.deepSleep(10000ULL, WAKE_RF_DEFAULT);
-        return;
-      } else {
-        if (rtcRfPrepared != 0) {
-          writeRTCRfPrepared(0);
-        }
-        DBG_PRINTF("[AUTO] %lu/%u — sleep RF_OFF\n", rtcCounter.counter, READINGS_PER_SEND);
-      }
+    if (rtcCounter.counter >= READINGS_PER_SEND) {
+      DBG_PRINTLN(F("[AUTO] Soglia raggiunta — riavvio rapido con RF_DEFAULT per calibrazione..."));
+      writeRTCRfPrepared(1);
+      ESP.deepSleep(10000ULL, WAKE_RF_DEFAULT);
+      return;
     } else {
-      // Avvio manuale: mostra i dati e invia immediatamente per agevolare il test
-      DBG_PRINTLN(F("[MAN] Avvio a freddo — Ciclo Display 10s"));
-      runDisplayCycle(10000UL);
-
-      DBG_PRINTLN(F("[MAN] Invio dati immediato post-display..."));
-      WiFi.forceSleepWake();
-      delay(1);
-      sendWiFiData();
+      if (rtcRfPrepared != 0) {
+        writeRTCRfPrepared(0);
+      }
+      DBG_PRINTF("[AUTO] %lu/%u — sleep RF_OFF\n", rtcCounter.counter, READINGS_PER_SEND);
     }
   } else {
-    // DOUBLE-RESET (Solo display per 10s, nessun salvataggio o invio)
-    DBG_PRINTLN(F("[MAN] Ciclo Display 10s (double-reset)"));
+    // ── Esecuzione Manuale (Tasto RESET) ──
+    // Qualsiasi pressione manuale NON salva dati e NON invia al server.
+    // Viene eseguito solo se il secondo reset è stato confermato.
+    
+    DBG_PRINTLN(F("[MAN] Ciclo Display 10s (SOLO VISUALIZZAZIONE)"));
     runDisplayCycle(10000UL);
   }
 
   uint32_t elapsedMs = millis();
-  uint32_t sleepMs = SLEEP_US / 1000ULL;
-  uint64_t actualSleepUs = (elapsedMs < sleepMs) ? (sleepMs - elapsedMs) * 1000ULL : 1000000ULL;
+  uint64_t sleepMs   = SLEEP_US / 1000ULL;  // uint64_t per evitare overflow con sleep >70 min
+  // Fix B2b: se elapsed >= sleepMs il ciclo è già in ritardo → sleep 0 (risveglio immediato)
+  uint64_t actualSleepUs = (sleepMs > (uint64_t)elapsedMs)
+                           ? (sleepMs - (uint64_t)elapsedMs) * 1000ULL
+                           : 0ULL;
 
   DBG_PRINTF("[BOOT] → deepSleep %llu s (sveglio per %lu ms)\n", actualSleepUs / 1000000ULL, elapsedMs);
   ESP.deepSleep(actualSleepUs, WAKE_RF_DISABLED);

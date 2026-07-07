@@ -91,7 +91,7 @@ var SCHEMAS = {
     'is_deleted'
   ],
   // ── Termoigrometri: dati ambientali ESP8266/SHT40 ──────────────
-  // Ogni riga = una lettura singola (un ciclo = 60 letture/ora).
+  // Ogni riga = una lettura singola (un ciclo = 4 letture/ora — ogni 15 min).
   // timestamp: ISO 8601 generato lato server GAS (non dipende dall'orologio ESP).
   // device_id: MAC address dell'ESP che ha inviato il batch.
   // temperature: float in °C (t10 / 10.0)
@@ -940,7 +940,7 @@ function doPost(e) {
       }
       
       var readings = dati.readings;
-      var interval = dati.interval ? parseInt(dati.interval, 10) : 60; // in secondi
+      var interval = dati.interval ? parseInt(dati.interval, 10) : 900; // in secondi (default 15 min / 900s)
       
       if (!readings || !Array.isArray(readings) || readings.length === 0) {
         throw new Error('termoigrometro_data: campo "readings" mancante o vuoto.');

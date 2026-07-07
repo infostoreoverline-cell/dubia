@@ -4,7 +4,7 @@
  *
  *  Bridge ESP8266 firmware → Google Apps Script backend.
  *
- *  Il firmware (termoigrometro_v2) invia un POST CSV ogni ~1h con le
+ *  Il firmware (termoigrometro_v2) invia un POST CSV ogni ~3h con le
  *  letture accumulate del sensore SHT40:
  *    - Body:   testo CSV, righe "t10,h10\n"
  *    - Header: Content-Type: text/csv
@@ -19,7 +19,7 @@
  */
 
 // URL Google Apps Script — aggiornare dopo ogni re-deploy GAS.
-const GAS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwMu0JUWz3Xzf4-AlVF2e7d34vtwWMOmNi4NLxEwGh4EGPxqkzhbBtY13mVvKS-5zPayQ/exec';
+const GAS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbytzG9NLE51X939kgbNQbaRTC5vmd5V58nfYKAtfuZixhv30mizaPsB2ko7jmjD0gygsg/exec';
 
 const MAX_RETRIES       = 3;
 const RETRY_BASE_DELAY  = 1000; // ms
@@ -58,7 +58,7 @@ export default async function handler(req, res) {
   }
 
   const deviceId = (req.headers['x-device-id'] || '').trim() || 'unknown';
-  const readingInterval = parseInt(req.headers['x-reading-interval'], 10) || 60;
+  const readingInterval = parseInt(req.headers['x-reading-interval'], 10) || 900;
 
   // Leggi body raw (il firmware invia text/csv come stream)
   let rawBody = '';
