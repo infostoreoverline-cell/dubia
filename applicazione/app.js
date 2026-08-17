@@ -2016,74 +2016,77 @@ const exportFullCatalogPDF = (channel = 'DIRECT') => {
         doc.setLineWidth(0.3);
         doc.line(15, 28, 195, 28);
 
-        // ── 2. TABELLA SEMPLICE & PROTETTA (GRIGLIA CALIBRATA) ──
-        let tableY = 34;
-
-        // Intestazione Tabella
-        doc.setFillColor(...headerBg);
-        doc.rect(15, tableY, 180, 7.5, 'F');
-        doc.setDrawColor(...lineGray);
-        doc.line(15, tableY, 195, tableY);
-        doc.line(15, tableY + 7.5, 195, tableY + 7.5);
-
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(7.5);
-        doc.setTextColor(...textMuted);
-        doc.text('PRODOTTO / SPECIE', 17, tableY + 5);
-        doc.text('TAGLIA / MISURA', 62, tableY + 5);
-        doc.text('QUANTITÀ / FORMATO', 104, tableY + 5);
-        doc.text('PREZZO', 156, tableY + 5, { align: 'right' });
-        doc.text('DETTAGLIO', 193, tableY + 5, { align: 'right' });
-
-        let curY = tableY + 7.5;
+        // ── 2. CARDS PRODOTTO AD ALTA LEGGIBILITÀ (4 BLOCCHI VISIVI RAPIDI) ──
         const blatteCategory = PRICE_CATALOG_FULL.categories.find(c => c.id === 'BLATTE') || PRICE_CATALOG_FULL.categories[0];
+        let cardY = 32;
+        const cardHeight = 54;
+        const cardGap = 7;
 
-        blatteCategory.items.forEach((item, itemIdx) => {
+        blatteCategory.items.forEach((item) => {
             const tiers = item.tiers[channel] || item.tiers.DIRECT;
 
+            // Container Card Principale
+            doc.setFillColor(255, 255, 255);
+            doc.setDrawColor(226, 232, 240); // #E2E8F0
+            doc.setLineWidth(0.3);
+            doc.roundedRect(15, cardY, 180, cardHeight, 2.5, 2.5, 'FD');
+
+            // Header della Card (Sfondo grigio chiarissimo)
+            doc.setFillColor(248, 250, 252); // #F8FAFC
+            doc.roundedRect(15, cardY, 180, 11, 2.5, 2.5, 'F');
+            doc.rect(15, cardY + 5, 180, 6, 'F'); // Raddrizza angoli inferiori header
+
+            doc.setDrawColor(226, 232, 240);
+            doc.line(15, cardY + 11, 195, cardY + 11);
+
+            // Titolo Prodotto
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10.5);
+            doc.setTextColor(15, 23, 42); // #0F172A
+            doc.text(item.title.toUpperCase(), 20, cardY + 7.5);
+
+            // Taglia Badge Destra
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8.5);
+            doc.setTextColor(71, 85, 105); // #475569
+            doc.text(`Taglia / Misura: ${item.size}`, 190, cardY + 7.5, { align: 'right' });
+
+            // 3 Box Prezzo Affiancati (Lettura Istantanea)
+            const boxWidth = 54;
+            const boxHeight = 35;
+            const boxSpacing = 6;
+            const boxStartY = cardY + 15;
+
             tiers.forEach((t, tIdx) => {
-                // Riga sfondo alternato
-                if ((itemIdx + tIdx) % 2 === 1) {
-                    doc.setFillColor(252, 252, 253);
-                    doc.rect(15, curY, 180, 7.2, 'F');
-                }
+                const boxX = 18 + tIdx * (boxWidth + boxSpacing);
 
-                // Titolo e Taglia mostrati solo sulla prima riga del gruppo
-                if (tIdx === 0) {
-                    doc.setFont('helvetica', 'bold');
-                    doc.setFontSize(8.5);
-                    doc.setTextColor(...textDark);
-                    drawSafeText(doc, item.title, 17, curY + 4.8, 43, 'left');
+                // Sfondo Box Scaglione
+                doc.setFillColor(248, 250, 252); // #F8FAFC
+                doc.setDrawColor(203, 213, 225); // #CBD5E1
+                doc.setLineWidth(0.25);
+                doc.roundedRect(boxX, boxStartY, boxWidth, boxHeight, 2, 2, 'FD');
 
-                    doc.setFont('helvetica', 'normal');
-                    doc.setFontSize(8);
-                    doc.setTextColor(...textMuted);
-                    drawSafeText(doc, item.size, 62, curY + 4.8, 38, 'left');
-                }
-
-                // Formato, Prezzo e Note con bordi protetti
-                doc.setFont('helvetica', 'normal');
-                doc.setFontSize(8);
-                doc.setTextColor(...textDark);
-                drawSafeText(doc, t.qty, 104, curY + 4.8, 32, 'left');
-
+                // Formato / Quantità
                 doc.setFont('helvetica', 'bold');
-                doc.setFontSize(8.5);
-                doc.setTextColor(...textDark);
-                drawSafeText(doc, `€ ${t.price.toFixed(2)}`, 156, curY + 4.8, 20, 'right');
+                doc.setFontSize(9);
+                doc.setTextColor(71, 85, 105);
+                doc.text(t.qty, boxX + (boxWidth / 2), boxStartY + 7.5, { align: 'center' });
 
+                // Prezzo Grande & Evidente
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(14);
+                doc.setTextColor(15, 23, 42);
+                const priceFormatted = `€ ${t.price.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                doc.text(priceFormatted, boxX + (boxWidth / 2), boxStartY + 19, { align: 'center' });
+
+                // Dettaglio / Note
                 doc.setFont('helvetica', 'normal');
                 doc.setFontSize(7.5);
-                doc.setTextColor(...textMuted);
-                drawSafeText(doc, t.note, 193, curY + 4.8, 34, 'right');
-
-                curY += 7.2;
+                doc.setTextColor(100, 116, 139); // #64748B
+                doc.text(t.note, boxX + (boxWidth / 2), boxStartY + 29, { align: 'center' });
             });
 
-            // Linea divisoria tra i gruppi di prodotto
-            doc.setDrawColor(...lineGray);
-            doc.setLineWidth(0.3);
-            doc.line(15, curY, 195, curY);
+            cardY += cardHeight + cardGap;
         });
 
         // ── 3. FOOTER MINIMALE ──
@@ -2091,10 +2094,11 @@ const exportFullCatalogPDF = (channel = 'DIRECT') => {
         doc.setLineWidth(0.3);
         doc.line(15, 278, 195, 278);
 
+        doc.setFont('helvetica', 'normal');
         doc.setFontSize(8);
         doc.setTextColor(156, 163, 175);
         doc.text('D.U.B.I.A. · Allevamento Selezionato Blaptica Dubia', 15, 285);
-        doc.text('Pagina 1 di 1', 195, 285, { align: 'right' });
+        doc.text('Listino Ufficiale · Pagina 1 di 1', 195, 285, { align: 'right' });
 
         const fileName = isMichael ? 'Listino_Blatte_Dubia_Ingrosso_Michael.pdf' : 'Listino_Blatte_Dubia_2026.pdf';
         const saved = savePdfDocument(doc, fileName);
