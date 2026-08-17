@@ -275,15 +275,14 @@ describe('Listino Prezzi & Catalogo Completo D.U.B.I.A.', () => {
 
     it('should generate formatted WhatsApp price list text for DIRECT and MICHAEL', () => {
         const directText = generateWhatsAppPriceListText('DIRECT');
-        expect(directText).toContain('LISTINO PREZZI UFFICIALE');
-        expect(directText).toContain('BLATTE DA PASTO');
-        expect(directText).toContain('HARDWARE IOT');
-        expect(directText).toContain('NUTRIZIONE');
+        expect(directText).toContain('LISTINO PREZZI BLATTE DUBIA 2026');
+        expect(directText).toContain('BLATTE ADULTE');
+        expect(directText).toContain('NEANIDI MEDIE');
         expect(directText).toContain('SPEDIZIONI & GARANZIA QUALITÀ');
 
         const michaelText = generateWhatsAppPriceListText('MICHAEL');
         expect(michaelText).toContain('LISTINO RISERVATO INGROSSO (MICHAEL)');
-        expect(michaelText).toContain('BLATTE DA PASTO');
+        expect(michaelText).toContain('BLATTE ADULTE');
         expect(michaelText).not.toEqual(directText);
     });
 });

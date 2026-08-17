@@ -2122,24 +2122,22 @@ let listinoCurrentState = {
  */
 const generateWhatsAppPriceListText = (channel = 'DIRECT') => {
     const isMichael = (channel === 'MICHAEL');
-    const headerTitle = isMichael ? 'LISTINO RISERVATO INGROSSO (MICHAEL)' : 'LISTINO PREZZI UFFICIALE 2026';
+    const headerTitle = isMichael ? 'LISTINO RISERVATO INGROSSO (MICHAEL)' : 'LISTINO PREZZI BLATTE DUBIA 2026';
     
     let text = `🌿 *${headerTitle} — D.U.B.I.A.* 🌿\n`;
-    text += `_Allevamento Selezionato Blaptica Dubia & Sistemi IoT per Terrari_\n\n`;
+    text += `_Allevamento Selezionato Insetti da Pasto & Colonie (Blaptica Dubia)_\n\n`;
 
-    PRICE_CATALOG_FULL.categories.forEach(cat => {
-        text += `${cat.icon} *${cat.title.toUpperCase()}*\n`;
-        cat.items.forEach(item => {
-            const tiers = item.tiers[channel] || item.tiers.DIRECT;
-            const tiersStr = tiers.map(t => `   • ${t.qty}: *€ ${t.price.toFixed(2)}* _(${t.note})_`).join('\n');
-            text += `🔹 *${item.title}* (${item.size})\n${tiersStr}\n`;
-        });
-        text += `\n`;
+    const blatteCategory = PRICE_CATALOG_FULL.categories.find(c => c.id === 'BLATTE') || PRICE_CATALOG_FULL.categories[0];
+
+    blatteCategory.items.forEach(item => {
+        const tiers = item.tiers[channel] || item.tiers.DIRECT;
+        const tiersStr = tiers.map(t => `   • ${t.qty}: *€ ${t.price.toFixed(2)}* _(${t.note})_`).join('\n');
+        text += `🪳 *${item.title.toUpperCase()}* (${item.size})\n${tiersStr}\n\n`;
     });
 
     text += `🚚 *SPEDIZIONI & GARANZIA QUALITÀ*:\n`;
-    text += `✓ Partenze Lunedì-Mercoledì con Corriere Espresso 24/48h\n`;
-    text += `✓ Box termico con Heat Pack 40h incluso nei mesi invernali\n`;
+    text += `✓ Partenze Lunedì-Mercoledì con Corriere Espresso 24/48h tracciato\n`;
+    text += `✓ Box termico con Heat Pack 40h incluso gratuitamente d'inverno\n`;
     text += `✓ Garanzia 100% vivi all'arrivo e supporto post-vendita\n\n`;
     text += `📍 *Per preventivi personalizzati o ordini:* scrivimi direttamente qui!`;
 
@@ -2177,7 +2175,8 @@ const copyPriceListToWhatsApp = async (channel = 'DIRECT') => {
 };
 
 /**
- * Genera ed esporta il PDF completo del Listino Prezzi D.U.B.I.A.
+ * Genera ed esporta il PDF ufficiale a pagina singola per le sole Blatte Dubia.
+ * Layout vettoriale 100% autonomo senza dipendenze instabili da plugin esterni.
  * @param {string} channel - 'DIRECT' o 'MICHAEL'
  */
 const exportFullCatalogPDF = (channel = 'DIRECT') => {
@@ -2189,141 +2188,202 @@ const exportFullCatalogPDF = (channel = 'DIRECT') => {
 
     try {
         const doc = new JsPDFClass({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-
-        const primaryColor = [24, 43, 73];    // #182B49
-        const goldColor = [242, 201, 76];     // #F2C94C
-        const darkGray = [44, 62, 80];
-        const lightGray = [245, 247, 250];
         const isMichael = (channel === 'MICHAEL');
 
-        // ── HEADER BANNER ──
-        doc.setFillColor(...primaryColor);
-        doc.rect(0, 0, 210, 36, 'F');
+        const primaryNavy = [24, 43, 73];       // #182B49 (D.U.B.I.A. Navy)
+        const goldColor   = [242, 201, 76];      // #F2C94C (Gold)
+        const textDark    = [33, 43, 54];        // #212B36
+        const textMuted   = [100, 116, 139];     // #64748B
+        const cardBorder  = [226, 232, 240];     // #E2E8F0
+        const priceGreen  = [22, 101, 52];       // #166534
 
-        // Brand Title
+        // ══════════════════════════════════════════════════════
+        // 1. TOP HEADER BANNER (Y: 0 -> 32mm)
+        // ══════════════════════════════════════════════════════
+        doc.setFillColor(...primaryNavy);
+        doc.rect(0, 0, 210, 32, 'F');
+
+        // Gold line separator
+        doc.setFillColor(...goldColor);
+        doc.rect(0, 32, 210, 1.2, 'F');
+
+        // Brand Title & Subtitles
         doc.setTextColor(255, 255, 255);
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(22);
-        doc.text('D.U.B.I.A.', 15, 16);
+        doc.setFontSize(20);
+        doc.text('D.U.B.I.A.', 14, 14);
 
-        doc.setFontSize(8.5);
+        doc.setFontSize(8);
         doc.setFont('helvetica', 'normal');
-        doc.setTextColor(200, 210, 225);
-        doc.text('Dynamic Updating Biomass Inference Algorithm', 15, 22);
-        doc.text('Allevamento Selezionato Insetti da Pasto & Sistemi IoT di Monitoraggio', 15, 27);
+        doc.setTextColor(203, 213, 225);
+        doc.text('Allevamento Selezionato Blaptica Dubia · Insetti da Pasto & Colonie', 14, 20);
+        doc.text('Standard Qualitativi Elevati · Esoscheletro Morbido & Digeribile', 14, 25);
 
-        // Document Type Header on Right
+        // Header Right (Title, Date, Channel)
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(11);
+        doc.setFontSize(10.5);
         doc.setTextColor(...goldColor);
-        const listTitle = isMichael ? 'LISTINO RISERVATO INGROSSO' : 'LISTINO PREZZI COMMERCIALE';
-        doc.text(listTitle, 195, 16, { align: 'right' });
+        const headerTitle = isMichael ? 'LISTINO RISERVATO INGROSSO' : 'LISTINO PREZZI UFFICIALE 2026';
+        doc.text(headerTitle, 196, 14, { align: 'right' });
 
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8.5);
+        doc.setFontSize(8);
         doc.setTextColor(255, 255, 255);
         const today = new Date().toLocaleDateString('it-IT');
-        doc.text(`Edizione: 2026 · Aggiornato: ${today}`, 195, 22, { align: 'right' });
-        doc.text(isMichael ? 'Canale: Fornitura Intermediario (Michael)' : 'Canale: Vendita Diretta & Privati', 195, 27, { align: 'right' });
+        doc.text(`Aggiornato al: ${today}`, 196, 20, { align: 'right' });
+        doc.text(isMichael ? 'Canale: Fornitura Intermediario (Michael)' : 'Canale: Vendita Diretta & Privati', 196, 25, { align: 'right' });
 
-        let currentY = 44;
+        // ══════════════════════════════════════════════════════
+        // 2. BLATTE DUBIA PRODUCTS — 6 CRUCIAL CARDS (Y: 36.5 -> 228mm)
+        // ══════════════════════════════════════════════════════
+        const blatteCategory = PRICE_CATALOG_FULL.categories.find(c => c.id === 'BLATTE') || PRICE_CATALOG_FULL.categories[0];
+        const blatteItems = blatteCategory.items;
 
-        // Itera le categorie del catalogo
-        PRICE_CATALOG_FULL.categories.forEach((cat, index) => {
-            // Se non c'è abbastanza spazio per l'intestazione e almeno una riga, salta pagina
-            if (currentY > 230) {
-                doc.addPage();
-                currentY = 20;
-            }
+        let startY = 36.5;
+        const cardHeight = 29.5;
+        const cardSpacing = 2.5;
 
-            // Barra intestazione categoria
-            doc.setFillColor(235, 240, 248);
-            doc.roundedRect(15, currentY, 180, 8, 1.5, 1.5, 'F');
+        blatteItems.forEach((item, index) => {
+            const cardY = startY + index * (cardHeight + cardSpacing);
+            const cardX = 14;
+            const cardWidth = 182;
 
+            // Card background & sleek border
+            const bgVal = index % 2 === 0 ? 255 : 250;
+            doc.setFillColor(bgVal, bgVal, bgVal);
+            doc.roundedRect(cardX, cardY, cardWidth, cardHeight, 2, 2, 'F');
+            doc.setDrawColor(...cardBorder);
+            doc.roundedRect(cardX, cardY, cardWidth, cardHeight, 2, 2, 'S');
+
+            // Left gold indicator bar
+            doc.setFillColor(242, 201, 76);
+            doc.roundedRect(cardX, cardY, 2.5, cardHeight, 1, 1, 'F');
+
+            // Left Content: Title, size, short desc
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(9.5);
-            doc.setTextColor(...primaryColor);
-            doc.text(cat.title, 18, currentY + 5.5);
+            doc.setTextColor(...primaryNavy);
+            doc.text(`${item.title}`, cardX + 6, cardY + 7);
 
-            currentY += 10;
+            // Size badge
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(7.5);
+            doc.setTextColor(180, 83, 9); // Amber
+            doc.text(`[ Taglia: ${item.size} ]`, cardX + 6, cardY + 12.5);
 
-            const tableBody = [];
-            cat.items.forEach(item => {
-                const tiers = item.tiers[channel] || item.tiers.DIRECT;
-                const tiersStr = tiers.map(t => `${t.qty}: € ${t.price.toFixed(2)} (${t.note})`).join('\n');
-                tableBody.push([
-                    item.title,
-                    item.size,
-                    item.desc,
-                    tiersStr
-                ]);
+            // Short description
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(7);
+            doc.setTextColor(...textMuted);
+            const descLines = doc.splitTextToSize(item.desc, 80);
+            doc.text(descLines.slice(0, 2), cardX + 6, cardY + 18);
+
+            // Right Content: Price Tier Boxes
+            const tiers = item.tiers[channel] || item.tiers.DIRECT;
+            const tierCount = tiers.length;
+            const tiersAreaX = cardX + 90;
+            const tiersAreaWidth = cardWidth - 94; // 88mm width
+            const boxWidth = (tiersAreaWidth - (tierCount - 1) * 3) / tierCount;
+            const boxHeight = 21;
+            const boxY = cardY + 4.2;
+
+            tiers.forEach((tier, tIdx) => {
+                const bx = tiersAreaX + tIdx * (boxWidth + 3);
+
+                // Tier box container
+                doc.setFillColor(243, 246, 250);
+                doc.roundedRect(bx, boxY, boxWidth, boxHeight, 1.5, 1.5, 'F');
+                doc.setDrawColor(218, 225, 235);
+                doc.roundedRect(bx, boxY, boxWidth, boxHeight, 1.5, 1.5, 'S');
+
+                // Quantity header (e.g. "100 pz", "500 pz", "1 Kg")
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(7.5);
+                doc.setTextColor(...primaryNavy);
+                doc.text(tier.qty, bx + boxWidth / 2, boxY + 5.5, { align: 'center' });
+
+                // Price (Big, Bold, Green)
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(10);
+                doc.setTextColor(...priceGreen);
+                doc.text(`€ ${tier.price.toFixed(2)}`, bx + boxWidth / 2, boxY + 12.5, { align: 'center' });
+
+                // Unit note (e.g. "0,10 €/pz")
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(6.5);
+                doc.setTextColor(...textMuted);
+                doc.text(tier.note, bx + boxWidth / 2, boxY + 17.5, { align: 'center' });
             });
-
-            currentY = safeAutoTable(doc, {
-                startY: currentY,
-                head: [['Articolo / Prodotto', 'Taglia / Specifiche', 'Descrizione / Utilizzo', 'Prezzi & Formati']],
-                body: tableBody,
-                theme: 'striped',
-                headStyles: {
-                    fillColor: primaryColor,
-                    textColor: [255, 255, 255],
-                    fontSize: 8.5,
-                    fontStyle: 'bold',
-                    halign: 'left'
-                },
-                styles: {
-                    fontSize: 8,
-                    cellPadding: 2.5,
-                    textColor: darkGray,
-                    valign: 'middle'
-                },
-                columnStyles: {
-                    0: { fontStyle: 'bold', cellWidth: 42 },
-                    1: { cellWidth: 32, fontStyle: 'italic' },
-                    2: { cellWidth: 62 },
-                    3: { cellWidth: 44, fontStyle: 'bold', textColor: [20, 90, 50] }
-                },
-                margin: { left: 15, right: 15 }
-            });
-
-            currentY += 6;
         });
 
-        // Box Garanzie e Condizioni
-        if (currentY > 230) {
-            doc.addPage();
-            currentY = 20;
-        }
+        // ══════════════════════════════════════════════════════
+        // 3. TERMS, SHIPPING & GUARANTEES BOX (Y: 231 -> 276mm)
+        // ══════════════════════════════════════════════════════
+        const termsY = 231;
+        doc.setFillColor(245, 248, 252);
+        doc.roundedRect(14, termsY, 182, 45, 2, 2, 'F');
+        doc.setDrawColor(186, 205, 230);
+        doc.roundedRect(14, termsY, 182, 45, 2, 2, 'S');
 
-        doc.setFillColor(...lightGray);
-        doc.roundedRect(15, currentY, 180, 32, 2, 2, 'F');
-        doc.setDrawColor(210, 215, 220);
-        doc.roundedRect(15, currentY, 180, 32, 2, 2, 'S');
-
+        // Header of terms box
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(8.5);
-        doc.setTextColor(...primaryColor);
-        doc.text('GARANZIA, SPEDIZIONE & CONDIZIONI DI FORNITURA:', 19, currentY + 6);
+        doc.setTextColor(...primaryNavy);
+        doc.text('CONDIZIONI DI FORNITURA, SPEDIZIONI & GARANZIE', 19, termsY + 6.5);
 
+        // 4 Clean Bullet Items in 2 Columns
+        // Left Column (X: 19)
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7.5);
+        doc.setTextColor(...primaryNavy);
+        doc.text('• SPEDIZIONI ESPRESSE 24/48h:', 19, termsY + 14);
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(7.8);
-        doc.setTextColor(...darkGray);
-        doc.text('• SPEDIZIONI: Lunedì e Mercoledì con corriere espresso 24/48h per evitare fermi deposito durante il fine settimana.', 19, currentY + 12);
-        doc.text('• PACKAGING: Box isotermico con Heat Pack 40h incluso gratuitamente nei mesi invernali per proteggere gli insetti.', 19, currentY + 17);
-        doc.text('• GARANZIA 100% VIVI: Sostituzione immediata o rimborso in caso di mortalità documentata alla consegna entro 2h.', 19, currentY + 22);
-        doc.text('• CONTATTI & ORDINI: Per ordini personalizzati, preventivi su misura o supporto tecnico termoigrometri contattare D.U.B.I.A.', 19, currentY + 27);
+        doc.setFontSize(7);
+        doc.setTextColor(...textDark);
+        doc.text('Partenze Lunedi e Mercoledi con corriere espresso per', 22, termsY + 18.5);
+        doc.text('evitare qualsiasi sosta nei depositi durante il weekend.', 22, termsY + 22.5);
 
-        // Footer con numero di pagina
-        const pageCount = doc.internal.getNumberOfPages();
-        for (let i = 1; i <= pageCount; i++) {
-            doc.setPage(i);
-            doc.setFontSize(7.5);
-            doc.setTextColor(150, 150, 150);
-            doc.text('Documento generato da D.U.B.I.A. Cervello Digitale · Listino Prezzi Ufficiale', 105, 290, { align: 'center' });
-            doc.text(`Pagina ${i} di ${pageCount}`, 195, 290, { align: 'right' });
-        }
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7.5);
+        doc.setTextColor(...primaryNavy);
+        doc.text('• PACKAGING ISOTERMICO INVERNALE:', 19, termsY + 29);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.setTextColor(...textDark);
+        doc.text('Box in polistirolo alta densita con scaldino chimico', 22, termsY + 33.5);
+        doc.text('Heat Pack 40h incluso gratuitamente nei mesi freddi.', 22, termsY + 37.5);
 
-        const fileName = isMichael ? 'Listino_DUBIA_Ingrosso_Michael.pdf' : 'Listino_DUBIA_Ufficiale_2026.pdf';
+        // Right Column (X: 106)
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7.5);
+        doc.setTextColor(...primaryNavy);
+        doc.text('• GARANZIA 100% VIVI ALL\'ARRIVO:', 106, termsY + 14);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.setTextColor(...textDark);
+        doc.text('Sostituzione immediata o rimborso in caso di', 109, termsY + 18.5);
+        doc.text('mortalita documentata con foto entro 2 ore dalla consegna.', 109, termsY + 22.5);
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7.5);
+        doc.setTextColor(...primaryNavy);
+        doc.text('• ORDINI & PREVENTIVI SU MISURA:', 106, termsY + 29);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.setTextColor(...textDark);
+        doc.text('Per quantitativi speciali, forniture continuative o', 109, termsY + 33.5);
+        doc.text('ritiro diretto, contattare direttamente via WhatsApp.', 109, termsY + 37.5);
+
+        // ══════════════════════════════════════════════════════
+        // 4. FOOTER (Y: 286mm)
+        // ══════════════════════════════════════════════════════
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.setTextColor(150, 150, 150);
+        doc.text('D.U.B.I.A. Cervello Digitale · Listino Prezzi Ufficiale Blaptica Dubia', 105, 286, { align: 'center' });
+        doc.text('Pagina 1 di 1', 196, 286, { align: 'right' });
+
+        const fileName = isMichael ? 'Listino_Blatte_Dubia_Ingrosso_Michael.pdf' : 'Listino_Blatte_Dubia_2026.pdf';
         const saved = savePdfDocument(doc, fileName);
         if (saved && typeof showNotification === 'function') {
             showNotification("PDF Scaricato", `Il listino prezzi (${fileName}) è stato generato con successo!`, "success");
@@ -2347,25 +2407,11 @@ const renderListinoPrezziUI = () => {
     const categoryFilter = listinoCurrentState.category || 'ALL';
     const searchFilter = (listinoCurrentState.searchTerm || '').trim().toLowerCase();
 
-    // Aggiorna conteggi pillole
-    let totalAll = 0, totalBlatte = 0, totalIot = 0, totalAccessori = 0;
-    PRICE_CATALOG_FULL.categories.forEach(cat => {
-        cat.items.forEach(item => {
-            totalAll++;
-            if (cat.id === 'BLATTE') totalBlatte++;
-            if (cat.id === 'IOT') totalIot++;
-            if (cat.id === 'ACCESSORI') totalAccessori++;
-        });
-    });
+    const blatteCategory = PRICE_CATALOG_FULL.categories.find(c => c.id === 'BLATTE') || PRICE_CATALOG_FULL.categories[0];
+    const blatteItems = blatteCategory.items;
 
     const elCountAll = document.getElementById('countAll');
-    const elCountBlatte = document.getElementById('countBlatte');
-    const elCountIot = document.getElementById('countIot');
-    const elCountAccessori = document.getElementById('countAccessori');
-    if (elCountAll) elCountAll.textContent = totalAll;
-    if (elCountBlatte) elCountBlatte.textContent = totalBlatte;
-    if (elCountIot) elCountIot.textContent = totalIot;
-    if (elCountAccessori) elCountAccessori.textContent = totalAccessori;
+    if (elCountAll) elCountAll.textContent = blatteItems.length;
 
     // Aggiorna testo anteprima WhatsApp
     const whatsappEl = document.getElementById('whatsappMessageContent');
@@ -2373,30 +2419,31 @@ const renderListinoPrezziUI = () => {
         whatsappEl.textContent = generateWhatsAppPriceListText(channel);
     }
 
+    // Filtra per taglia / ricerca
+    const filteredItems = blatteItems.filter(item => {
+        if (categoryFilter !== 'ALL') {
+            if (categoryFilter === 'BREEDING') {
+                if (item.id !== 'FEMALES_BREEDING' && item.id !== 'MALES_SELECTED') return false;
+            } else if (item.id !== categoryFilter) {
+                return false;
+            }
+        }
+        if (!searchFilter) return true;
+        return item.title.toLowerCase().includes(searchFilter) ||
+               item.size.toLowerCase().includes(searchFilter) ||
+               item.desc.toLowerCase().includes(searchFilter);
+    });
+
     let html = '';
 
-    PRICE_CATALOG_FULL.categories.forEach(cat => {
-        if (categoryFilter !== 'ALL' && cat.id !== categoryFilter) {
-            return;
-        }
-
-        // Filtra per ricerca
-        const filteredItems = cat.items.filter(item => {
-            if (!searchFilter) return true;
-            return item.title.toLowerCase().includes(searchFilter) ||
-                   item.size.toLowerCase().includes(searchFilter) ||
-                   item.desc.toLowerCase().includes(searchFilter);
-        });
-
-        if (filteredItems.length === 0) return;
-
+    if (filteredItems.length > 0) {
         html += `
             <div class="listino-section">
                 <div class="listino-section-header">
                     <h3 class="listino-section-title">
-                        <span>${cat.icon}</span> ${cat.title}
+                        <span>🪳</span> Prezzi Blatte da Pasto & Colonie (Blaptica Dubia)
                     </h3>
-                    <span class="listino-badge listino-tag-${cat.tag}">${cat.tagLabel} (${filteredItems.length})</span>
+                    <span class="listino-badge listino-tag-blatte">Insetti Vivi Selezionati (${filteredItems.length})</span>
                 </div>
                 <div class="listino-grid">
         `;
@@ -2424,7 +2471,7 @@ const renderListinoPrezziUI = () => {
                                     <span class="listino-card-size">${item.size}</span>
                                 </div>
                             </div>
-                            <span class="listino-tag listino-tag-${cat.tag}">${cat.tagLabel}</span>
+                            <span class="listino-tag listino-tag-blatte">Dubia</span>
                         </div>
                         <p class="listino-card-desc">${item.desc}</p>
                         <div class="listino-tiers-box">
@@ -2432,7 +2479,7 @@ const renderListinoPrezziUI = () => {
                         </div>
                     </div>
                     <div class="listino-card-footer">
-                        <button type="button" class="listino-quick-btn btn-listino-copy-item" data-id="${item.id}" data-title="${item.title}" title="Copia prezzi di questo articolo">
+                        <button type="button" class="listino-quick-btn btn-listino-copy-item" data-id="${item.id}" data-title="${item.title}" title="Copia prezzi di questa taglia">
                             📋 Copia
                         </button>
                         <button type="button" class="listino-quick-btn btn-listino-add-quote" data-cat="${item.id}" data-unit="${item.unit}" data-price="${tiers[0]?.price || 0}" style="background: rgba(142,68,173,0.2); border-color: rgba(142,68,173,0.4); color: #fff;" title="Aggiungi a preventivo">
@@ -2447,13 +2494,11 @@ const renderListinoPrezziUI = () => {
                 </div>
             </div>
         `;
-    });
-
-    if (!html) {
+    } else {
         html = `
             <div class="card" style="text-align:center; padding: 2.5rem 1rem;">
                 <span style="font-size:2.5rem; display:block; margin-bottom:0.5rem;">🔍</span>
-                <h3>Nessun prodotto trovato</h3>
+                <h3>Nessuna taglia trovata</h3>
                 <p class="subtitle-text">Nessun articolo corrisponde ai filtri o al termine di ricerca inserito.</p>
             </div>
         `;
