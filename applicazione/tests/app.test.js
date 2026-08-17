@@ -127,19 +127,19 @@ describe('Commercial Price Catalog & PDF Quotation Engine', () => {
     const { COMMERCIAL_CATALOG } = require('../app.js');
 
     it('should have exact pricing scheme specified by user', () => {
-        // 1. Blatte Adulte (M/F 2-2.5cm): 40€ / kg
-        expect(COMMERCIAL_CATALOG.ADULT.pricePerKg).toBe(40.00);
+        // 1. Blatte Adulte (M/F 2-2.5cm): 50€ / kg
+        expect(COMMERCIAL_CATALOG.ADULT.pricePerKg).toBe(50.00);
 
-        // 2. Misto (Colonia avviata): 60€ / kg
-        expect(COMMERCIAL_CATALOG.MIXED.pricePerKg).toBe(60.00);
+        // 2. Misto (Colonia avviata): 65€ / kg
+        expect(COMMERCIAL_CATALOG.MIXED.pricePerKg).toBe(65.00);
 
-        // 3. Medie (1-1.5cm): 14€ / 100 pz -> 140€ / kg
-        expect(COMMERCIAL_CATALOG.MEDIUM.pricePer100).toBe(14.00);
-        expect(COMMERCIAL_CATALOG.MEDIUM.pricePerKg).toBe(140.00);
+        // 3. Medie (1-1.5cm): 16€ / 100 pz -> 150€ / kg
+        expect(COMMERCIAL_CATALOG.MEDIUM.pricePer100).toBe(16.00);
+        expect(COMMERCIAL_CATALOG.MEDIUM.pricePerKg).toBe(150.00);
 
-        // 4. Small (1-8mm): 12.50€ / 100 pz -> 1250€ / kg
-        expect(COMMERCIAL_CATALOG.SMALL.pricePer100).toBe(12.50);
-        expect(COMMERCIAL_CATALOG.SMALL.pricePerKg).toBe(1250.00);
+        // 4. Small (1-8mm): 14€ / 100 pz -> 1000€ / kg
+        expect(COMMERCIAL_CATALOG.SMALL.pricePer100).toBe(14.00);
+        expect(COMMERCIAL_CATALOG.SMALL.pricePerKg).toBe(1000.00);
     });
 
     it('should accurately calculate quote line items, shipping, discounts and totals', () => {

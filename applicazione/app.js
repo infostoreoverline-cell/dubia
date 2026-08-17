@@ -200,30 +200,30 @@ const COMMERCIAL_CATALOG = {
         id: 'ADULT',
         label: 'Blatte Adulte (M/F)',
         size: '2.0 – 2.5 cm',
-        pricePerKg: 40.00,
-        pricePer100: 8.00,
-        massPerUnit: 2.0, // ~2.0g per adulto medio
-        defaultUnit: 'kg',
+        pricePerKg: 50.00,
+        pricePer100: 10.00,
+        massPerUnit: 2.0, // ~2.0g per adulto (500 pz/kg)
+        defaultUnit: '100pz',
         color: '#e74c3c',
-        desc: 'Adulti riproduttori o feeder taglia grande'
+        desc: 'Riproduttori selezionati o feeder per sauri di grandi dimensioni'
     },
     MIXED: {
         id: 'MIXED',
         label: 'Colonia Mista Avviata',
-        size: 'Mix Tutte le Misure',
-        pricePerKg: 60.00,
-        pricePer100: null,
-        massPerUnit: null,
+        size: 'Tutte le taglie (Mix)',
+        pricePerKg: 65.00,
+        pricePer100: null, // venduto solo a peso
+        massPerUnit: 0.5,
         defaultUnit: 'kg',
         color: '#9b59b6',
-        desc: 'Colonia avviata completa (baby, medie, grandi)'
+        desc: 'Mix demografico bilanciato per avvio/potenziamento allevamento'
     },
     MEDIUM: {
         id: 'MEDIUM',
         label: 'Neanidi Medie',
         size: '1.0 – 1.5 cm',
-        pricePerKg: 140.00,
-        pricePer100: 14.00,
+        pricePerKg: 150.00,
+        pricePer100: 16.00,
         massPerUnit: 1.0, // ~1.0g per individuo (1000 pz/kg)
         defaultUnit: '100pz',
         color: '#2ecc71',
@@ -233,8 +233,8 @@ const COMMERCIAL_CATALOG = {
         id: 'SMALL',
         label: 'Neanidi Small (Baby)',
         size: '1 mm – 8 mm',
-        pricePerKg: 1250.00,
-        pricePer100: 12.50,
+        pricePerKg: 1000.00,
+        pricePer100: 14.00,
         massPerUnit: 0.1, // ~0.1g per baby (10.000 pz/kg)
         defaultUnit: '100pz',
         color: '#f39c12',
@@ -266,12 +266,12 @@ const PRICE_CATALOG_FULL = {
                         DIRECT: [
                             { qty: '100 pz', price: 10.00, note: '0,10 €/pz' },
                             { qty: '500 pz', price: 45.00, note: '0,09 €/pz' },
-                            { qty: '1 Kg (~500 pz)', price: 45.00, note: 'Scorta convenienza' }
+                            { qty: '1 Kg (~500 pz)', price: 50.00, note: '50,00 €/kg' }
                         ],
                         MICHAEL: [
                             { qty: '100 pz', price: 9.00, note: '0,09 €/pz' },
                             { qty: '500 pz', price: 40.00, note: '0,08 €/pz' },
-                            { qty: '1 Kg (~500 pz)', price: 40.00, note: 'Prezzo ingrosso' }
+                            { qty: '1 Kg (~500 pz)', price: 45.00, note: 'Prezzo ingrosso' }
                         ]
                     }
                 },
@@ -329,12 +329,12 @@ const PRICE_CATALOG_FULL = {
                         DIRECT: [
                             { qty: '100 pz', price: 14.00, note: '0,14 €/pz' },
                             { qty: '500 pz', price: 65.00, note: '0,13 €/pz' },
-                            { qty: '1 Kg (~10.000 pz)', price: 1300.00, note: 'Maxi allevamento' }
+                            { qty: '1 Kg (~10.000 pz)', price: 1000.00, note: 'Maxi allevamento' }
                         ],
                         MICHAEL: [
                             { qty: '100 pz', price: 12.00, note: '0,12 €/pz' },
                             { qty: '500 pz', price: 55.00, note: '0,11 €/pz' },
-                            { qty: '1 Kg (~10.000 pz)', price: 1150.00, note: '1.150,00 €/kg' }
+                            { qty: '1 Kg (~10.000 pz)', price: 900.00, note: '900,00 €/kg' }
                         ]
                     }
                 }
