@@ -242,7 +242,7 @@ const COMMERCIAL_CATALOG = {
     }
 };
 
-// Catalogo Commerciale Completo Multilivello (Blatte, Hardware IoT & Accessori)
+// Catalogo Commerciale Prezzi Blatte Dubia
 const PRICE_CATALOG_FULL = {
     edition: '2026',
     brand: 'D.U.B.I.A. Cervello Digitale',
@@ -278,7 +278,7 @@ const PRICE_CATALOG_FULL = {
                 {
                     id: 'MIXED',
                     title: 'Colonia Mista Avviata',
-                    size: 'Tutte le misure (Baby + Medie + Adulti)',
+                    size: 'Mix tutte le taglie',
                     icon: '🟣',
                     desc: 'Mix demografico perfettamente bilanciato per avviare o potenziare il proprio allevamento autonomo di blatte dubia.',
                     category: 'BLATTE',
@@ -320,7 +320,7 @@ const PRICE_CATALOG_FULL = {
                 {
                     id: 'SMALL',
                     title: 'Neanidi Small (Baby)',
-                    size: '1 mm – 8 mm',
+                    size: '1 – 8 mm (Baby)',
                     icon: '🟡',
                     desc: 'Neanidi piccolissime con esoscheletro tenero e digeribile. Perfette per baby gechi, rane, dendrobates, aracnidi e sauri nani.',
                     category: 'BLATTE',
@@ -341,7 +341,7 @@ const PRICE_CATALOG_FULL = {
                 {
                     id: 'FEMALES_BREEDING',
                     title: 'Femmine Riproduttrici Selezionate',
-                    size: '2.3 – 2.6 cm (Femmine Gravide)',
+                    size: '2.3 – 2.6 cm (Gravide)',
                     icon: '👑',
                     desc: 'Femmine adulte fecondate pronte alla deposizione delle ooteche. Selezionate per taglia e vitalità.',
                     category: 'BLATTE',
@@ -360,7 +360,7 @@ const PRICE_CATALOG_FULL = {
                 {
                     id: 'MALES_SELECTED',
                     title: 'Maschi Adulti Fecondatori',
-                    size: '2.0 – 2.3 cm (Maschi Alati)',
+                    size: '2.0 – 2.3 cm (Alati)',
                     icon: '🛡️',
                     desc: 'Maschi adulti sani ed energici per garantire il corretto rapporto sessuale (1 maschio ogni 3-4 femmine).',
                     category: 'BLATTE',
@@ -1711,6 +1711,24 @@ const savePdfDocument = (doc, fileName) => {
 };
 
 /**
+ * Renderizza testo all'interno di una larghezza massima garantita senza debordare o sovrapporsi.
+ */
+const drawSafeText = (doc, text, x, y, maxWidth, align = 'left') => {
+    if (text === undefined || text === null || text === '') return;
+    const str = String(text);
+    const measuredWidth = doc.getTextWidth(str);
+    if (measuredWidth <= maxWidth) {
+        doc.text(str, x, y, { align });
+        return;
+    }
+    let truncated = str;
+    while (truncated.length > 3 && doc.getTextWidth(truncated + '...') > maxWidth) {
+        truncated = truncated.slice(0, -1);
+    }
+    doc.text(truncated + '...', x, y, { align });
+};
+
+/**
  * Esporta il preventivo in PDF con stile minimale, pulito e chiaro.
  */
 const exportQuotePDF = (quote) => {
@@ -1770,7 +1788,7 @@ const exportQuotePDF = (quote) => {
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(8.5);
         doc.setTextColor(...textMuted);
-        doc.text(clientName, 15, infoY + 5);
+        drawSafeText(doc, clientName, 15, infoY + 5, 85, 'left');
         doc.text('Allevamento D.U.B.I.A.', 110, infoY + 5);
 
         let detailsLeft = [];
@@ -1780,14 +1798,14 @@ const exportQuotePDF = (quote) => {
 
         let leftY = infoY + 9.5;
         detailsLeft.forEach(d => {
-            doc.text(d, 15, leftY);
+            drawSafeText(doc, d, 15, leftY, 85, 'left');
             leftY += 4.2;
         });
 
         doc.text(isMichael ? 'Canale: Fornitura Riservata Intermediario' : 'Spedizione con box termico protetto', 110, infoY + 9.5);
         doc.text(`Validità offerta: ${quote.validityDays || 15} giorni`, 110, infoY + 13.7);
 
-        // ── 3. TABELLA ARTICOLI (MINIMALE E PULITA) ──
+        // ── 3. TABELLA ARTICOLI (CALIBRATA AL MILLIMETRO) ──
         let tableStartY = Math.max(leftY + 4, infoY + 20);
 
         // Intestazione Tabella
@@ -1800,12 +1818,12 @@ const exportQuotePDF = (quote) => {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(7.5);
         doc.setTextColor(...textMuted);
-        doc.text('#', 18, tableStartY + 5);
-        doc.text('ARTICOLO / SPECIE', 26, tableStartY + 5);
-        doc.text('TAGLIA', 85, tableStartY + 5);
-        doc.text('QUANTITÀ', 125, tableStartY + 5);
+        doc.text('#', 18, tableStartY + 5, { align: 'center' });
+        doc.text('ARTICOLO / SPECIE', 25, tableStartY + 5);
+        doc.text('TAGLIA', 83, tableStartY + 5);
+        doc.text('QUANTITÀ', 124, tableStartY + 5);
         doc.text('PREZZO UNIT.', 160, tableStartY + 5, { align: 'right' });
-        doc.text('TOTALE', 192, tableStartY + 5, { align: 'right' });
+        doc.text('TOTALE', 193, tableStartY + 5, { align: 'right' });
 
         let rowY = tableStartY + 7.5;
         const items = quote.items || [];
@@ -1826,20 +1844,20 @@ const exportQuotePDF = (quote) => {
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(8);
             doc.setTextColor(...textDark);
-            doc.text(String(idx + 1), 18, rowY + 4.8);
+            drawSafeText(doc, String(idx + 1), 18, rowY + 4.8, 8, 'center');
             
             doc.setFont('helvetica', 'bold');
-            doc.text(catLabel, 26, rowY + 4.8);
+            drawSafeText(doc, catLabel, 25, rowY + 4.8, 55, 'left');
 
             doc.setFont('helvetica', 'normal');
             doc.setTextColor(...textMuted);
-            doc.text(sizeLabel, 85, rowY + 4.8);
-            doc.text(qtyLabel, 125, rowY + 4.8);
-            doc.text(`€ ${itemUnitP}`, 160, rowY + 4.8, { align: 'right' });
+            drawSafeText(doc, sizeLabel, 83, rowY + 4.8, 38, 'left');
+            drawSafeText(doc, qtyLabel, 124, rowY + 4.8, 24, 'left');
+            drawSafeText(doc, `€ ${itemUnitP}`, 160, rowY + 4.8, 22, 'right');
 
             doc.setFont('helvetica', 'bold');
             doc.setTextColor(...textDark);
-            doc.text(`€ ${itemTotal}`, 192, rowY + 4.8, { align: 'right' });
+            drawSafeText(doc, `€ ${itemTotal}`, 193, rowY + 4.8, 24, 'right');
 
             doc.setDrawColor(...lineGray);
             doc.line(15, rowY + 7, 195, rowY + 7);
@@ -1858,21 +1876,21 @@ const exportQuotePDF = (quote) => {
         doc.setTextColor(...textMuted);
         doc.text('Subtotale:', 155, totalsY, { align: 'right' });
         doc.setTextColor(...textDark);
-        doc.text(`€ ${subtotalVal}`, 192, totalsY, { align: 'right' });
+        doc.text(`€ ${subtotalVal}`, 193, totalsY, { align: 'right' });
 
         if (!isMichael) {
             totalsY += 5;
             doc.setTextColor(...textMuted);
             doc.text('Spedizione & Box Termico:', 155, totalsY, { align: 'right' });
             doc.setTextColor(...textDark);
-            doc.text(`€ ${shippingVal}`, 192, totalsY, { align: 'right' });
+            doc.text(`€ ${shippingVal}`, 193, totalsY, { align: 'right' });
         }
 
         if (parseFloat(quote.discount || 0) > 0) {
             totalsY += 5;
             doc.setTextColor(220, 38, 38);
             doc.text('Sconto:', 155, totalsY, { align: 'right' });
-            doc.text(`- € ${discountVal}`, 192, totalsY, { align: 'right' });
+            doc.text(`- € ${discountVal}`, 193, totalsY, { align: 'right' });
         }
 
         totalsY += 6;
@@ -1885,7 +1903,7 @@ const exportQuotePDF = (quote) => {
         doc.setFontSize(11);
         doc.setTextColor(...textDark);
         doc.text('TOTALE:', 155, totalsY, { align: 'right' });
-        doc.text(`€ ${grandTotalVal}`, 192, totalsY, { align: 'right' });
+        doc.text(`€ ${grandTotalVal}`, 193, totalsY, { align: 'right' });
 
         // ── 5. NOTE INFERIORI & FOOTER ──
         const noteY = Math.max(totalsY + 12, 255);
@@ -1988,7 +2006,7 @@ const copyPriceListToWhatsApp = async (channel = 'DIRECT') => {
 
 /**
  * Genera ed esporta il PDF del Listino Prezzi D.U.B.I.A.
- * Design ultra-minimale, elegante, solo dati essenziali delle sole Blatte Dubia.
+ * Design ultra-minimale, elegante, con colonne millimetrate protette da sovrapposizioni.
  * @param {string} channel - 'DIRECT' o 'MICHAEL'
  */
 const exportFullCatalogPDF = (channel = 'DIRECT') => {
@@ -2036,7 +2054,7 @@ const exportFullCatalogPDF = (channel = 'DIRECT') => {
         doc.setLineWidth(0.3);
         doc.line(15, 28, 195, 28);
 
-        // ── 2. TABELLA SEMPLICE & MINIMALE (SOLE BLATTE DUBIA) ──
+        // ── 2. TABELLA SEMPLICE & PROTETTA (GRIGLIA CALIBRATA) ──
         let tableY = 34;
 
         // Intestazione Tabella
@@ -2049,18 +2067,17 @@ const exportFullCatalogPDF = (channel = 'DIRECT') => {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(7.5);
         doc.setTextColor(...textMuted);
-        doc.text('PRODOTTO / SPECIE', 18, tableY + 5);
-        doc.text('TAGLIA / MISURA', 72, tableY + 5);
-        doc.text('QUANTITÀ / FORMATO', 115, tableY + 5);
-        doc.text('PREZZO', 160, tableY + 5, { align: 'right' });
-        doc.text('NOTE', 192, tableY + 5, { align: 'right' });
+        doc.text('PRODOTTO / SPECIE', 17, tableY + 5);
+        doc.text('TAGLIA / MISURA', 62, tableY + 5);
+        doc.text('QUANTITÀ / FORMATO', 104, tableY + 5);
+        doc.text('PREZZO', 156, tableY + 5, { align: 'right' });
+        doc.text('DETTAGLIO', 193, tableY + 5, { align: 'right' });
 
         let curY = tableY + 7.5;
         const blatteCategory = PRICE_CATALOG_FULL.categories.find(c => c.id === 'BLATTE') || PRICE_CATALOG_FULL.categories[0];
 
         blatteCategory.items.forEach((item, itemIdx) => {
             const tiers = item.tiers[channel] || item.tiers.DIRECT;
-            const startGroupY = curY;
 
             tiers.forEach((t, tIdx) => {
                 // Riga sfondo alternato
@@ -2074,29 +2091,29 @@ const exportFullCatalogPDF = (channel = 'DIRECT') => {
                     doc.setFont('helvetica', 'bold');
                     doc.setFontSize(8.5);
                     doc.setTextColor(...textDark);
-                    doc.text(item.title, 18, curY + 4.8);
+                    drawSafeText(doc, item.title, 17, curY + 4.8, 43, 'left');
 
                     doc.setFont('helvetica', 'normal');
                     doc.setFontSize(8);
                     doc.setTextColor(...textMuted);
-                    doc.text(item.size, 72, curY + 4.8);
+                    drawSafeText(doc, item.size, 62, curY + 4.8, 38, 'left');
                 }
 
-                // Formato, Prezzo e Note
+                // Formato, Prezzo e Note con bordi protetti
                 doc.setFont('helvetica', 'normal');
                 doc.setFontSize(8);
                 doc.setTextColor(...textDark);
-                doc.text(t.qty, 115, curY + 4.8);
+                drawSafeText(doc, t.qty, 104, curY + 4.8, 32, 'left');
 
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(8.5);
                 doc.setTextColor(...textDark);
-                doc.text(`€ ${t.price.toFixed(2)}`, 160, curY + 4.8, { align: 'right' });
+                drawSafeText(doc, `€ ${t.price.toFixed(2)}`, 156, curY + 4.8, 20, 'right');
 
                 doc.setFont('helvetica', 'normal');
                 doc.setFontSize(7.5);
                 doc.setTextColor(...textMuted);
-                doc.text(t.note, 192, curY + 4.8, { align: 'right' });
+                drawSafeText(doc, t.note, 193, curY + 4.8, 34, 'right');
 
                 curY += 7.2;
             });
