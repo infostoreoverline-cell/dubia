@@ -15,9 +15,18 @@
     <!-- QR Code Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    <!-- jsPDF & AutoTable for Quotes / Preventivi PDF Export -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.autotable.min.js"></script>
+    <!-- jsPDF & AutoTable for Quotes / Preventivi PDF Export with Fallbacks -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';"></script>
+    <script>
+        if (typeof window !== 'undefined') {
+            window.getJsPDFClass = function() {
+                if (window.jspdf && window.jspdf.jsPDF) return window.jspdf.jsPDF;
+                if (window.jsPDF) return window.jsPDF;
+                return null;
+            };
+        }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.autotable.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js';"></script>
     <link rel="stylesheet" href="style.css">
 
 </head>

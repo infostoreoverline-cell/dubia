@@ -1776,121 +1776,221 @@ const openQuoteModal = (quote = null) => {
 };
 
 /**
+ * Helper sicuro per recuperare la classe costruttore di jsPDF.
+ */
+const getJsPDFClass = () => {
+    if (typeof window !== 'undefined') {
+        if (window.jspdf && typeof window.jspdf.jsPDF === 'function') return window.jspdf.jsPDF;
+        if (typeof window.jsPDF === 'function') return window.jsPDF;
+    }
+    return null;
+};
+
+/**
+ * Esegue autoTable in modo sicuro su qualsiasi versione/ambiente jsPDF con fallback testuale.
+ */
+const safeAutoTable = (doc, options) => {
+    let finalY = options.startY || 60;
+    try {
+        if (typeof doc.autoTable === 'function') {
+            doc.autoTable(options);
+            return (doc.lastAutoTable && doc.lastAutoTable.finalY) ? doc.lastAutoTable.finalY : finalY + 40;
+        } else if (window.jspdfAutoTable && typeof window.jspdfAutoTable.default === 'function') {
+            window.jspdfAutoTable.default(doc, options);
+            return (doc.lastAutoTable && doc.lastAutoTable.finalY) ? doc.lastAutoTable.finalY : finalY + 40;
+        } else if (window.jspdfAutoTable && typeof window.jspdfAutoTable === 'function') {
+            window.jspdfAutoTable(doc, options);
+            return (doc.lastAutoTable && doc.lastAutoTable.finalY) ? doc.lastAutoTable.finalY : finalY + 40;
+        } else if (typeof window.autoTable === 'function') {
+            window.autoTable(doc, options);
+            return (doc.lastAutoTable && doc.lastAutoTable.finalY) ? doc.lastAutoTable.finalY : finalY + 40;
+        }
+    } catch (err) {
+        console.warn("safeAutoTable warning (utilizzo fallback grafico/testuale):", err);
+    }
+
+    // Fallback tabellare manuale nel caso il plugin autoTable non sia caricato
+    let y = finalY;
+    if (options.head && options.head[0]) {
+        doc.setFillColor(24, 43, 73);
+        doc.rect(15, y, 180, 7, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.text(options.head[0].join('  |  '), 18, y + 4.8);
+        y += 9;
+    }
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.8);
+    doc.setTextColor(44, 62, 80);
+    if (options.body && Array.isArray(options.body)) {
+        options.body.forEach(row => {
+            const line = Array.isArray(row) ? row.slice(0, 3).join('  -  ') : String(row);
+            doc.text(line.substring(0, 95), 18, y);
+            y += 5.5;
+        });
+    }
+    return y + 4;
+};
+
+/**
+ * Salva e scarica il documento PDF in modo compatibile su tutti i browser e dispositivi.
+ */
+const savePdfDocument = (doc, fileName) => {
+    try {
+        doc.save(fileName);
+        return true;
+    } catch (saveErr) {
+        console.warn("doc.save() standard non riuscito, avvio download alternativo tramite Blob URL:", saveErr);
+        try {
+            const blob = doc.output('blob');
+            const blobUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(blobUrl);
+            }, 2500);
+            return true;
+        } catch (blobErr) {
+            console.error("Download Blob fallito, apertura dataURI:", blobErr);
+            try {
+                const dataUri = doc.output('datauristring');
+                const win = window.open();
+                if (win) {
+                    win.document.write(`<iframe src="${dataUri}" frameborder="0" style="border:0; top:0; left:0; bottom:0; right:0; width:100%; height:100%;" allowfullscreen></iframe>`);
+                } else {
+                    window.location.href = dataUri;
+                }
+                return true;
+            } catch (finalErr) {
+                console.error("Impossibile scaricare il PDF:", finalErr);
+                return false;
+            }
+        }
+    }
+};
+
+/**
  * Esporta il preventivo in PDF ad alta qualità con jsPDF e autoTable.
  */
 const exportQuotePDF = (quote) => {
-    if (!window.jspdf || !window.jspdf.jsPDF) {
-        alert("Libreria jsPDF non disponibile al momento. Verifica la connessione.");
+    const JsPDFClass = getJsPDFClass();
+    if (!JsPDFClass) {
+        alert("Libreria jsPDF non disponibile al momento. Verifica la connessione a Internet.");
         return;
     }
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-    const isMichael = (quote.channel === 'MICHAEL') || (!quote.shipping || parseFloat(quote.shipping) === 0);
+    try {
+        const doc = new JsPDFClass({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-    const primaryColor = [24, 43, 73];    // #182B49
-    const goldColor = [242, 201, 76];     // #F2C94C
-    const darkGray = [44, 62, 80];
-    const lightGray = [245, 247, 250];
+        const isMichael = (quote.channel === 'MICHAEL') || (!quote.shipping || parseFloat(quote.shipping) === 0);
 
-    // ── HEADER BANNER ──
-    doc.setFillColor(...primaryColor);
-    doc.rect(0, 0, 210, 38, 'F');
+        const primaryColor = [24, 43, 73];    // #182B49
+        const goldColor = [242, 201, 76];     // #F2C94C
+        const darkGray = [44, 62, 80];
+        const lightGray = [245, 247, 250];
 
-    // Title / Brand
-    doc.setTextColor(255, 255, 255);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(22);
-    doc.text('D.U.B.I.A.', 15, 18);
+        // ── HEADER BANNER ──
+        doc.setFillColor(...primaryColor);
+        doc.rect(0, 0, 210, 38, 'F');
 
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(200, 210, 225);
-    doc.text('Dynamic Updating Biomass Inference Algorithm', 15, 24);
-    doc.text('Allevamento Selezionato Blatta Lateralis & Blatta Dubia', 15, 29);
+        // Title / Brand
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(22);
+        doc.text('D.U.B.I.A.', 15, 18);
 
-    // Document Type on right
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.setTextColor(...goldColor);
-    const docTitle = isMichael ? 'PREVENTIVO RISERVATO INTERMEDIARIO' : 'PREVENTIVO COMMERCIALE';
-    doc.text(docTitle, 195, 18, { align: 'right' });
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(200, 210, 225);
+        doc.text('Dynamic Updating Biomass Inference Algorithm', 15, 24);
+        doc.text('Allevamento Selezionato Blatta Lateralis & Blatta Dubia', 15, 29);
 
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(255, 255, 255);
-    doc.text(`Doc. N°: ${quote.number || 'PREV-001'}`, 195, 25, { align: 'right' });
-    doc.text(`Data: ${quote.date || new Date().toISOString().split('T')[0]}`, 195, 30, { align: 'right' });
+        // Document Type on right
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(12);
+        doc.setTextColor(...goldColor);
+        const docTitle = isMichael ? 'PREVENTIVO RISERVATO INTERMEDIARIO' : 'PREVENTIVO COMMERCIALE';
+        doc.text(docTitle, 195, 18, { align: 'right' });
 
-    // ── INFO BOXES (Fornitore & Cliente) ──
-    const startY = 46;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(255, 255, 255);
+        doc.text(`Doc. N°: ${quote.number || 'PREV-001'}`, 195, 25, { align: 'right' });
+        doc.text(`Data: ${quote.date || new Date().toISOString().split('T')[0]}`, 195, 30, { align: 'right' });
 
-    // Box Fornitore
-    doc.setFillColor(...lightGray);
-    doc.roundedRect(15, startY, 86, 32, 2, 2, 'F');
-    doc.setDrawColor(220, 225, 230);
-    doc.roundedRect(15, startY, 86, 32, 2, 2, 'S');
+        // ── INFO BOXES (Fornitore & Cliente) ──
+        const startY = 46;
 
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.setTextColor(...primaryColor);
-    doc.text('EMESSO DA (Allevatore):', 19, startY + 6);
+        // Box Fornitore
+        doc.setFillColor(...lightGray);
+        doc.roundedRect(15, startY, 86, 32, 2, 2, 'F');
+        doc.setDrawColor(220, 225, 230);
+        doc.roundedRect(15, startY, 86, 32, 2, 2, 'S');
 
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.5);
-    doc.setTextColor(...darkGray);
-    doc.text('Allevamento D.U.B.I.A.', 19, startY + 12);
-    doc.text(isMichael ? 'Canale: Fornitura Riservata Intermediario' : 'Specializzato in Insetti da Pasto & Colonie', 19, startY + 17);
-    doc.text(isMichael ? 'Spedizione: Non applicata (Consegna Diretta)' : 'Termini: Box isotermico + Heat pack', 19, startY + 22);
-    doc.text('Validità offerta: ' + (quote.validityDays || 15) + ' giorni', 19, startY + 27);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(...primaryColor);
+        doc.text('EMESSO DA (Allevatore):', 19, startY + 6);
 
-    // Box Cliente
-    doc.setFillColor(...lightGray);
-    doc.roundedRect(109, startY, 86, 32, 2, 2, 'F');
-    doc.roundedRect(109, startY, 86, 32, 2, 2, 'S');
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.5);
+        doc.setTextColor(...darkGray);
+        doc.text('Allevamento D.U.B.I.A.', 19, startY + 12);
+        doc.text(isMichael ? 'Canale: Fornitura Riservata Intermediario' : 'Specializzato in Insetti da Pasto & Colonie', 19, startY + 17);
+        doc.text(isMichael ? 'Spedizione: Non applicata (Consegna Diretta)' : 'Termini: Box isotermico + Heat pack', 19, startY + 22);
+        doc.text('Validità offerta: ' + (quote.validityDays || 15) + ' giorni', 19, startY + 27);
 
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.setTextColor(...primaryColor);
-    doc.text(isMichael ? 'INTERMEDIARIO / DESTINATARIO:' : 'DESTINATARIO / CLIENTE:', 113, startY + 6);
+        // Box Cliente
+        doc.setFillColor(...lightGray);
+        doc.roundedRect(109, startY, 86, 32, 2, 2, 'F');
+        doc.roundedRect(109, startY, 86, 32, 2, 2, 'S');
 
-    const client = quote.client || {};
-    const clientName = client.nome ? `${client.nome} ${client.cognome || ''}` : (client.name || (isMichael ? 'Michael' : 'Gentile Cliente'));
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(...primaryColor);
+        doc.text(isMichael ? 'INTERMEDIARIO / DESTINATARIO:' : 'DESTINATARIO / CLIENTE:', 113, startY + 6);
 
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8.5);
-    doc.setTextColor(...darkGray);
-    doc.text(clientName, 113, startY + 12);
+        const client = quote.client || {};
+        const clientName = client.nome ? `${client.nome} ${client.cognome || ''}` : (client.name || (isMichael ? 'Michael' : 'Gentile Cliente'));
 
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Città: ${client.citta || client.citta_indirizzo || '—'}`, 113, startY + 17);
-    doc.text(`Tel: ${client.telefono || '—'}`, 113, startY + 22);
-    doc.text(`Email: ${client.email || '—'}`, 113, startY + 27);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8.5);
+        doc.setTextColor(...darkGray);
+        doc.text(clientName, 113, startY + 12);
 
-    // ── TABLE OF ITEMS (AutoTable) ──
-    const tableRows = (quote.items || []).map((it, index) => {
-        const itemTotal = parseFloat(it.total || (it.quantity * it.unitPrice) || 0).toFixed(2);
-        const itemUnitP = parseFloat(it.unitPrice || 0).toFixed(2);
-        let categoryLabel = it.categoryLabel || it.category;
-        if (COMMERCIAL_CATALOG[it.category]) {
-            categoryLabel = COMMERCIAL_CATALOG[it.category].label;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(100, 110, 120);
+
+        if (client.citta) {
+            doc.text(`Città: ${client.citta}`, 113, startY + 17);
         }
-        let sizeInfo = it.size || (COMMERCIAL_CATALOG[it.category]?.size || '—');
-        return [
-            index + 1,
-            categoryLabel,
-            sizeInfo,
-            `${it.quantity} ${it.unit}`,
-            `€ ${itemUnitP}`,
-            `€ ${itemTotal}`
-        ];
-    });
+        if (client.telefono) {
+            doc.text(`Tel: ${client.telefono}`, 113, startY + 22);
+        }
+        if (client.email) {
+            doc.text(`Email: ${client.email}`, 113, startY + 27);
+        }
 
-    if (typeof doc.autoTable === 'function') {
-        doc.autoTable({
+        // ── TABELLA ARTICOLI PREVENTIVATI ──
+        const tableBody = (quote.items || []).map((it, idx) => [
+            (idx + 1).toString(),
+            it.categoryLabel || it.category,
+            it.size || '—',
+            `${it.quantity} ${it.unit || 'kg'}`,
+            `€ ${parseFloat(it.unitPrice || 0).toFixed(2)}`,
+            `€ ${parseFloat(it.total || 0).toFixed(2)}`
+        ]);
+
+        let finalY = safeAutoTable(doc, {
             startY: 84,
-            head: [['#', 'Articolo / Descrizione', 'Taglia Indicativa', 'Quantità', 'Prezzo Unit.', 'Importo Totale']],
-            body: tableRows,
+            head: [['#', 'Articolo / Specie', 'Taglia / Descrizione', 'Quantità', 'Prezzo Unit.', 'Totale']],
+            body: tableBody,
             theme: 'striped',
             headStyles: {
                 fillColor: primaryColor,
@@ -1916,87 +2016,92 @@ const exportQuotePDF = (quote) => {
                 fillColor: [248, 249, 250]
             }
         });
-    }
 
-    let finalY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : 140) + 8;
+        finalY += 8;
 
-    if (finalY > 230) {
-        doc.addPage();
-        finalY = 20;
-    }
+        if (finalY > 230) {
+            doc.addPage();
+            finalY = 20;
+        }
 
-    // ── TOTALS BOX ──
-    const totalsBoxX = 115;
-    const totalsBoxWidth = 80;
-    const totalsBoxHeight = isMichael ? 30 : 38;
+        // ── TOTALS BOX ──
+        const totalsBoxX = 115;
+        const totalsBoxWidth = 80;
+        const totalsBoxHeight = isMichael ? 30 : 38;
 
-    doc.setFillColor(...lightGray);
-    doc.roundedRect(totalsBoxX, finalY, totalsBoxWidth, totalsBoxHeight, 2, 2, 'F');
-    doc.setDrawColor(220, 225, 230);
-    doc.roundedRect(totalsBoxX, finalY, totalsBoxWidth, totalsBoxHeight, 2, 2, 'S');
+        doc.setFillColor(...lightGray);
+        doc.roundedRect(totalsBoxX, finalY, totalsBoxWidth, totalsBoxHeight, 2, 2, 'F');
+        doc.setDrawColor(220, 225, 230);
+        doc.roundedRect(totalsBoxX, finalY, totalsBoxWidth, totalsBoxHeight, 2, 2, 'S');
 
-    doc.setFontSize(8.5);
-    doc.setTextColor(...darkGray);
-    doc.text('Subtotale Articoli:', totalsBoxX + 4, finalY + 7);
-    doc.text(`€ ${parseFloat(quote.subtotal || 0).toFixed(2)}`, totalsBoxX + totalsBoxWidth - 4, finalY + 7, { align: 'right' });
+        doc.setFontSize(8.5);
+        doc.setTextColor(...darkGray);
+        doc.text('Subtotale Articoli:', totalsBoxX + 4, finalY + 7);
+        doc.text(`€ ${parseFloat(quote.subtotal || 0).toFixed(2)}`, totalsBoxX + totalsBoxWidth - 4, finalY + 7, { align: 'right' });
 
-    let curOffset = 13;
-    if (!isMichael) {
-        doc.text('Spedizione & Box Termico:', totalsBoxX + 4, finalY + curOffset);
-        doc.text(`€ ${parseFloat(quote.shipping || 0).toFixed(2)}`, totalsBoxX + totalsBoxWidth - 4, finalY + curOffset, { align: 'right' });
-        curOffset += 6;
-    }
+        let curOffset = 13;
+        if (!isMichael) {
+            doc.text('Spedizione & Box Termico:', totalsBoxX + 4, finalY + curOffset);
+            doc.text(`€ ${parseFloat(quote.shipping || 0).toFixed(2)}`, totalsBoxX + totalsBoxWidth - 4, finalY + curOffset, { align: 'right' });
+            curOffset += 6;
+        }
 
-    if (parseFloat(quote.discount || 0) > 0) {
-        doc.setTextColor(231, 76, 60);
-        doc.text('Sconto Applicato:', totalsBoxX + 4, finalY + curOffset);
-        doc.text(`- € ${parseFloat(quote.discount).toFixed(2)}`, totalsBoxX + totalsBoxWidth - 4, finalY + curOffset, { align: 'right' });
-        curOffset += 6;
-    }
+        if (parseFloat(quote.discount || 0) > 0) {
+            doc.setTextColor(231, 76, 60);
+            doc.text('Sconto Applicato:', totalsBoxX + 4, finalY + curOffset);
+            doc.text(`- € ${parseFloat(quote.discount).toFixed(2)}`, totalsBoxX + totalsBoxWidth - 4, finalY + curOffset, { align: 'right' });
+            curOffset += 6;
+        }
 
-    doc.setDrawColor(200, 200, 200);
-    doc.line(totalsBoxX + 4, finalY + curOffset, totalsBoxX + totalsBoxWidth - 4, finalY + curOffset);
+        doc.setDrawColor(200, 200, 200);
+        doc.line(totalsBoxX + 4, finalY + curOffset, totalsBoxX + totalsBoxWidth - 4, finalY + curOffset);
 
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.setTextColor(39, 174, 96);
-    doc.text('TOTALE PREVENTIVO:', totalsBoxX + 4, finalY + curOffset + 7);
-    doc.text(`€ ${parseFloat(quote.grandTotal || 0).toFixed(2)}`, totalsBoxX + totalsBoxWidth - 4, finalY + curOffset + 7, { align: 'right' });
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.setTextColor(39, 174, 96);
+        doc.text('TOTALE PREVENTIVO:', totalsBoxX + 4, finalY + curOffset + 7);
+        doc.text(`€ ${parseFloat(quote.grandTotal || 0).toFixed(2)}`, totalsBoxX + totalsBoxWidth - 4, finalY + curOffset + 7, { align: 'right' });
 
-    // ── NOTE & CONDIZIONI ──
-    const notesBoxWidth = 92;
-    doc.setFillColor(255, 255, 255);
-    doc.roundedRect(15, finalY, notesBoxWidth, totalsBoxHeight, 2, 2, 'S');
+        // ── NOTE & CONDIZIONI ──
+        const notesBoxWidth = 92;
+        doc.setFillColor(255, 255, 255);
+        doc.roundedRect(15, finalY, notesBoxWidth, totalsBoxHeight, 2, 2, 'S');
 
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.setTextColor(...primaryColor);
-    doc.text(isMichael ? 'ACCORDI FORNITURA & CONSEGNA:' : 'CONDIZIONI DI TRASPORTO & PAGAMENTO:', 19, finalY + 6);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(...primaryColor);
+        doc.text(isMichael ? 'ACCORDI FORNITURA & CONSEGNA:' : 'CONDIZIONI DI TRASPORTO & PAGAMENTO:', 19, finalY + 6);
 
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.5);
-    doc.setTextColor(100, 110, 120);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7.5);
+        doc.setTextColor(100, 110, 120);
 
-    const paymentText = `Metodo di Pagamento: ${quote.paymentTerms || (isMichael ? 'Saldo a consegna / Bonifico' : 'Bonifico / PayPal / Ritiro')}`;
-    doc.text(paymentText, 19, finalY + 12);
+        const paymentText = `Metodo di Pagamento: ${quote.paymentTerms || (isMichael ? 'Saldo a consegna / Bonifico' : 'Bonifico / PayPal / Ritiro')}`;
+        doc.text(paymentText, 19, finalY + 12);
 
-    const defaultNotes = isMichael
-        ? 'Accordi di fornitura riservata intermediario Michael. Consegna e ritiro diretti senza spese di spedizione.'
-        : 'Spedizione con corriere espresso tracciato 24/48h. Imballaggio isotermico protetto con heat pack 72h stagionale.';
+        const defaultNotes = isMichael
+            ? 'Accordi di fornitura riservata intermediario Michael. Consegna e ritiro diretti senza spese di spedizione.'
+            : 'Spedizione con corriere espresso tracciato 24/48h. Imballaggio isotermico protetto con heat pack 72h stagionale.';
 
-    const notesText = doc.splitTextToSize(quote.notes || defaultNotes, notesBoxWidth - 8);
-    doc.text(notesText, 19, finalY + 18);
+        const notesText = doc.splitTextToSize(quote.notes || defaultNotes, notesBoxWidth - 8);
+        doc.text(notesText, 19, finalY + 18);
 
-    // ── FOOTER ──
-    doc.setFontSize(7.5);
-    doc.setTextColor(150, 150, 150);
-    doc.text('Documento generato automaticamente da D.U.B.I.A. Cervello Digitale · Preventivo commerciale', 105, 287, { align: 'center' });
+        // ── FOOTER ──
+        doc.setFontSize(7.5);
+        doc.setTextColor(150, 150, 150);
+        doc.text('Documento generato automaticamente da D.U.B.I.A. Cervello Digitale · Preventivo commerciale', 105, 287, { align: 'center' });
 
-    // Download
-    const fileName = `${quote.number || 'Preventivo'}_DUBIA.pdf`;
-    doc.save(fileName);
-    if (typeof showNotification === 'function') {
-        showNotification("PDF Scaricato", `Preventivo ${fileName} generato con successo.`, "success");
+        // Download
+        const fileName = `${quote.number || 'Preventivo'}_DUBIA.pdf`;
+        const saved = savePdfDocument(doc, fileName);
+        if (saved && typeof showNotification === 'function') {
+            showNotification("PDF Scaricato", `Preventivo ${fileName} generato con successo.`, "success");
+        }
+    } catch (err) {
+        console.error("Errore durante la generazione del Preventivo PDF:", err);
+        if (typeof showNotification === 'function') {
+            showNotification("Errore PDF", `Impossibile generare il PDF: ${err.message}`, "error");
+        }
     }
 };
 
@@ -2076,153 +2181,158 @@ const copyPriceListToWhatsApp = async (channel = 'DIRECT') => {
  * @param {string} channel - 'DIRECT' o 'MICHAEL'
  */
 const exportFullCatalogPDF = (channel = 'DIRECT') => {
-    if (!window.jspdf || !window.jspdf.jsPDF) {
-        alert("Libreria jsPDF non disponibile al momento. Verifica la connessione.");
+    const JsPDFClass = getJsPDFClass();
+    if (!JsPDFClass) {
+        alert("Libreria jsPDF non disponibile al momento. Verifica la connessione a Internet.");
         return;
     }
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-    const primaryColor = [24, 43, 73];    // #182B49
-    const goldColor = [242, 201, 76];     // #F2C94C
-    const darkGray = [44, 62, 80];
-    const lightGray = [245, 247, 250];
-    const isMichael = (channel === 'MICHAEL');
+    try {
+        const doc = new JsPDFClass({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-    // ── HEADER BANNER ──
-    doc.setFillColor(...primaryColor);
-    doc.rect(0, 0, 210, 36, 'F');
+        const primaryColor = [24, 43, 73];    // #182B49
+        const goldColor = [242, 201, 76];     // #F2C94C
+        const darkGray = [44, 62, 80];
+        const lightGray = [245, 247, 250];
+        const isMichael = (channel === 'MICHAEL');
 
-    // Brand Title
-    doc.setTextColor(255, 255, 255);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(22);
-    doc.text('D.U.B.I.A.', 15, 16);
+        // ── HEADER BANNER ──
+        doc.setFillColor(...primaryColor);
+        doc.rect(0, 0, 210, 36, 'F');
 
-    doc.setFontSize(8.5);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(200, 210, 225);
-    doc.text('Dynamic Updating Biomass Inference Algorithm', 15, 22);
-    doc.text('Allevamento Selezionato Insetti da Pasto & Sistemi IoT di Monitoraggio', 15, 27);
+        // Brand Title
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(22);
+        doc.text('D.U.B.I.A.', 15, 16);
 
-    // Document Type Header on Right
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.setTextColor(...goldColor);
-    const listTitle = isMichael ? 'LISTINO RISERVATO INGROSSO' : 'LISTINO PREZZI COMMERCIALE';
-    doc.text(listTitle, 195, 16, { align: 'right' });
+        doc.setFontSize(8.5);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(200, 210, 225);
+        doc.text('Dynamic Updating Biomass Inference Algorithm', 15, 22);
+        doc.text('Allevamento Selezionato Insetti da Pasto & Sistemi IoT di Monitoraggio', 15, 27);
 
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.5);
-    doc.setTextColor(255, 255, 255);
-    const today = new Date().toLocaleDateString('it-IT');
-    doc.text(`Edizione: 2026 · Aggiornato: ${today}`, 195, 22, { align: 'right' });
-    doc.text(isMichael ? 'Canale: Fornitura Intermediario (Michael)' : 'Canale: Vendita Diretta & Privati', 195, 27, { align: 'right' });
+        // Document Type Header on Right
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.setTextColor(...goldColor);
+        const listTitle = isMichael ? 'LISTINO RISERVATO INGROSSO' : 'LISTINO PREZZI COMMERCIALE';
+        doc.text(listTitle, 195, 16, { align: 'right' });
 
-    let currentY = 44;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.5);
+        doc.setTextColor(255, 255, 255);
+        const today = new Date().toLocaleDateString('it-IT');
+        doc.text(`Edizione: 2026 · Aggiornato: ${today}`, 195, 22, { align: 'right' });
+        doc.text(isMichael ? 'Canale: Fornitura Intermediario (Michael)' : 'Canale: Vendita Diretta & Privati', 195, 27, { align: 'right' });
 
-    // Itera le categorie del catalogo
-    PRICE_CATALOG_FULL.categories.forEach((cat, index) => {
-        // Se non c'è abbastanza spazio per l'intestazione e almeno una riga, salta pagina
+        let currentY = 44;
+
+        // Itera le categorie del catalogo
+        PRICE_CATALOG_FULL.categories.forEach((cat, index) => {
+            // Se non c'è abbastanza spazio per l'intestazione e almeno una riga, salta pagina
+            if (currentY > 230) {
+                doc.addPage();
+                currentY = 20;
+            }
+
+            // Barra intestazione categoria
+            doc.setFillColor(235, 240, 248);
+            doc.roundedRect(15, currentY, 180, 8, 1.5, 1.5, 'F');
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(9.5);
+            doc.setTextColor(...primaryColor);
+            doc.text(cat.title, 18, currentY + 5.5);
+
+            currentY += 10;
+
+            const tableBody = [];
+            cat.items.forEach(item => {
+                const tiers = item.tiers[channel] || item.tiers.DIRECT;
+                const tiersStr = tiers.map(t => `${t.qty}: € ${t.price.toFixed(2)} (${t.note})`).join('\n');
+                tableBody.push([
+                    item.title,
+                    item.size,
+                    item.desc,
+                    tiersStr
+                ]);
+            });
+
+            currentY = safeAutoTable(doc, {
+                startY: currentY,
+                head: [['Articolo / Prodotto', 'Taglia / Specifiche', 'Descrizione / Utilizzo', 'Prezzi & Formati']],
+                body: tableBody,
+                theme: 'striped',
+                headStyles: {
+                    fillColor: primaryColor,
+                    textColor: [255, 255, 255],
+                    fontSize: 8.5,
+                    fontStyle: 'bold',
+                    halign: 'left'
+                },
+                styles: {
+                    fontSize: 8,
+                    cellPadding: 2.5,
+                    textColor: darkGray,
+                    valign: 'middle'
+                },
+                columnStyles: {
+                    0: { fontStyle: 'bold', cellWidth: 42 },
+                    1: { cellWidth: 32, fontStyle: 'italic' },
+                    2: { cellWidth: 62 },
+                    3: { cellWidth: 44, fontStyle: 'bold', textColor: [20, 90, 50] }
+                },
+                margin: { left: 15, right: 15 }
+            });
+
+            currentY += 6;
+        });
+
+        // Box Garanzie e Condizioni
         if (currentY > 230) {
             doc.addPage();
             currentY = 20;
         }
 
-        // Barra intestazione categoria
-        doc.setFillColor(235, 240, 248);
-        doc.roundedRect(15, currentY, 180, 8, 1.5, 1.5, 'F');
+        doc.setFillColor(...lightGray);
+        doc.roundedRect(15, currentY, 180, 32, 2, 2, 'F');
+        doc.setDrawColor(210, 215, 220);
+        doc.roundedRect(15, currentY, 180, 32, 2, 2, 'S');
 
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9.5);
+        doc.setFontSize(8.5);
         doc.setTextColor(...primaryColor);
-        doc.text(cat.title, 18, currentY + 5.5);
+        doc.text('GARANZIA, SPEDIZIONE & CONDIZIONI DI FORNITURA:', 19, currentY + 6);
 
-        currentY += 10;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7.8);
+        doc.setTextColor(...darkGray);
+        doc.text('• SPEDIZIONI: Lunedì e Mercoledì con corriere espresso 24/48h per evitare fermi deposito durante il fine settimana.', 19, currentY + 12);
+        doc.text('• PACKAGING: Box isotermico con Heat Pack 40h incluso gratuitamente nei mesi invernali per proteggere gli insetti.', 19, currentY + 17);
+        doc.text('• GARANZIA 100% VIVI: Sostituzione immediata o rimborso in caso di mortalità documentata alla consegna entro 2h.', 19, currentY + 22);
+        doc.text('• CONTATTI & ORDINI: Per ordini personalizzati, preventivi su misura o supporto tecnico termoigrometri contattare D.U.B.I.A.', 19, currentY + 27);
 
-        const tableBody = [];
-        cat.items.forEach(item => {
-            const tiers = item.tiers[channel] || item.tiers.DIRECT;
-            const tiersStr = tiers.map(t => `${t.qty}: € ${t.price.toFixed(2)} (${t.note})`).join('\n');
-            tableBody.push([
-                item.title,
-                item.size,
-                item.desc,
-                tiersStr
-            ]);
-        });
+        // Footer con numero di pagina
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(7.5);
+            doc.setTextColor(150, 150, 150);
+            doc.text('Documento generato da D.U.B.I.A. Cervello Digitale · Listino Prezzi Ufficiale', 105, 290, { align: 'center' });
+            doc.text(`Pagina ${i} di ${pageCount}`, 195, 290, { align: 'right' });
+        }
 
-        doc.autoTable({
-            startY: currentY,
-            head: [['Articolo / Prodotto', 'Taglia / Specifiche', 'Descrizione / Utilizzo', 'Prezzi & Formati']],
-            body: tableBody,
-            theme: 'striped',
-            headStyles: {
-                fillColor: primaryColor,
-                textColor: [255, 255, 255],
-                fontSize: 8.5,
-                fontStyle: 'bold',
-                halign: 'left'
-            },
-            styles: {
-                fontSize: 8,
-                cellPadding: 2.5,
-                textColor: darkGray,
-                valign: 'middle'
-            },
-            columnStyles: {
-                0: { fontStyle: 'bold', cellWidth: 42 },
-                1: { cellWidth: 32, fontStyle: 'italic' },
-                2: { cellWidth: 62 },
-                3: { cellWidth: 44, fontStyle: 'bold', textColor: [20, 90, 50] }
-            },
-            margin: { left: 15, right: 15 },
-            didDrawPage: (data) => {
-                currentY = data.cursor.y + 6;
-            }
-        });
-
-        currentY = doc.lastAutoTable.finalY + 6;
-    });
-
-    // Box Garanzie e Condizioni
-    if (currentY > 230) {
-        doc.addPage();
-        currentY = 20;
-    }
-
-    doc.setFillColor(...lightGray);
-    doc.roundedRect(15, currentY, 180, 32, 2, 2, 'F');
-    doc.setDrawColor(210, 215, 220);
-    doc.roundedRect(15, currentY, 180, 32, 2, 2, 'S');
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8.5);
-    doc.setTextColor(...primaryColor);
-    doc.text('GARANZIA, SPEDIZIONE & CONDIZIONI DI FORNITURA:', 19, currentY + 6);
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.8);
-    doc.setTextColor(...darkGray);
-    doc.text('• SPEDIZIONI: Lunedì e Mercoledì con corriere espresso 24/48h per evitare fermi deposito durante il fine settimana.', 19, currentY + 12);
-    doc.text('• PACKAGING: Box isotermico con Heat Pack 40h incluso gratuitamente nei mesi invernali per proteggere gli insetti.', 19, currentY + 17);
-    doc.text('• GARANZIA 100% VIVI: Sostituzione immediata o rimborso in caso di mortalità documentata alla consegna entro 2h.', 19, currentY + 22);
-    doc.text('• CONTATTI & ORDINI: Per ordini personalizzati, preventivi su misura o supporto tecnico termoigrometri contattare D.U.B.I.A.', 19, currentY + 27);
-
-    // Footer con numero di pagina
-    const pageCount = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.setFontSize(7.5);
-        doc.setTextColor(150, 150, 150);
-        doc.text('Documento generato da D.U.B.I.A. Cervello Digitale · Listino Prezzi Ufficiale', 105, 290, { align: 'center' });
-        doc.text(`Pagina ${i} di ${pageCount}`, 195, 290, { align: 'right' });
-    }
-
-    const fileName = isMichael ? 'Listino_DUBIA_Ingrosso_Michael.pdf' : 'Listino_DUBIA_Ufficiale_2026.pdf';
-    doc.save(fileName);
-    if (typeof showNotification === 'function') {
-        showNotification("PDF Scaricato", `Il listino prezzi (${fileName}) è stato generato con successo!`, "success");
+        const fileName = isMichael ? 'Listino_DUBIA_Ingrosso_Michael.pdf' : 'Listino_DUBIA_Ufficiale_2026.pdf';
+        const saved = savePdfDocument(doc, fileName);
+        if (saved && typeof showNotification === 'function') {
+            showNotification("PDF Scaricato", `Il listino prezzi (${fileName}) è stato generato con successo!`, "success");
+        }
+    } catch (err) {
+        console.error("Errore durante la generazione del Listino PDF:", err);
+        if (typeof showNotification === 'function') {
+            showNotification("Errore PDF", `Impossibile generare il PDF: ${err.message}`, "error");
+        }
     }
 };
 
