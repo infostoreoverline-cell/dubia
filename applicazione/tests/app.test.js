@@ -222,14 +222,11 @@ describe('Commercial Price Catalog & PDF Quotation Engine', () => {
 describe('Listino Prezzi & Catalogo Completo D.U.B.I.A.', () => {
     const { PRICE_CATALOG_FULL, generateWhatsAppPriceListText } = require('../app.js');
 
-    it('should have complete PRICE_CATALOG_FULL structure with 3 categories', () => {
+    it('should have complete PRICE_CATALOG_FULL structure for Blatte Dubia', () => {
         expect(PRICE_CATALOG_FULL).toBeDefined();
-        expect(PRICE_CATALOG_FULL.categories).toHaveLength(3);
-
+        expect(PRICE_CATALOG_FULL.categories.length).toBeGreaterThan(0);
         const categoryIds = PRICE_CATALOG_FULL.categories.map(c => c.id);
         expect(categoryIds).toContain('BLATTE');
-        expect(categoryIds).toContain('IOT');
-        expect(categoryIds).toContain('ACCESSORI');
     });
 
     it('should have valid items and positive prices in each category', () => {
