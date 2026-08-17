@@ -1711,7 +1711,7 @@ const savePdfDocument = (doc, fileName) => {
 };
 
 /**
- * Esporta il preventivo in PDF ad alta qualità con jsPDF e autoTable.
+ * Esporta il preventivo in PDF con stile minimale, pulito e chiaro.
  */
 const exportQuotePDF = (quote) => {
     const JsPDFClass = getJsPDFClass();
@@ -1722,210 +1722,186 @@ const exportQuotePDF = (quote) => {
 
     try {
         const doc = new JsPDFClass({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-
         const isMichael = (quote.channel === 'MICHAEL') || (!quote.shipping || parseFloat(quote.shipping) === 0);
 
-        const primaryColor = [24, 43, 73];    // #182B49
-        const goldColor = [242, 201, 76];     // #F2C94C
-        const darkGray = [44, 62, 80];
-        const lightGray = [245, 247, 250];
+        const textDark = [17, 24, 39];       // #111827
+        const textMuted = [107, 114, 128];   // #6B7280
+        const lineGray = [229, 231, 235];    // #E5E7EB
+        const headerBg = [249, 250, 251];    // #F9FAFB
 
-        // ── HEADER BANNER ──
-        doc.setFillColor(...primaryColor);
-        doc.rect(0, 0, 210, 38, 'F');
-
-        // Title / Brand
-        doc.setTextColor(255, 255, 255);
+        // ── 1. HEADER MINIMALE ──
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(22);
+        doc.setFontSize(18);
+        doc.setTextColor(...textDark);
         doc.text('D.U.B.I.A.', 15, 18);
-
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(200, 210, 225);
-        doc.text('Dynamic Updating Biomass Inference Algorithm', 15, 24);
-        doc.text('Allevamento Selezionato Blatta Lateralis & Blatta Dubia', 15, 29);
-
-        // Document Type on right
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(12);
-        doc.setTextColor(...goldColor);
-        const docTitle = isMichael ? 'PREVENTIVO RISERVATO INTERMEDIARIO' : 'PREVENTIVO COMMERCIALE';
-        doc.text(docTitle, 195, 18, { align: 'right' });
-
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.setTextColor(255, 255, 255);
-        doc.text(`Doc. N°: ${quote.number || 'PREV-001'}`, 195, 25, { align: 'right' });
-        doc.text(`Data: ${quote.date || new Date().toISOString().split('T')[0]}`, 195, 30, { align: 'right' });
-
-        // ── INFO BOXES (Fornitore & Cliente) ──
-        const startY = 46;
-
-        // Box Fornitore
-        doc.setFillColor(...lightGray);
-        doc.roundedRect(15, startY, 86, 32, 2, 2, 'F');
-        doc.setDrawColor(220, 225, 230);
-        doc.roundedRect(15, startY, 86, 32, 2, 2, 'S');
-
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9);
-        doc.setTextColor(...primaryColor);
-        doc.text('EMESSO DA (Allevatore):', 19, startY + 6);
 
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(8.5);
-        doc.setTextColor(...darkGray);
-        doc.text('Allevamento D.U.B.I.A.', 19, startY + 12);
-        doc.text(isMichael ? 'Canale: Fornitura Riservata Intermediario' : 'Specializzato in Insetti da Pasto & Colonie', 19, startY + 17);
-        doc.text(isMichael ? 'Spedizione: Non applicata (Consegna Diretta)' : 'Termini: Box isotermico + Heat pack', 19, startY + 22);
-        doc.text('Validità offerta: ' + (quote.validityDays || 15) + ' giorni', 19, startY + 27);
+        doc.setTextColor(...textMuted);
+        doc.text('Allevamento Blaptica Dubia · Preventivo Commerciale', 15, 23.5);
 
-        // Box Cliente
-        doc.setFillColor(...lightGray);
-        doc.roundedRect(109, startY, 86, 32, 2, 2, 'F');
-        doc.roundedRect(109, startY, 86, 32, 2, 2, 'S');
-
+        // Header Destra
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9);
-        doc.setTextColor(...primaryColor);
-        doc.text(isMichael ? 'INTERMEDIARIO / DESTINATARIO:' : 'DESTINATARIO / CLIENTE:', 113, startY + 6);
+        doc.setFontSize(10.5);
+        doc.setTextColor(...textDark);
+        doc.text(quote.number || 'PREVENTIVO', 195, 18, { align: 'right' });
 
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8.5);
+        doc.setTextColor(...textMuted);
+        doc.text(`Data: ${quote.date || new Date().toISOString().split('T')[0]}`, 195, 23.5, { align: 'right' });
+
+        // Linea divisoria
+        doc.setDrawColor(...lineGray);
+        doc.setLineWidth(0.3);
+        doc.line(15, 27, 195, 27);
+
+        // ── 2. INFO CLIENTE & FORNITORE (TESTO PULITO) ──
         const client = quote.client || {};
         const clientName = client.nome ? `${client.nome} ${client.cognome || ''}` : (client.name || (isMichael ? 'Michael' : 'Gentile Cliente'));
 
+        let infoY = 34;
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(8.5);
-        doc.setTextColor(...darkGray);
-        doc.text(clientName, 113, startY + 12);
+        doc.setTextColor(...textDark);
+        doc.text('DESTINATARIO:', 15, infoY);
+        doc.text('EMESSO DA:', 110, infoY);
 
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8);
-        doc.setTextColor(100, 110, 120);
+        doc.setFontSize(8.5);
+        doc.setTextColor(...textMuted);
+        doc.text(clientName, 15, infoY + 5);
+        doc.text('Allevamento D.U.B.I.A.', 110, infoY + 5);
 
-        if (client.citta) {
-            doc.text(`Città: ${client.citta}`, 113, startY + 17);
-        }
-        if (client.telefono) {
-            doc.text(`Tel: ${client.telefono}`, 113, startY + 22);
-        }
-        if (client.email) {
-            doc.text(`Email: ${client.email}`, 113, startY + 27);
-        }
+        let detailsLeft = [];
+        if (client.citta) detailsLeft.push(`Città: ${client.citta}`);
+        if (client.telefono) detailsLeft.push(`Tel: ${client.telefono}`);
+        if (client.email) detailsLeft.push(`Email: ${client.email}`);
 
-        // ── TABELLA ARTICOLI PREVENTIVATI ──
-        const tableBody = (quote.items || []).map((it, idx) => [
-            (idx + 1).toString(),
-            it.categoryLabel || it.category,
-            it.size || '—',
-            `${it.quantity} ${it.unit || 'kg'}`,
-            `€ ${parseFloat(it.unitPrice || 0).toFixed(2)}`,
-            `€ ${parseFloat(it.total || 0).toFixed(2)}`
-        ]);
-
-        let finalY = safeAutoTable(doc, {
-            startY: 84,
-            head: [['#', 'Articolo / Specie', 'Taglia / Descrizione', 'Quantità', 'Prezzo Unit.', 'Totale']],
-            body: tableBody,
-            theme: 'striped',
-            headStyles: {
-                fillColor: primaryColor,
-                textColor: [255, 255, 255],
-                fontStyle: 'bold',
-                fontSize: 9,
-                halign: 'left'
-            },
-            columnStyles: {
-                0: { halign: 'center', cellWidth: 10 },
-                1: { halign: 'left', cellWidth: 60, fontStyle: 'bold' },
-                2: { halign: 'left', cellWidth: 40 },
-                3: { halign: 'center', cellWidth: 25 },
-                4: { halign: 'right', cellWidth: 25 },
-                5: { halign: 'right', cellWidth: 25, fontStyle: 'bold' }
-            },
-            styles: {
-                fontSize: 8.5,
-                cellPadding: 3.5,
-                valign: 'middle'
-            },
-            alternateRowStyles: {
-                fillColor: [248, 249, 250]
-            }
+        let leftY = infoY + 9.5;
+        detailsLeft.forEach(d => {
+            doc.text(d, 15, leftY);
+            leftY += 4.2;
         });
 
-        finalY += 8;
+        doc.text(isMichael ? 'Canale: Fornitura Riservata Intermediario' : 'Spedizione con box termico protetto', 110, infoY + 9.5);
+        doc.text(`Validità offerta: ${quote.validityDays || 15} giorni`, 110, infoY + 13.7);
 
-        if (finalY > 230) {
-            doc.addPage();
-            finalY = 20;
-        }
+        // ── 3. TABELLA ARTICOLI (MINIMALE E PULITA) ──
+        let tableStartY = Math.max(leftY + 4, infoY + 20);
 
-        // ── TOTALS BOX ──
-        const totalsBoxX = 115;
-        const totalsBoxWidth = 80;
-        const totalsBoxHeight = isMichael ? 30 : 38;
+        // Intestazione Tabella
+        doc.setFillColor(...headerBg);
+        doc.rect(15, tableStartY, 180, 7.5, 'F');
+        doc.setDrawColor(...lineGray);
+        doc.line(15, tableStartY, 195, tableStartY);
+        doc.line(15, tableStartY + 7.5, 195, tableStartY + 7.5);
 
-        doc.setFillColor(...lightGray);
-        doc.roundedRect(totalsBoxX, finalY, totalsBoxWidth, totalsBoxHeight, 2, 2, 'F');
-        doc.setDrawColor(220, 225, 230);
-        doc.roundedRect(totalsBoxX, finalY, totalsBoxWidth, totalsBoxHeight, 2, 2, 'S');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7.5);
+        doc.setTextColor(...textMuted);
+        doc.text('#', 18, tableStartY + 5);
+        doc.text('ARTICOLO / SPECIE', 26, tableStartY + 5);
+        doc.text('TAGLIA', 85, tableStartY + 5);
+        doc.text('QUANTITÀ', 125, tableStartY + 5);
+        doc.text('PREZZO UNIT.', 160, tableStartY + 5, { align: 'right' });
+        doc.text('TOTALE', 192, tableStartY + 5, { align: 'right' });
 
+        let rowY = tableStartY + 7.5;
+        const items = quote.items || [];
+
+        items.forEach((it, idx) => {
+            const itemTotal = parseFloat(it.total || (it.quantity * it.unitPrice) || 0).toFixed(2);
+            const itemUnitP = parseFloat(it.unitPrice || 0).toFixed(2);
+            const catLabel = it.categoryLabel || it.category;
+            const sizeLabel = it.size || '—';
+            const qtyLabel = `${it.quantity} ${it.unit || 'kg'}`;
+
+            // Sfondo alternato leggerissimo
+            if (idx % 2 === 1) {
+                doc.setFillColor(252, 252, 253);
+                doc.rect(15, rowY, 180, 7, 'F');
+            }
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            doc.setTextColor(...textDark);
+            doc.text(String(idx + 1), 18, rowY + 4.8);
+            
+            doc.setFont('helvetica', 'bold');
+            doc.text(catLabel, 26, rowY + 4.8);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(...textMuted);
+            doc.text(sizeLabel, 85, rowY + 4.8);
+            doc.text(qtyLabel, 125, rowY + 4.8);
+            doc.text(`€ ${itemUnitP}`, 160, rowY + 4.8, { align: 'right' });
+
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...textDark);
+            doc.text(`€ ${itemTotal}`, 192, rowY + 4.8, { align: 'right' });
+
+            doc.setDrawColor(...lineGray);
+            doc.line(15, rowY + 7, 195, rowY + 7);
+            rowY += 7;
+        });
+
+        // ── 4. RIEPILOGO TOTALI (DESTRO MINIMALE) ──
+        let totalsY = rowY + 6;
+        const subtotalVal = parseFloat(quote.subtotal || 0).toFixed(2);
+        const shippingVal = parseFloat(quote.shipping || 0).toFixed(2);
+        const discountVal = parseFloat(quote.discount || 0).toFixed(2);
+        const grandTotalVal = parseFloat(quote.grandTotal || 0).toFixed(2);
+
+        doc.setFont('helvetica', 'normal');
         doc.setFontSize(8.5);
-        doc.setTextColor(...darkGray);
-        doc.text('Subtotale Articoli:', totalsBoxX + 4, finalY + 7);
-        doc.text(`€ ${parseFloat(quote.subtotal || 0).toFixed(2)}`, totalsBoxX + totalsBoxWidth - 4, finalY + 7, { align: 'right' });
+        doc.setTextColor(...textMuted);
+        doc.text('Subtotale:', 155, totalsY, { align: 'right' });
+        doc.setTextColor(...textDark);
+        doc.text(`€ ${subtotalVal}`, 192, totalsY, { align: 'right' });
 
-        let curOffset = 13;
         if (!isMichael) {
-            doc.text('Spedizione & Box Termico:', totalsBoxX + 4, finalY + curOffset);
-            doc.text(`€ ${parseFloat(quote.shipping || 0).toFixed(2)}`, totalsBoxX + totalsBoxWidth - 4, finalY + curOffset, { align: 'right' });
-            curOffset += 6;
+            totalsY += 5;
+            doc.setTextColor(...textMuted);
+            doc.text('Spedizione & Box Termico:', 155, totalsY, { align: 'right' });
+            doc.setTextColor(...textDark);
+            doc.text(`€ ${shippingVal}`, 192, totalsY, { align: 'right' });
         }
 
         if (parseFloat(quote.discount || 0) > 0) {
-            doc.setTextColor(231, 76, 60);
-            doc.text('Sconto Applicato:', totalsBoxX + 4, finalY + curOffset);
-            doc.text(`- € ${parseFloat(quote.discount).toFixed(2)}`, totalsBoxX + totalsBoxWidth - 4, finalY + curOffset, { align: 'right' });
-            curOffset += 6;
+            totalsY += 5;
+            doc.setTextColor(220, 38, 38);
+            doc.text('Sconto:', 155, totalsY, { align: 'right' });
+            doc.text(`- € ${discountVal}`, 192, totalsY, { align: 'right' });
         }
 
-        doc.setDrawColor(200, 200, 200);
-        doc.line(totalsBoxX + 4, finalY + curOffset, totalsBoxX + totalsBoxWidth - 4, finalY + curOffset);
+        totalsY += 6;
+        doc.setDrawColor(...textDark);
+        doc.setLineWidth(0.4);
+        doc.line(125, totalsY, 195, totalsY);
+        totalsY += 5.5;
 
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(11);
-        doc.setTextColor(39, 174, 96);
-        doc.text('TOTALE PREVENTIVO:', totalsBoxX + 4, finalY + curOffset + 7);
-        doc.text(`€ ${parseFloat(quote.grandTotal || 0).toFixed(2)}`, totalsBoxX + totalsBoxWidth - 4, finalY + curOffset + 7, { align: 'right' });
+        doc.setTextColor(...textDark);
+        doc.text('TOTALE:', 155, totalsY, { align: 'right' });
+        doc.text(`€ ${grandTotalVal}`, 192, totalsY, { align: 'right' });
 
-        // ── NOTE & CONDIZIONI ──
-        const notesBoxWidth = 92;
-        doc.setFillColor(255, 255, 255);
-        doc.roundedRect(15, finalY, notesBoxWidth, totalsBoxHeight, 2, 2, 'S');
-
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(8);
-        doc.setTextColor(...primaryColor);
-        doc.text(isMichael ? 'ACCORDI FORNITURA & CONSEGNA:' : 'CONDIZIONI DI TRASPORTO & PAGAMENTO:', 19, finalY + 6);
+        // ── 5. NOTE INFERIORI & FOOTER ──
+        const noteY = Math.max(totalsY + 12, 255);
+        doc.setDrawColor(...lineGray);
+        doc.setLineWidth(0.3);
+        doc.line(15, noteY, 195, noteY);
 
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(7.5);
-        doc.setTextColor(100, 110, 120);
-
-        const paymentText = `Metodo di Pagamento: ${quote.paymentTerms || (isMichael ? 'Saldo a consegna / Bonifico' : 'Bonifico / PayPal / Ritiro')}`;
-        doc.text(paymentText, 19, finalY + 12);
-
+        doc.setTextColor(...textMuted);
         const defaultNotes = isMichael
-            ? 'Accordi di fornitura riservata intermediario Michael. Consegna e ritiro diretti senza spese di spedizione.'
-            : 'Spedizione con corriere espresso tracciato 24/48h. Imballaggio isotermico protetto con heat pack 72h stagionale.';
+            ? 'Fornitura riservata intermediario Michael · Consegna e ritiro diretti.'
+            : 'Spedizioni Lun-Mer con corriere 24/48h · Imballo isotermico con heat pack · Garanzia 100% vivi all\'arrivo.';
+        doc.text(quote.notes || defaultNotes, 15, noteY + 5);
 
-        const notesText = doc.splitTextToSize(quote.notes || defaultNotes, notesBoxWidth - 8);
-        doc.text(notesText, 19, finalY + 18);
-
-        // ── FOOTER ──
-        doc.setFontSize(7.5);
-        doc.setTextColor(150, 150, 150);
-        doc.text('Documento generato automaticamente da D.U.B.I.A. Cervello Digitale · Preventivo commerciale', 105, 287, { align: 'center' });
+        doc.text('Documento generato da D.U.B.I.A. · Allevamento Selezionato Blaptica Dubia', 105, 287, { align: 'center' });
 
         // Download
         const fileName = `${quote.number || 'Preventivo'}_DUBIA.pdf`;
@@ -1961,7 +1937,7 @@ const generateWhatsAppPriceListText = (channel = 'DIRECT') => {
     const headerTitle = isMichael ? 'LISTINO RISERVATO INGROSSO (MICHAEL)' : 'LISTINO PREZZI BLATTE DUBIA 2026';
     
     let text = `🌿 *${headerTitle} — D.U.B.I.A.* 🌿\n`;
-    text += `_Allevamento Selezionato Insetti da Pasto & Colonie (Blaptica Dubia)_\n\n`;
+    text += `_Allevamento Selezionato Blaptica Dubia (Insetti da Pasto & Colonie)_\n\n`;
 
     const blatteCategory = PRICE_CATALOG_FULL.categories.find(c => c.id === 'BLATTE') || PRICE_CATALOG_FULL.categories[0];
 
@@ -1975,7 +1951,7 @@ const generateWhatsAppPriceListText = (channel = 'DIRECT') => {
     text += `✓ Partenze Lunedì-Mercoledì con Corriere Espresso 24/48h tracciato\n`;
     text += `✓ Box termico con Heat Pack 40h incluso gratuitamente d'inverno\n`;
     text += `✓ Garanzia 100% vivi all'arrivo e supporto post-vendita\n\n`;
-    text += `📍 *Per preventivi personalizzati o ordini:* scrivimi direttamente qui!`;
+    text += `📍 *Per ordini o preventivi:* rispondi direttamente a questo messaggio!`;
 
     return text;
 };
@@ -2011,8 +1987,8 @@ const copyPriceListToWhatsApp = async (channel = 'DIRECT') => {
 };
 
 /**
- * Genera ed esporta il PDF ufficiale a pagina singola per le sole Blatte Dubia.
- * Layout vettoriale 100% autonomo senza dipendenze instabili da plugin esterni.
+ * Genera ed esporta il PDF del Listino Prezzi D.U.B.I.A.
+ * Design ultra-minimale, elegante, solo dati essenziali delle sole Blatte Dubia.
  * @param {string} channel - 'DIRECT' o 'MICHAEL'
  */
 const exportFullCatalogPDF = (channel = 'DIRECT') => {
@@ -2026,198 +2002,133 @@ const exportFullCatalogPDF = (channel = 'DIRECT') => {
         const doc = new JsPDFClass({ orientation: 'portrait', unit: 'mm', format: 'a4' });
         const isMichael = (channel === 'MICHAEL');
 
-        const primaryNavy = [24, 43, 73];       // #182B49 (D.U.B.I.A. Navy)
-        const goldColor   = [242, 201, 76];      // #F2C94C (Gold)
-        const textDark    = [33, 43, 54];        // #212B36
-        const textMuted   = [100, 116, 139];     // #64748B
-        const cardBorder  = [226, 232, 240];     // #E2E8F0
-        const priceGreen  = [22, 101, 52];       // #166534
+        const textDark = [17, 24, 39];       // #111827 (Dark Charcoal)
+        const textMuted = [107, 114, 128];   // #6B7280 (Muted Gray)
+        const lineGray = [229, 231, 235];    // #E5E7EB (Light Border)
+        const headerBg = [249, 250, 251];    // #F9FAFB (Very subtle table head)
 
-        // ══════════════════════════════════════════════════════
-        // 1. TOP HEADER BANNER (Y: 0 -> 32mm)
-        // ══════════════════════════════════════════════════════
-        doc.setFillColor(...primaryNavy);
-        doc.rect(0, 0, 210, 32, 'F');
-
-        // Gold line separator
-        doc.setFillColor(...goldColor);
-        doc.rect(0, 32, 210, 1.2, 'F');
-
-        // Brand Title & Subtitles
-        doc.setTextColor(255, 255, 255);
+        // ── 1. HEADER MINIMALE ──
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(20);
-        doc.text('D.U.B.I.A.', 14, 14);
+        doc.setTextColor(...textDark);
+        doc.text('D.U.B.I.A.', 15, 18);
 
-        doc.setFontSize(8);
         doc.setFont('helvetica', 'normal');
-        doc.setTextColor(203, 213, 225);
-        doc.text('Allevamento Selezionato Blaptica Dubia · Insetti da Pasto & Colonie', 14, 20);
-        doc.text('Standard Qualitativi Elevati · Esoscheletro Morbido & Digeribile', 14, 25);
+        doc.setFontSize(8.5);
+        doc.setTextColor(...textMuted);
+        doc.text('Allevamento Selezionato Blaptica Dubia', 15, 23.5);
 
-        // Header Right (Title, Date, Channel)
+        // Header Destra
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(10.5);
-        doc.setTextColor(...goldColor);
-        const headerTitle = isMichael ? 'LISTINO RISERVATO INGROSSO' : 'LISTINO PREZZI UFFICIALE 2026';
-        doc.text(headerTitle, 196, 14, { align: 'right' });
+        doc.setTextColor(...textDark);
+        const titleDoc = isMichael ? 'LISTINO RISERVATO INGROSSO (MICHAEL)' : 'LISTINO PREZZI UFFICIALE 2026';
+        doc.text(titleDoc, 195, 18, { align: 'right' });
 
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8);
-        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(8.5);
+        doc.setTextColor(...textMuted);
         const today = new Date().toLocaleDateString('it-IT');
-        doc.text(`Aggiornato al: ${today}`, 196, 20, { align: 'right' });
-        doc.text(isMichael ? 'Canale: Fornitura Intermediario (Michael)' : 'Canale: Vendita Diretta & Privati', 196, 25, { align: 'right' });
+        doc.text(`Aggiornato al: ${today}`, 195, 23.5, { align: 'right' });
 
-        // ══════════════════════════════════════════════════════
-        // 2. BLATTE DUBIA PRODUCTS — 6 CRUCIAL CARDS (Y: 36.5 -> 228mm)
-        // ══════════════════════════════════════════════════════
+        // Linea divisoria sottile
+        doc.setDrawColor(...lineGray);
+        doc.setLineWidth(0.3);
+        doc.line(15, 28, 195, 28);
+
+        // ── 2. TABELLA SEMPLICE & MINIMALE (SOLE BLATTE DUBIA) ──
+        let tableY = 34;
+
+        // Intestazione Tabella
+        doc.setFillColor(...headerBg);
+        doc.rect(15, tableY, 180, 7.5, 'F');
+        doc.setDrawColor(...lineGray);
+        doc.line(15, tableY, 195, tableY);
+        doc.line(15, tableY + 7.5, 195, tableY + 7.5);
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7.5);
+        doc.setTextColor(...textMuted);
+        doc.text('PRODOTTO / SPECIE', 18, tableY + 5);
+        doc.text('TAGLIA / MISURA', 72, tableY + 5);
+        doc.text('QUANTITÀ / FORMATO', 115, tableY + 5);
+        doc.text('PREZZO', 160, tableY + 5, { align: 'right' });
+        doc.text('NOTE', 192, tableY + 5, { align: 'right' });
+
+        let curY = tableY + 7.5;
         const blatteCategory = PRICE_CATALOG_FULL.categories.find(c => c.id === 'BLATTE') || PRICE_CATALOG_FULL.categories[0];
-        const blatteItems = blatteCategory.items;
 
-        let startY = 36.5;
-        const cardHeight = 29.5;
-        const cardSpacing = 2.5;
-
-        blatteItems.forEach((item, index) => {
-            const cardY = startY + index * (cardHeight + cardSpacing);
-            const cardX = 14;
-            const cardWidth = 182;
-
-            // Card background & sleek border
-            const bgVal = index % 2 === 0 ? 255 : 250;
-            doc.setFillColor(bgVal, bgVal, bgVal);
-            doc.roundedRect(cardX, cardY, cardWidth, cardHeight, 2, 2, 'F');
-            doc.setDrawColor(...cardBorder);
-            doc.roundedRect(cardX, cardY, cardWidth, cardHeight, 2, 2, 'S');
-
-            // Left gold indicator bar
-            doc.setFillColor(242, 201, 76);
-            doc.roundedRect(cardX, cardY, 2.5, cardHeight, 1, 1, 'F');
-
-            // Left Content: Title, size, short desc
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(9.5);
-            doc.setTextColor(...primaryNavy);
-            doc.text(`${item.title}`, cardX + 6, cardY + 7);
-
-            // Size badge
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(7.5);
-            doc.setTextColor(180, 83, 9); // Amber
-            doc.text(`[ Taglia: ${item.size} ]`, cardX + 6, cardY + 12.5);
-
-            // Short description
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(7);
-            doc.setTextColor(...textMuted);
-            const descLines = doc.splitTextToSize(item.desc, 80);
-            doc.text(descLines.slice(0, 2), cardX + 6, cardY + 18);
-
-            // Right Content: Price Tier Boxes
+        blatteCategory.items.forEach((item, itemIdx) => {
             const tiers = item.tiers[channel] || item.tiers.DIRECT;
-            const tierCount = tiers.length;
-            const tiersAreaX = cardX + 90;
-            const tiersAreaWidth = cardWidth - 94; // 88mm width
-            const boxWidth = (tiersAreaWidth - (tierCount - 1) * 3) / tierCount;
-            const boxHeight = 21;
-            const boxY = cardY + 4.2;
+            const startGroupY = curY;
 
-            tiers.forEach((tier, tIdx) => {
-                const bx = tiersAreaX + tIdx * (boxWidth + 3);
+            tiers.forEach((t, tIdx) => {
+                // Riga sfondo alternato
+                if ((itemIdx + tIdx) % 2 === 1) {
+                    doc.setFillColor(252, 252, 253);
+                    doc.rect(15, curY, 180, 7.2, 'F');
+                }
 
-                // Tier box container
-                doc.setFillColor(243, 246, 250);
-                doc.roundedRect(bx, boxY, boxWidth, boxHeight, 1.5, 1.5, 'F');
-                doc.setDrawColor(218, 225, 235);
-                doc.roundedRect(bx, boxY, boxWidth, boxHeight, 1.5, 1.5, 'S');
+                // Titolo e Taglia mostrati solo sulla prima riga del gruppo
+                if (tIdx === 0) {
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(8.5);
+                    doc.setTextColor(...textDark);
+                    doc.text(item.title, 18, curY + 4.8);
 
-                // Quantity header (e.g. "100 pz", "500 pz", "1 Kg")
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(7.5);
-                doc.setTextColor(...primaryNavy);
-                doc.text(tier.qty, bx + boxWidth / 2, boxY + 5.5, { align: 'center' });
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(8);
+                    doc.setTextColor(...textMuted);
+                    doc.text(item.size, 72, curY + 4.8);
+                }
 
-                // Price (Big, Bold, Green)
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(10);
-                doc.setTextColor(...priceGreen);
-                doc.text(`€ ${tier.price.toFixed(2)}`, bx + boxWidth / 2, boxY + 12.5, { align: 'center' });
-
-                // Unit note (e.g. "0,10 €/pz")
+                // Formato, Prezzo e Note
                 doc.setFont('helvetica', 'normal');
-                doc.setFontSize(6.5);
+                doc.setFontSize(8);
+                doc.setTextColor(...textDark);
+                doc.text(t.qty, 115, curY + 4.8);
+
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(8.5);
+                doc.setTextColor(...textDark);
+                doc.text(`€ ${t.price.toFixed(2)}`, 160, curY + 4.8, { align: 'right' });
+
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(7.5);
                 doc.setTextColor(...textMuted);
-                doc.text(tier.note, bx + boxWidth / 2, boxY + 17.5, { align: 'center' });
+                doc.text(t.note, 192, curY + 4.8, { align: 'right' });
+
+                curY += 7.2;
             });
+
+            // Linea divisoria tra i gruppi di prodotto
+            doc.setDrawColor(...lineGray);
+            doc.setLineWidth(0.3);
+            doc.line(15, curY, 195, curY);
         });
 
-        // ══════════════════════════════════════════════════════
-        // 3. TERMS, SHIPPING & GUARANTEES BOX (Y: 231 -> 276mm)
-        // ══════════════════════════════════════════════════════
-        const termsY = 231;
-        doc.setFillColor(245, 248, 252);
-        doc.roundedRect(14, termsY, 182, 45, 2, 2, 'F');
-        doc.setDrawColor(186, 205, 230);
-        doc.roundedRect(14, termsY, 182, 45, 2, 2, 'S');
+        // ── 3. NOTE INFERIORI & GARANZIE (MINIMALE) ──
+        const bottomY = curY + 12;
+        doc.setDrawColor(...lineGray);
+        doc.setLineWidth(0.3);
+        doc.line(15, bottomY, 195, bottomY);
 
-        // Header of terms box
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(8.5);
-        doc.setTextColor(...primaryNavy);
-        doc.text('CONDIZIONI DI FORNITURA, SPEDIZIONI & GARANZIE', 19, termsY + 6.5);
-
-        // 4 Clean Bullet Items in 2 Columns
-        // Left Column (X: 19)
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(7.5);
-        doc.setTextColor(...primaryNavy);
-        doc.text('• SPEDIZIONI ESPRESSE 24/48h:', 19, termsY + 14);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(7);
+        doc.setFontSize(8);
         doc.setTextColor(...textDark);
-        doc.text('Partenze Lunedi e Mercoledi con corriere espresso per', 22, termsY + 18.5);
-        doc.text('evitare qualsiasi sosta nei depositi durante il weekend.', 22, termsY + 22.5);
+        doc.text('INFORMAZIONI DI FORNITURA:', 15, bottomY + 6);
 
-        doc.setFont('helvetica', 'bold');
+        doc.setFont('helvetica', 'normal');
         doc.setFontSize(7.5);
-        doc.setTextColor(...primaryNavy);
-        doc.text('• PACKAGING ISOTERMICO INVERNALE:', 19, termsY + 29);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(7);
-        doc.setTextColor(...textDark);
-        doc.text('Box in polistirolo alta densita con scaldino chimico', 22, termsY + 33.5);
-        doc.text('Heat Pack 40h incluso gratuitamente nei mesi freddi.', 22, termsY + 37.5);
+        doc.setTextColor(...textMuted);
+        doc.text('• SPEDIZIONI: Lunedì e Mercoledì con corriere espresso 24/48h (nessuna sosta nel weekend).', 15, bottomY + 11);
+        doc.text('• PACKAGING: Box isotermico con Heat Pack 40h incluso gratuitamente nei mesi invernali.', 15, bottomY + 15.5);
+        doc.text('• GARANZIA: 100% vivi all\'arrivo (sostituzione o rimborso con foto alla consegna entro 2h).', 15, bottomY + 20);
 
-        // Right Column (X: 106)
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(7.5);
-        doc.setTextColor(...primaryNavy);
-        doc.text('• GARANZIA 100% VIVI ALL\'ARRIVO:', 106, termsY + 14);
-        doc.setFont('helvetica', 'normal');
+        // Footer
         doc.setFontSize(7);
-        doc.setTextColor(...textDark);
-        doc.text('Sostituzione immediata o rimborso in caso di', 109, termsY + 18.5);
-        doc.text('mortalita documentata con foto entro 2 ore dalla consegna.', 109, termsY + 22.5);
-
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(7.5);
-        doc.setTextColor(...primaryNavy);
-        doc.text('• ORDINI & PREVENTIVI SU MISURA:', 106, termsY + 29);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(7);
-        doc.setTextColor(...textDark);
-        doc.text('Per quantitativi speciali, forniture continuative o', 109, termsY + 33.5);
-        doc.text('ritiro diretto, contattare direttamente via WhatsApp.', 109, termsY + 37.5);
-
-        // ══════════════════════════════════════════════════════
-        // 4. FOOTER (Y: 286mm)
-        // ══════════════════════════════════════════════════════
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(7);
-        doc.setTextColor(150, 150, 150);
-        doc.text('D.U.B.I.A. Cervello Digitale · Listino Prezzi Ufficiale Blaptica Dubia', 105, 286, { align: 'center' });
-        doc.text('Pagina 1 di 1', 196, 286, { align: 'right' });
+        doc.setTextColor(156, 163, 175);
+        doc.text('D.U.B.I.A. · Allevamento Selezionato Blaptica Dubia · Pagina 1 di 1', 105, 287, { align: 'center' });
 
         const fileName = isMichael ? 'Listino_Blatte_Dubia_Ingrosso_Michael.pdf' : 'Listino_Blatte_Dubia_2026.pdf';
         const saved = savePdfDocument(doc, fileName);
