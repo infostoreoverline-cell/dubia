@@ -242,7 +242,7 @@ const COMMERCIAL_CATALOG = {
     }
 };
 
-// Catalogo Commerciale Prezzi Blatte Dubia
+// Catalogo Commerciale Prezzi Blatte Dubia (4 Categorie Principali)
 const PRICE_CATALOG_FULL = {
     edition: '2026',
     brand: 'D.U.B.I.A. Cervello Digitale',
@@ -259,18 +259,18 @@ const PRICE_CATALOG_FULL = {
                     title: 'Blatte Adulte (M/F)',
                     size: '2.0 – 2.5 cm',
                     icon: '🔴',
-                    desc: 'Adulti riproduttori o feeder per sauri di taglia media e grande (pogone, varani, tegu). Elevato apporto proteico e guscio consistente.',
+                    desc: 'Adulti riproduttori o feeder per sauri di taglia media e grande (pogone, varani, tegu). Elevato apporto proteico.',
                     category: 'BLATTE',
                     unit: '100pz',
                     tiers: {
                         DIRECT: [
                             { qty: '100 pz', price: 10.00, note: '0,10 €/pz' },
-                            { qty: '500 pz', price: 42.00, note: '0,084 €/pz' },
-                            { qty: '1 Kg (~500 pz)', price: 48.00, note: 'Scorta convenienza' }
+                            { qty: '500 pz', price: 45.00, note: '0,09 €/pz' },
+                            { qty: '1 Kg (~500 pz)', price: 45.00, note: 'Scorta convenienza' }
                         ],
                         MICHAEL: [
-                            { qty: '100 pz', price: 8.00, note: '0,08 €/pz' },
-                            { qty: '500 pz', price: 35.00, note: '0,07 €/pz' },
+                            { qty: '100 pz', price: 9.00, note: '0,09 €/pz' },
+                            { qty: '500 pz', price: 40.00, note: '0,08 €/pz' },
                             { qty: '1 Kg (~500 pz)', price: 40.00, note: 'Prezzo ingrosso' }
                         ]
                     }
@@ -280,19 +280,19 @@ const PRICE_CATALOG_FULL = {
                     title: 'Colonia Mista Avviata',
                     size: 'Mix tutte le taglie',
                     icon: '🟣',
-                    desc: 'Mix demografico perfettamente bilanciato per avviare o potenziare il proprio allevamento autonomo di blatte dubia.',
+                    desc: 'Mix demografico perfettamente bilanciato per avviare o potenziare il proprio allevamento autonomo.',
                     category: 'BLATTE',
                     unit: 'kg',
                     tiers: {
                         DIRECT: [
-                            { qty: '500 g', price: 38.00, note: 'Mix avviato' },
-                            { qty: '1 Kg', price: 70.00, note: 'Colonia completa' },
-                            { qty: 'Starter Kit 2 Kg', price: 130.00, note: 'Super pack riproduzione' }
+                            { qty: '500 g', price: 35.00, note: 'Mix avviato' },
+                            { qty: '1 Kg', price: 65.00, note: 'Colonia completa' },
+                            { qty: '2 Kg', price: 125.00, note: 'Super pack riproduzione' }
                         ],
                         MICHAEL: [
-                            { qty: '500 g', price: 35.00, note: 'Mix bilanciato' },
+                            { qty: '500 g', price: 30.00, note: 'Mix bilanciato' },
                             { qty: '1 Kg', price: 60.00, note: 'Prezzo concordato' },
-                            { qty: 'Kit Fornitura 2 Kg', price: 110.00, note: 'Fornitura all\'ingrosso' }
+                            { qty: '2 Kg', price: 115.00, note: 'Fornitura ingrosso (-5€/kg)' }
                         ]
                     }
                 },
@@ -307,13 +307,13 @@ const PRICE_CATALOG_FULL = {
                     tiers: {
                         DIRECT: [
                             { qty: '100 pz', price: 16.00, note: '0,16 €/pz' },
-                            { qty: '500 pz', price: 72.00, note: '0,144 €/pz' },
+                            { qty: '500 pz', price: 75.00, note: '0,15 €/pz' },
                             { qty: '1 Kg (~1.000 pz)', price: 150.00, note: '150,00 €/kg' }
                         ],
                         MICHAEL: [
                             { qty: '100 pz', price: 14.00, note: '0,14 €/pz' },
                             { qty: '500 pz', price: 65.00, note: '0,13 €/pz' },
-                            { qty: '1 Kg (~1.000 pz)', price: 140.00, note: '140,00 €/kg' }
+                            { qty: '1 Kg (~1.000 pz)', price: 135.00, note: '135,00 €/kg' }
                         ]
                     }
                 },
@@ -322,57 +322,19 @@ const PRICE_CATALOG_FULL = {
                     title: 'Neanidi Small (Baby)',
                     size: '1 – 8 mm (Baby)',
                     icon: '🟡',
-                    desc: 'Neanidi piccolissime con esoscheletro tenero e digeribile. Perfette per baby gechi, rane, dendrobates, aracnidi e sauri nani.',
+                    desc: 'Neanidi piccolissime con esoscheletro morbido e digeribile. Perfette per baby gechi, rane, dendrobates e sauri nani.',
                     category: 'BLATTE',
                     unit: '100pz',
                     tiers: {
                         DIRECT: [
                             { qty: '100 pz', price: 14.00, note: '0,14 €/pz' },
-                            { qty: '500 pz', price: 60.00, note: '0,12 €/pz' },
-                            { qty: '1 Kg (~10.000 pz)', price: 1350.00, note: 'Maxi allevamento' }
+                            { qty: '500 pz', price: 65.00, note: '0,13 €/pz' },
+                            { qty: '1 Kg (~10.000 pz)', price: 1300.00, note: 'Maxi allevamento' }
                         ],
                         MICHAEL: [
-                            { qty: '100 pz', price: 12.50, note: '0,125 €/pz' },
+                            { qty: '100 pz', price: 12.00, note: '0,12 €/pz' },
                             { qty: '500 pz', price: 55.00, note: '0,11 €/pz' },
-                            { qty: '1 Kg (~10.000 pz)', price: 1250.00, note: '1.250,00 €/kg' }
-                        ]
-                    }
-                },
-                {
-                    id: 'FEMALES_BREEDING',
-                    title: 'Femmine Riproduttrici Selezionate',
-                    size: '2.3 – 2.6 cm (Gravide)',
-                    icon: '👑',
-                    desc: 'Femmine adulte fecondate pronte alla deposizione delle ooteche. Selezionate per taglia e vitalità.',
-                    category: 'BLATTE',
-                    unit: '50pz',
-                    tiers: {
-                        DIRECT: [
-                            { qty: '50 pz', price: 28.00, note: '0,56 €/cad' },
-                            { qty: '100 pz', price: 50.00, note: '0,50 €/cad' }
-                        ],
-                        MICHAEL: [
-                            { qty: '50 pz', price: 25.00, note: '0,50 €/cad' },
-                            { qty: '100 pz', price: 45.00, note: '0,45 €/cad' }
-                        ]
-                    }
-                },
-                {
-                    id: 'MALES_SELECTED',
-                    title: 'Maschi Adulti Fecondatori',
-                    size: '2.0 – 2.3 cm (Alati)',
-                    icon: '🛡️',
-                    desc: 'Maschi adulti sani ed energici per garantire il corretto rapporto sessuale (1 maschio ogni 3-4 femmine).',
-                    category: 'BLATTE',
-                    unit: '50pz',
-                    tiers: {
-                        DIRECT: [
-                            { qty: '50 pz', price: 20.00, note: '0,40 €/cad' },
-                            { qty: '100 pz', price: 35.00, note: '0,35 €/cad' }
-                        ],
-                        MICHAEL: [
-                            { qty: '50 pz', price: 18.00, note: '0,36 €/cad' },
-                            { qty: '100 pz', price: 32.00, note: '0,32 €/cad' }
+                            { qty: '1 Kg (~10.000 pz)', price: 1150.00, note: '1.150,00 €/kg' }
                         ]
                     }
                 }
@@ -2124,28 +2086,15 @@ const exportFullCatalogPDF = (channel = 'DIRECT') => {
             doc.line(15, curY, 195, curY);
         });
 
-        // ── 3. NOTE INFERIORI & GARANZIE (MINIMALE) ──
-        const bottomY = curY + 12;
+        // ── 3. FOOTER MINIMALE ──
         doc.setDrawColor(...lineGray);
         doc.setLineWidth(0.3);
-        doc.line(15, bottomY, 195, bottomY);
+        doc.line(15, 278, 195, 278);
 
-        doc.setFont('helvetica', 'bold');
         doc.setFontSize(8);
-        doc.setTextColor(...textDark);
-        doc.text('INFORMAZIONI DI FORNITURA:', 15, bottomY + 6);
-
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(7.5);
-        doc.setTextColor(...textMuted);
-        doc.text('• SPEDIZIONI: Lunedì e Mercoledì con corriere espresso 24/48h (nessuna sosta nel weekend).', 15, bottomY + 11);
-        doc.text('• PACKAGING: Box isotermico con Heat Pack 40h incluso gratuitamente nei mesi invernali.', 15, bottomY + 15.5);
-        doc.text('• GARANZIA: 100% vivi all\'arrivo (sostituzione o rimborso con foto alla consegna entro 2h).', 15, bottomY + 20);
-
-        // Footer
-        doc.setFontSize(7);
         doc.setTextColor(156, 163, 175);
-        doc.text('D.U.B.I.A. · Allevamento Selezionato Blaptica Dubia · Pagina 1 di 1', 105, 287, { align: 'center' });
+        doc.text('D.U.B.I.A. · Allevamento Selezionato Blaptica Dubia', 15, 285);
+        doc.text('Pagina 1 di 1', 195, 285, { align: 'right' });
 
         const fileName = isMichael ? 'Listino_Blatte_Dubia_Ingrosso_Michael.pdf' : 'Listino_Blatte_Dubia_2026.pdf';
         const saved = savePdfDocument(doc, fileName);
@@ -2186,11 +2135,7 @@ const renderListinoPrezziUI = () => {
     // Filtra per taglia / ricerca
     const filteredItems = blatteItems.filter(item => {
         if (categoryFilter !== 'ALL') {
-            if (categoryFilter === 'BREEDING') {
-                if (item.id !== 'FEMALES_BREEDING' && item.id !== 'MALES_SELECTED') return false;
-            } else if (item.id !== categoryFilter) {
-                return false;
-            }
+            if (item.id !== categoryFilter) return false;
         }
         if (!searchFilter) return true;
         return item.title.toLowerCase().includes(searchFilter) ||

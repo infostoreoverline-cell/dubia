@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dubia-app-v5';
+const CACHE_NAME = 'dubia-app-v6';
 const urlsToCache = [
   './',
   './index.html',
