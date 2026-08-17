@@ -1,0 +1,10 @@
+node_modules/
+.git_backup/
+compile_commands.json
+**/compile_commands.json
+*.log
+**/logs/
+**/media_debug/
+.vscode/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,9 @@
+# Regole per lo Sviluppo del Termoigrometro
+
+- **Sincronizzazione dei file del sensore:** I file `sensori/termoigrometri/termoigrometro_v2/termoigrometro_v2.ino` e `sensori/termoigrometri/test_senza_sensore/test_senza_sensore.ino` devono essere mantenuti aggiornati con le medesime funzionalità (stesse routine WiFi, display, logica di invio dati, ecc.). 
+- **Differenza fondamentale da rispettare:** 
+  - `termoigrometro_v2.ino`: È la versione di produzione. DEVE utilizzare la libreria `Adafruit_SHT4x.h` e interfacciarsi con il chip fisico SHT40 tramite I2C per leggere i dati reali di temperatura e umidità. Utilizza parametri di temporizzazione di produzione (es. `SLEEP_US = 15 minuti`).
+  - `test_senza_sensore.ino`: È la versione di test. NON DEVE utilizzare il sensore SHT40. La funzione `readSensor()` deve restituire dati generati in modo randomico/simulato (appoggiandosi anche al contatore RTC per variare i dati a ogni deep sleep). DEVE utilizzare parametri di temporizzazione brevi per permettere un debug rapido senza dover aspettare ore (es. `SLEEP_US` nell'ordine di secondi/minuti).
+- **Divieto di clonazione totale:** Mai sovrascrivere interamente un file con l'altro. Le modifiche architetturali devono essere copiate, ma la logica di lettura e temporizzazione (`readSensor()`, `#include <Adafruit_SHT4x.h>`, costanti temporali) deve sempre rimanere separata e specifica per il proprio scopo.
+- **Anteprima e Simulatore Locale:** Deve essere presente e mantenuto aggiornato un file di anteprima interattivo HTML (`sensori/anteprima_termoigrometro.html`) che implementi la simulazione visiva e logica del termoigrometro. Questo serve a permettere il collaudo rapido del flusso dei dati e della connettività dell'API di ingest direttamente dal browser, replicando i cicli di boot/sleep e di logging della versione di test (`test_senza_sensore.ino`).
+

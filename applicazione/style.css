@@ -2262,3 +2262,666 @@ table th {
     border: 1px solid var(--border-color) !important;
 }
 
+/* ═══════════════════════════════════════════════════════════
+   LISTINO PREZZI COMMERCIALE & GRAFICO ANALITICO
+   ═══════════════════════════════════════════════════════════ */
+
+.catalog-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.catalog-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1.1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.catalog-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.catalog-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.catalog-icon {
+    font-size: 1.6rem;
+    line-height: 1;
+}
+
+.catalog-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+.catalog-size {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    display: block;
+    margin-top: 0.15rem;
+}
+
+.catalog-price-row {
+    margin: 0.75rem 0;
+    padding: 0.5rem 0;
+    border-top: 1px dashed rgba(255, 255, 255, 0.1);
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.catalog-main-price {
+    display: flex;
+    align-items: baseline;
+    gap: 0.35rem;
+}
+
+.catalog-main-price .price-val {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--color-gold, #F2C94C);
+    letter-spacing: -0.02em;
+}
+
+.catalog-main-price .price-unit {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.catalog-sub-price {
+    font-size: 0.75rem;
+    color: var(--accent-green, #2ecc71);
+    margin-top: 0.2rem;
+    font-weight: 500;
+}
+
+.catalog-desc {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    line-height: 1.35;
+    margin-top: 0.25rem;
+}
+
+/* Toggle Buttons */
+.chart-btn-group {
+    display: flex;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 2px;
+    gap: 2px;
+}
+
+.chart-btn-group .btn-toggle {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.chart-btn-group .btn-toggle.active {
+    background: var(--accent-purple, #8e44ad);
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.chart-btn-group .btn-toggle:hover:not(.active) {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PREVENTIVI / QUOTE BUILDER & PDF EXPORT
+   ═══════════════════════════════════════════════════════════ */
+
+.quote-item-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto;
+    gap: 0.5rem;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    padding: 0.5rem 0.6rem;
+}
+
+@media (max-width: 768px) {
+    .quote-item-row {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.4rem;
+    }
+}
+
+.quote-item-row .input-standard {
+    padding: 0.4rem 0.5rem;
+    font-size: 0.85rem;
+}
+
+.quote-status-badge {
+    display: inline-block;
+    padding: 0.2rem 0.55rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.quote-status-DRAFT {
+    background: rgba(242, 201, 76, 0.15);
+    color: #F2C94C;
+    border: 1px solid rgba(242, 201, 76, 0.3);
+}
+
+.quote-status-SENT {
+    background: rgba(52, 152, 219, 0.15);
+    color: #3498db;
+    border: 1px solid rgba(52, 152, 219, 0.3);
+}
+
+.quote-status-ACCEPTED {
+    background: rgba(39, 174, 96, 0.15);
+    color: #27ae60;
+    border: 1px solid rgba(39, 174, 96, 0.3);
+}
+
+.quote-status-CONVERTED {
+    background: rgba(142, 68, 173, 0.2);
+    color: #9b59b6;
+    border: 1px solid rgba(142, 68, 173, 0.4);
+}
+
+.quote-status-REJECTED {
+    background: rgba(231, 76, 60, 0.15);
+    color: #e74c3c;
+    border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LISTINO PREZZI UFFICIALE & CATALOGO COMPLETO
+   ═══════════════════════════════════════════════════════════ */
+
+.listino-hero-card {
+    background: linear-gradient(135deg, rgba(24, 43, 73, 0.95), rgba(15, 23, 42, 0.95));
+    border: 1px solid rgba(242, 201, 76, 0.3);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    position: relative;
+    overflow: hidden;
+}
+
+.listino-hero-card::before {
+    content: '';
+    position: absolute;
+    top: -50px;
+    right: -50px;
+    width: 150px;
+    height: 150px;
+    background: radial-gradient(circle, rgba(242, 201, 76, 0.15), transparent 70%);
+    pointer-events: none;
+}
+
+.listino-hero-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+}
+
+.listino-badge-row {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.5rem;
+}
+
+.listino-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.25rem 0.65rem;
+    border-radius: 999px;
+    letter-spacing: 0.02em;
+}
+
+.listino-badge.badge-primary {
+    background: rgba(242, 201, 76, 0.15);
+    color: #F2C94C;
+    border: 1px solid rgba(242, 201, 76, 0.4);
+}
+
+.listino-badge.badge-success {
+    background: rgba(46, 204, 113, 0.15);
+    color: #2ecc71;
+    border: 1px solid rgba(46, 204, 113, 0.4);
+}
+
+.listino-badge.badge-info {
+    background: rgba(52, 152, 219, 0.15);
+    color: #3498db;
+    border: 1px solid rgba(52, 152, 219, 0.4);
+}
+
+.listino-hero-title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #ffffff, #e2e8f0);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.listino-hero-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.btn-listino-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.65rem 1.2rem;
+    font-size: 0.92rem;
+    font-weight: 700;
+    border-radius: 8px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-listino-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+.btn-whatsapp {
+    background: linear-gradient(135deg, #25D366, #128C7E);
+    color: #ffffff;
+    border: 1px solid #128C7E;
+}
+
+.btn-whatsapp:hover {
+    background: linear-gradient(135deg, #28e06c, #149c8c);
+}
+
+/* ─── Controls & Filter Toolbar ─── */
+.listino-controls-card {
+    padding: 1rem 1.25rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-color);
+}
+
+.listino-controls-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding-bottom: 0.85rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.listino-channel-selector {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.listino-label {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.listino-filters-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 0.85rem;
+}
+
+.listino-category-pills {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.listino-pill {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.listino-pill:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-color);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.listino-pill.active {
+    background: var(--accent-purple, #8e44ad);
+    color: #ffffff;
+    border-color: var(--accent-purple, #8e44ad);
+    box-shadow: 0 2px 8px rgba(142, 68, 173, 0.4);
+}
+
+.listino-search-wrapper {
+    position: relative;
+    min-width: 240px;
+    flex-grow: 1;
+    max-width: 380px;
+}
+
+.listino-search-input {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    padding: 0.45rem 0.75rem 0.45rem 2.2rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+
+.listino-search-input:focus {
+    border-color: var(--color-gold, #F2C94C);
+    box-shadow: 0 0 0 2px rgba(242, 201, 76, 0.2);
+}
+
+/* ─── WhatsApp Live Preview Card ─── */
+.whatsapp-preview-card {
+    background: #0b141a;
+    border: 1px solid rgba(37, 211, 102, 0.3);
+    border-radius: 12px;
+    padding: 1rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    animation: fadeIn 0.3s ease;
+}
+
+.whatsapp-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.whatsapp-bubble {
+    background: #1f2c34;
+    color: #e9edef;
+    padding: 1rem 1.25rem;
+    border-radius: 8px 8px 8px 0;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-size: 0.88rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    border-left: 3px solid #25D366;
+    max-height: 350px;
+    overflow-y: auto;
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.3);
+}
+
+/* ─── Category Sections & Product Cards ─── */
+.listino-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 1.5rem 0 0.75rem 0;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.listino-section-title {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.listino-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.listino-product-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 1.1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
+}
+
+.listino-product-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(242, 201, 76, 0.4);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.listino-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.listino-card-icon-title {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.listino-card-icon {
+    font-size: 1.6rem;
+    line-height: 1;
+}
+
+.listino-card-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+.listino-card-size {
+    font-size: 0.76rem;
+    color: var(--text-muted);
+    display: block;
+    margin-top: 0.1rem;
+}
+
+.listino-tag {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.listino-tag-blatte { background: rgba(231, 76, 60, 0.15); color: #e74c3c; border: 1px solid rgba(231, 76, 60, 0.3); }
+.listino-tag-iot { background: rgba(52, 152, 219, 0.15); color: #3498db; border: 1px solid rgba(52, 152, 219, 0.3); }
+.listino-tag-accessori { background: rgba(39, 174, 96, 0.15); color: #2ecc71; border: 1px solid rgba(39, 174, 96, 0.3); }
+
+.listino-card-desc {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+    margin-bottom: 0.85rem;
+}
+
+/* Tier Pricing Table inside cards */
+.listino-tiers-box {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.85rem;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.listino-tier-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.3rem 0;
+    font-size: 0.84rem;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
+}
+
+.listino-tier-row:last-child {
+    border-bottom: none;
+}
+
+.listino-tier-qty {
+    color: var(--text-color);
+    font-weight: 500;
+}
+
+.listino-tier-price {
+    font-weight: 700;
+    color: var(--color-gold, #F2C94C);
+    font-size: 0.92rem;
+}
+
+.listino-tier-note {
+    font-size: 0.72rem;
+    color: var(--accent-green, #2ecc71);
+    margin-left: 0.35rem;
+}
+
+.listino-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    gap: 0.5rem;
+}
+
+.listino-quick-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.35rem 0.65rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.listino-quick-btn:hover {
+    background: var(--accent-purple, #8e44ad);
+    color: #ffffff;
+    border-color: var(--accent-purple, #8e44ad);
+}
+
+/* ─── Terms & Guarantees Card ─── */
+.listino-terms-card {
+    margin-top: 1.5rem;
+    background: rgba(24, 43, 73, 0.3);
+    border: 1px solid rgba(52, 152, 219, 0.3);
+}
+
+.terms-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-top: 0.85rem;
+}
+
+.term-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 0.85rem;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.term-icon {
+    font-size: 1.5rem;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.term-item strong {
+    font-size: 0.88rem;
+    color: var(--text-color);
+    display: block;
+    margin-bottom: 0.2rem;
+}
+
+.term-item p {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    line-height: 1.35;
+    margin: 0;
+}
+
+@media (max-width: 768px) {
+    .listino-hero-content {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .listino-hero-actions {
+        width: 100%;
+    }
+    
+    .btn-listino-action {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .listino-controls-top {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .listino-search-wrapper {
+        max-width: 100%;
+    }
+}
+
+
+

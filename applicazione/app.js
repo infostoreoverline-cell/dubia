@@ -194,6 +194,357 @@ const DEFAULT_PRICES = {
     BABY: 0.05
 };
 
+// Listino Prezzi Ufficiale per Vendita e Preventivi D.U.B.I.A.
+const COMMERCIAL_CATALOG = {
+    ADULT: {
+        id: 'ADULT',
+        label: 'Blatte Adulte (M/F)',
+        size: '2.0 – 2.5 cm',
+        pricePerKg: 40.00,
+        pricePer100: 8.00,
+        massPerUnit: 2.0, // ~2.0g per adulto medio
+        defaultUnit: 'kg',
+        color: '#e74c3c',
+        desc: 'Adulti riproduttori o feeder taglia grande'
+    },
+    MIXED: {
+        id: 'MIXED',
+        label: 'Colonia Mista Avviata',
+        size: 'Mix Tutte le Misure',
+        pricePerKg: 60.00,
+        pricePer100: null,
+        massPerUnit: null,
+        defaultUnit: 'kg',
+        color: '#9b59b6',
+        desc: 'Colonia avviata completa (baby, medie, grandi)'
+    },
+    MEDIUM: {
+        id: 'MEDIUM',
+        label: 'Neanidi Medie',
+        size: '1.0 – 1.5 cm',
+        pricePerKg: 140.00,
+        pricePer100: 14.00,
+        massPerUnit: 1.0, // ~1.0g per individuo (1000 pz/kg)
+        defaultUnit: '100pz',
+        color: '#2ecc71',
+        desc: 'Dimensione ideale per gechi e sauri sub-adulti'
+    },
+    SMALL: {
+        id: 'SMALL',
+        label: 'Neanidi Small (Baby)',
+        size: '1 mm – 8 mm',
+        pricePerKg: 1250.00,
+        pricePer100: 12.50,
+        massPerUnit: 0.1, // ~0.1g per baby (10.000 pz/kg)
+        defaultUnit: '100pz',
+        color: '#f39c12',
+        desc: 'Appena nate, guscio morbidissimo e digeribile'
+    }
+};
+
+// Catalogo Commerciale Completo Multilivello (Blatte, Hardware IoT & Accessori)
+const PRICE_CATALOG_FULL = {
+    edition: '2026',
+    brand: 'D.U.B.I.A. Cervello Digitale',
+    categories: [
+        {
+            id: 'BLATTE',
+            title: 'Blatte da Pasto & Colonie Riproduttive (Blaptica Dubia)',
+            icon: '🪳',
+            tag: 'blatte',
+            tagLabel: 'Insetti Vivi',
+            items: [
+                {
+                    id: 'ADULT',
+                    title: 'Blatte Adulte (M/F)',
+                    size: '2.0 – 2.5 cm',
+                    icon: '🔴',
+                    desc: 'Adulti riproduttori o feeder per sauri di taglia media e grande (pogone, varani, tegu). Elevato apporto proteico e guscio consistente.',
+                    category: 'BLATTE',
+                    unit: '100pz',
+                    tiers: {
+                        DIRECT: [
+                            { qty: '100 pz', price: 10.00, note: '0,10 €/pz' },
+                            { qty: '500 pz', price: 42.00, note: '0,084 €/pz' },
+                            { qty: '1 Kg (~500 pz)', price: 48.00, note: 'Scorta convenienza' }
+                        ],
+                        MICHAEL: [
+                            { qty: '100 pz', price: 8.00, note: '0,08 €/pz' },
+                            { qty: '500 pz', price: 35.00, note: '0,07 €/pz' },
+                            { qty: '1 Kg (~500 pz)', price: 40.00, note: 'Prezzo ingrosso' }
+                        ]
+                    }
+                },
+                {
+                    id: 'MIXED',
+                    title: 'Colonia Mista Avviata',
+                    size: 'Tutte le misure (Baby + Medie + Adulti)',
+                    icon: '🟣',
+                    desc: 'Mix demografico perfettamente bilanciato per avviare o potenziare il proprio allevamento autonomo di blatte dubia.',
+                    category: 'BLATTE',
+                    unit: 'kg',
+                    tiers: {
+                        DIRECT: [
+                            { qty: '500 g', price: 38.00, note: 'Mix avviato' },
+                            { qty: '1 Kg', price: 70.00, note: 'Colonia completa' },
+                            { qty: 'Starter Kit 2 Kg', price: 130.00, note: 'Super pack riproduzione' }
+                        ],
+                        MICHAEL: [
+                            { qty: '500 g', price: 35.00, note: 'Mix bilanciato' },
+                            { qty: '1 Kg', price: 60.00, note: 'Prezzo concordato' },
+                            { qty: 'Kit Fornitura 2 Kg', price: 110.00, note: 'Fornitura all\'ingrosso' }
+                        ]
+                    }
+                },
+                {
+                    id: 'MEDIUM',
+                    title: 'Neanidi Medie',
+                    size: '1.0 – 1.5 cm',
+                    icon: '🟢',
+                    desc: 'La taglia più richiesta e versatile. Ideale per gechi leopardini, pogone sub-adulte, camaleonti e sauri giovani.',
+                    category: 'BLATTE',
+                    unit: '100pz',
+                    tiers: {
+                        DIRECT: [
+                            { qty: '100 pz', price: 16.00, note: '0,16 €/pz' },
+                            { qty: '500 pz', price: 72.00, note: '0,144 €/pz' },
+                            { qty: '1 Kg (~1.000 pz)', price: 150.00, note: '150,00 €/kg' }
+                        ],
+                        MICHAEL: [
+                            { qty: '100 pz', price: 14.00, note: '0,14 €/pz' },
+                            { qty: '500 pz', price: 65.00, note: '0,13 €/pz' },
+                            { qty: '1 Kg (~1.000 pz)', price: 140.00, note: '140,00 €/kg' }
+                        ]
+                    }
+                },
+                {
+                    id: 'SMALL',
+                    title: 'Neanidi Small (Baby)',
+                    size: '1 mm – 8 mm',
+                    icon: '🟡',
+                    desc: 'Neanidi piccolissime con esoscheletro tenero e digeribile. Perfette per baby gechi, rane, dendrobates, aracnidi e sauri nani.',
+                    category: 'BLATTE',
+                    unit: '100pz',
+                    tiers: {
+                        DIRECT: [
+                            { qty: '100 pz', price: 14.00, note: '0,14 €/pz' },
+                            { qty: '500 pz', price: 60.00, note: '0,12 €/pz' },
+                            { qty: '1 Kg (~10.000 pz)', price: 1350.00, note: 'Maxi allevamento' }
+                        ],
+                        MICHAEL: [
+                            { qty: '100 pz', price: 12.50, note: '0,125 €/pz' },
+                            { qty: '500 pz', price: 55.00, note: '0,11 €/pz' },
+                            { qty: '1 Kg (~10.000 pz)', price: 1250.00, note: '1.250,00 €/kg' }
+                        ]
+                    }
+                },
+                {
+                    id: 'FEMALES_BREEDING',
+                    title: 'Femmine Riproduttrici Selezionate',
+                    size: '2.3 – 2.6 cm (Femmine Gravide)',
+                    icon: '👑',
+                    desc: 'Femmine adulte fecondate pronte alla deposizione delle ooteche. Selezionate per taglia e vitalità.',
+                    category: 'BLATTE',
+                    unit: '50pz',
+                    tiers: {
+                        DIRECT: [
+                            { qty: '50 pz', price: 28.00, note: '0,56 €/cad' },
+                            { qty: '100 pz', price: 50.00, note: '0,50 €/cad' }
+                        ],
+                        MICHAEL: [
+                            { qty: '50 pz', price: 25.00, note: '0,50 €/cad' },
+                            { qty: '100 pz', price: 45.00, note: '0,45 €/cad' }
+                        ]
+                    }
+                },
+                {
+                    id: 'MALES_SELECTED',
+                    title: 'Maschi Adulti Fecondatori',
+                    size: '2.0 – 2.3 cm (Maschi Alati)',
+                    icon: '🛡️',
+                    desc: 'Maschi adulti sani ed energici per garantire il corretto rapporto sessuale (1 maschio ogni 3-4 femmine).',
+                    category: 'BLATTE',
+                    unit: '50pz',
+                    tiers: {
+                        DIRECT: [
+                            { qty: '50 pz', price: 20.00, note: '0,40 €/cad' },
+                            { qty: '100 pz', price: 35.00, note: '0,35 €/cad' }
+                        ],
+                        MICHAEL: [
+                            { qty: '50 pz', price: 18.00, note: '0,36 €/cad' },
+                            { qty: '100 pz', price: 32.00, note: '0,32 €/cad' }
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            id: 'IOT',
+            title: 'Hardware IoT & Monitoraggio Terrari (Termoigrometri Wi-Fi)',
+            icon: '📡',
+            tag: 'iot',
+            tagLabel: 'Hardware IoT',
+            items: [
+                {
+                    id: 'TERMOIGROMETRO_V2',
+                    title: 'Termoigrometro Wi-Fi ESP8266 + SHT40 v2.0',
+                    size: 'Dispositivo Smart Completo',
+                    icon: '📟',
+                    desc: 'Termoigrometro Wi-Fi programmato con firmware v2.0. Sensore di precisione Sensirion SHT40 (±1.5% RH, ±0.2°C), sincronizzazione cloud e dashboard live.',
+                    category: 'IOT',
+                    unit: 'pz',
+                    tiers: {
+                        DIRECT: [
+                            { qty: '1 Dispositivo', price: 34.90, note: 'Assemblato & Testato' },
+                            { qty: 'Kit 3 Dispositivi', price: 89.70, note: '29,90 € / cad (-14%)' }
+                        ],
+                        MICHAEL: [
+                            { qty: '1 Dispositivo', price: 29.90, note: 'Prezzo concordato' },
+                            { qty: 'Kit 3+ Dispositivi', price: 74.70, note: '24,90 € / cad' }
+                        ]
+                    }
+                },
+                {
+                    id: 'SONDA_SHT40',
+                    title: 'Sonda SHT40 con Cavo Schermato 1m',
+                    size: 'Sensore Esterno Terrario',
+                    icon: '🔬',
+                    desc: 'Sonda Sensirion SHT40 ad altissima affidabilità e risposta ultra rapida, protetta da guaina termorestringente e cavo flessibile schermato da 1 metro.',
+                    category: 'IOT',
+                    unit: 'pz',
+                    tiers: {
+                        DIRECT: [
+                            { qty: '1 Sonda', price: 16.90, note: 'Calibrata di fabbrica' },
+                            { qty: '3 Sonde', price: 44.70, note: '14,90 € / cad' }
+                        ],
+                        MICHAEL: [
+                            { qty: '1 Sonda', price: 14.90, note: 'Ricambio originale' },
+                            { qty: '3 Sonde', price: 38.70, note: '12,90 € / cad' }
+                        ]
+                    }
+                },
+                {
+                    id: 'DISPLAY_OLED',
+                    title: 'Modulo Display OLED I2C 0.96"',
+                    size: 'Schermo Digitale Locale',
+                    icon: '🖥️',
+                    desc: 'Display OLED retroilluminato ad alto contrasto per visualizzare temperatura, umidità, punto di rugiada e stato Wi-Fi direttamente sulla scatola.',
+                    category: 'IOT',
+                    unit: 'pz',
+                    tiers: {
+                        DIRECT: [
+                            { qty: '1 Modulo Display', price: 8.90, note: 'I2C Plug & Play' }
+                        ],
+                        MICHAEL: [
+                            { qty: '1 Modulo Display', price: 7.50, note: 'Prezzo riserva' }
+                        ]
+                    }
+                },
+                {
+                    id: 'POWER_KIT',
+                    title: 'Kit Alimentazione 5V 2A + Cavo 2m',
+                    size: 'Alimentazione Continua',
+                    icon: '🔌',
+                    desc: 'Alimentatore switching compatto stabilizzato 5V 2A con cavo Micro-USB rinforzato in nylon da 2 metri per installazione fissa in terrariofilia.',
+                    category: 'IOT',
+                    unit: 'pz',
+                    tiers: {
+                        DIRECT: [
+                            { qty: '1 Kit Alimentazione', price: 9.90, note: '5V 2A + Cavo 2m' }
+                        ],
+                        MICHAEL: [
+                            { qty: '1 Kit Alimentazione', price: 8.90, note: 'Fornitura continua' }
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            id: 'ACCESSORI',
+            title: 'Nutrizione, Substrato & Accessori Allevamento',
+            icon: '🌾',
+            tag: 'accessori',
+            tagLabel: 'Allevamento',
+            items: [
+                {
+                    id: 'FEED_PROTEIN',
+                    title: 'Mangime "Dubia Protein+" Formula Allevamento',
+                    size: 'Formula Secca Bilanciata',
+                    icon: '🥣',
+                    desc: 'Miscela secca bilanciata a base di cereali nobili, spirulina, proteine vegetali e carbonato di calcio. Massimizza tasso di crescita e fertilità.',
+                    category: 'ACCESSORI',
+                    unit: 'kg',
+                    tiers: {
+                        DIRECT: [
+                            { qty: '500 g', price: 7.50, note: '15,00 €/kg' },
+                            { qty: '1 Kg', price: 12.50, note: 'Confezione salva-freschezza' }
+                        ],
+                        MICHAEL: [
+                            { qty: '500 g', price: 6.50, note: '13,00 €/kg' },
+                            { qty: '1 Kg', price: 11.00, note: 'Formato scorta' }
+                        ]
+                    }
+                },
+                {
+                    id: 'WATER_GEL',
+                    title: 'Cristalli Idrogel Ultra-Puri (Idratazione)',
+                    size: 'Polimero Idrofilo Neutro',
+                    icon: '💧',
+                    desc: 'Cristalli idrogel a rilascio graduale. Prevengono l\'annegamento delle neanidi ed evitano ristagni d\'acqua e formazione di muffe nei contenitori.',
+                    category: 'ACCESSORI',
+                    unit: 'conf',
+                    tiers: {
+                        DIRECT: [
+                            { qty: '250 g secco (Resa 50L)', price: 8.90, note: 'Idratazione pulita' },
+                            { qty: '500 g secco (Resa 100L)', price: 15.00, note: 'Maxi convenienza' }
+                        ],
+                        MICHAEL: [
+                            { qty: '250 g secco (Resa 50L)', price: 7.90, note: 'Prezzo riservato' },
+                            { qty: '500 g secco (Resa 100L)', price: 13.50, note: 'Fornitura stock' }
+                        ]
+                    }
+                },
+                {
+                    id: 'EGG_CRATES',
+                    title: 'Cartoni Portauova Verticali Vergini',
+                    size: 'Pacco Rifugi Igienici',
+                    icon: '📦',
+                    desc: 'Portauova in cartone di cellulosa vergine non riciclata, esenti da trattamenti chimici e inchiostri. Ottimizzano la superficie calpestabile.',
+                    category: 'ACCESSORI',
+                    unit: 'pack',
+                    tiers: {
+                        DIRECT: [
+                            { qty: 'Pacco 15 pz', price: 8.00, note: 'Cartone naturale' },
+                            { qty: 'Pacco 30 pz', price: 14.00, note: '0,46 €/pz' }
+                        ],
+                        MICHAEL: [
+                            { qty: 'Pacco 15 pz', price: 7.00, note: 'Fornitura starter' },
+                            { qty: 'Pacco 30 pz', price: 12.00, note: '0,40 €/pz' }
+                        ]
+                    }
+                },
+                {
+                    id: 'SHIPPING_BOX',
+                    title: 'Box Termico Isotropico + Heat Pack 40h',
+                    size: 'Kit Spedizione Sicura',
+                    icon: '❄️',
+                    desc: 'Contenitore in polistirolo ad alta densità con scaldino chimico auto-attivante 40 ore. Garantisce temperatura ideale durante il tragitto.',
+                    category: 'ACCESSORI',
+                    unit: 'pz',
+                    tiers: {
+                        DIRECT: [
+                            { qty: '1 Kit Box + Scaldino', price: 6.90, note: 'Protezione freddo/caldo' }
+                        ],
+                        MICHAEL: [
+                            { qty: '1 Kit Box + Scaldino', price: 6.00, note: 'Costo vivo imballo' }
+                        ]
+                    }
+                }
+            ]
+        }
+    ]
+};
+
 // State
 let appState = {
     measurements: [],
@@ -201,6 +552,7 @@ let appState = {
     charts: {},
     clients: [],
     cessioni: [],
+    quotes: [],
     customPrices: { ...DEFAULT_PRICES },
     colonies: [],
     isSyncing: false,
@@ -212,8 +564,8 @@ let appState = {
 
 // --- DATABASE (IndexedDB) ---
 const dbName = "DubiaDB";
-// Versione 4: aggiunto store colonies
-const dbVersion = 4;
+// Versione 5: aggiunto store quotes (preventivi)
+const dbVersion = 5;
 let db;
 
 const initDB = () => {
@@ -244,6 +596,10 @@ const initDB = () => {
             if (!db.objectStoreNames.contains("colonies")) {
                 db.createObjectStore("colonies", { keyPath: "id", autoIncrement: true });
             }
+            // Crea store preventivi se non esiste (v5+)
+            if (!db.objectStoreNames.contains("quotes")) {
+                db.createObjectStore("quotes", { keyPath: "id", autoIncrement: true });
+            }
             // Migration v1→v2: invalida i parametri salvati in modo che vengano
             // rivalidati al prossimo caricamento (reset a DEFAULT_PARAMS se fuori range)
             if (oldVersion === 1) {
@@ -254,6 +610,9 @@ const initDB = () => {
             }
             if (oldVersion < 4) {
                 console.info('[D.U.B.I.A.] Migration v4: aggiunto store colonies.');
+            }
+            if (oldVersion < 5) {
+                console.info('[D.U.B.I.A.] Migration v5: aggiunto store quotes.');
             }
         };
 
@@ -281,8 +640,8 @@ const initDB = () => {
 const validateAndMigrateParams = (stored) => {
     if (!stored || typeof stored !== 'object') return { ...DEFAULT_PARAMS };
 
-    const THETA1_MIN = 0.01;  const THETA1_MAX = 2.0;
-    const THETA2_MIN = 0.01;  const THETA2_MAX = 5.0;
+    const THETA1_MIN = 0.05;  const THETA1_MAX = 2.0;
+    const THETA2_MIN = 0.20;  const THETA2_MAX = 3.0;
 
     const theta1 = parseFloat(stored.theta1);
     const theta2 = parseFloat(stored.theta2);
@@ -292,7 +651,7 @@ const validateAndMigrateParams = (stored) => {
 
     if (!theta1Valid || !theta2Valid) {
         console.warn(
-            `[D.U.B.I.A.] Params fuori range: θ₁=${theta1}, θ₂=${theta2}. ` +
+            `[D.U.B.I.A.] Params fuori range biologico: θ₁=${theta1}, θ₂=${theta2}. ` +
             `Reset a DEFAULT_PARAMS (θ₁=${DEFAULT_PARAMS.theta1}, θ₂=${DEFAULT_PARAMS.theta2}).`
         );
         return { ...DEFAULT_PARAMS };
@@ -329,7 +688,7 @@ const rebuildParamsFromMeasurements = (measurements) => {
         const d2 = new Date(curr.date);
         const delta_g = Math.max(1, (d2 - d1) / (1000 * 60 * 60 * 24));
 
-        const adultRatio = curr.adult_ratio || 0.35;
+        const adultRatio = (curr.adult_ratio !== undefined && curr.adult_ratio !== null) ? Number(curr.adult_ratio) : 0.35;
         const foodAmount = curr.food_amount || 0;
 
         const W_pred = dubiaModule
@@ -341,9 +700,9 @@ const rebuildParamsFromMeasurements = (measurements) => {
             : { theta1: theta1 - ALPHA * (W_pred - curr.total_weight) * foodAmount,
                 theta2: theta2 - ALPHA * (W_pred - curr.total_weight) * prev.total_weight * (1 - adultRatio) * (delta_g / 30) };
 
-        // Clamp per stabilità numerica
-        theta1 = Math.max(0.001, Math.min(2.0, bp.theta1));
-        theta2 = Math.max(0.001, Math.min(5.0, bp.theta2));
+        // Clamp per stabilità biologica e numerica
+        theta1 = Math.max(0.05, Math.min(2.0, bp.theta1));
+        theta2 = Math.max(0.20, Math.min(3.0, bp.theta2));
     }
 
     return { theta1, theta2 };
@@ -495,6 +854,7 @@ const loadInitialData = async () => {
     // ── Carica dati locali (IndexedDB) ───────────────────────────────────
     await loadClientsAndCessioni();
     await loadColonies();
+    await loadQuotes();
 
     // Carica misure locali (IndexedDB)
     await new Promise((resolve) => {
@@ -519,9 +879,11 @@ const loadInitialData = async () => {
 };
 
 const saveParams = (params) => {
-    const tx = db.transaction("parameters", "readwrite");
-    const store = tx.objectStore("parameters");
-    store.put({ id: 1, ...params });
+    if (typeof db !== 'undefined' && db && typeof db.transaction === 'function') {
+        const tx = db.transaction("parameters", "readwrite");
+        const store = tx.objectStore("parameters");
+        store.put({ id: 1, ...params });
+    }
 };
 
 // ═══════════════════════════════════════════════════
@@ -644,6 +1006,162 @@ const savePrices = (prices) => {
     const tx = db.transaction("parameters", "readwrite");
     const store = tx.objectStore("parameters");
     store.put({ id: 2, prices });
+};
+
+// ═══════════════════════════════════════════════════
+// PREVENTIVI / QUOTES — CRUD
+// ═══════════════════════════════════════════════════
+
+/**
+ * Carica tutti i preventivi salvati da IndexedDB.
+ */
+const loadQuotes = () => {
+    return new Promise((resolve) => {
+        if (!db || !db.objectStoreNames.contains("quotes")) {
+            appState.quotes = [];
+            return resolve();
+        }
+        try {
+            const tx = db.transaction("quotes", "readonly");
+            const store = tx.objectStore("quotes");
+            const req = store.getAll();
+            req.onsuccess = () => {
+                appState.quotes = (req.result || []).sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+                resolve();
+            };
+            req.onerror = () => {
+                appState.quotes = [];
+                resolve();
+            };
+        } catch (e) {
+            console.warn('[D.U.B.I.A.] loadQuotes fallback:', e);
+            appState.quotes = [];
+            resolve();
+        }
+    });
+};
+
+/**
+ * Salva o aggiorna un preventivo in IndexedDB.
+ */
+const saveQuote = async (quote) => {
+    return new Promise((resolve) => {
+        if (!db || !db.objectStoreNames.contains("quotes")) {
+            if (!quote.id) quote.id = Date.now();
+            const idx = appState.quotes.findIndex(q => q.id === quote.id);
+            if (idx >= 0) appState.quotes[idx] = quote;
+            else appState.quotes.unshift(quote);
+            return resolve(quote);
+        }
+        const tx = db.transaction("quotes", "readwrite");
+        const store = tx.objectStore("quotes");
+        const req = store.put(quote);
+        req.onsuccess = (e) => {
+            if (!quote.id) quote.id = e.target.result;
+            const idx = appState.quotes.findIndex(q => q.id === quote.id);
+            if (idx >= 0) appState.quotes[idx] = quote;
+            else appState.quotes.unshift(quote);
+            // Sync cloud
+            cloudPostWithQueue({ event_type: "preventivo_sync", ...quote });
+            resolve(quote);
+        };
+        req.onerror = () => resolve(null);
+    });
+};
+
+/**
+ * Elimina un preventivo per id.
+ */
+const deleteQuote = (id) => {
+    return new Promise((resolve) => {
+        if (!db || !db.objectStoreNames.contains("quotes")) {
+            appState.quotes = appState.quotes.filter(q => q.id !== Number(id));
+            return resolve();
+        }
+        const tx = db.transaction("quotes", "readwrite");
+        const store = tx.objectStore("quotes");
+        store.delete(Number(id));
+        appState.quotes = appState.quotes.filter(q => q.id !== Number(id));
+        cloudPostWithQueue({ event_type: "preventivo_delete", id: Number(id) });
+        resolve();
+    });
+};
+
+/**
+ * Converte un preventivo accettato in una o più cessioni registrate nel database.
+ */
+const convertQuoteToCessione = async (quoteId) => {
+    const quote = appState.quotes.find(q => q.id === Number(quoteId));
+    if (!quote) return;
+
+    // Trova o crea il cliente
+    let clientId = quote.clientId;
+    if (!clientId && quote.client && quote.client.nome) {
+        // Cerca se esiste già un cliente con lo stesso nome
+        const existing = appState.clients.find(c =>
+            (c.nome + ' ' + (c.cognome || '')).toLowerCase().trim() ===
+            (quote.client.nome + ' ' + (quote.client.cognome || '')).toLowerCase().trim()
+        );
+        if (existing) {
+            clientId = existing.id;
+        } else {
+            const newClient = await saveClient({
+                nome: quote.client.nome,
+                cognome: quote.client.cognome || '',
+                citta: quote.client.citta || '',
+                telefono: quote.client.telefono || '',
+                email: quote.client.email || '',
+                animale: 'rettile',
+                note: `Creato automaticamente da Preventivo ${quote.number || ''}`,
+                data_aggiunta: new Date().toISOString().split('T')[0]
+            });
+            clientId = newClient?.id;
+        }
+    }
+
+    if (!clientId && appState.clients.length > 0) {
+        clientId = appState.clients[0].id;
+    }
+
+    // Registra una cessione per ogni articolo
+    const items = quote.items || [];
+    for (const item of items) {
+        let tipoBlatta = 'SUBADULT';
+        if (item.category === 'ADULT') tipoBlatta = 'FEMALE';
+        else if (item.category === 'MEDIUM') tipoBlatta = 'MEDIUM';
+        else if (item.category === 'SMALL') tipoBlatta = 'SMALL';
+        else if (item.category === 'MIXED') tipoBlatta = 'SUBADULT';
+
+        let quantitaG = 0;
+        if (item.unit === 'kg') quantitaG = item.quantity * 1000;
+        else if (item.unit === 'g') quantitaG = item.quantity;
+        else if (item.unit === '100pz') {
+            const massMap = { ADULT: 200, MEDIUM: 100, SMALL: 10, MIXED: 80, CUSTOM: 80 };
+            quantitaG = item.quantity * (massMap[item.category] || 80);
+        } else if (item.unit === 'pz') {
+            const massMap = { ADULT: 2.0, MEDIUM: 1.0, SMALL: 0.1, MIXED: 0.8, CUSTOM: 0.8 };
+            quantitaG = item.quantity * (massMap[item.category] || 0.8);
+        }
+
+        const cessione = {
+            cliente_id: clientId || null,
+            data: new Date().toISOString().split('T')[0],
+            tipo_blatta: tipoBlatta,
+            quantita_g: quantitaG,
+            prezzo_unit: parseFloat(item.unitPrice || 0),
+            totale_euro: parseFloat(item.total || 0),
+            note: `Da preventivo ${quote.number || ''} (${item.categoryLabel || item.category}: ${item.quantity} ${item.unit})`
+        };
+        await saveCessione(cessione);
+    }
+
+    // Aggiorna stato preventivo a CONVERTED
+    quote.status = 'CONVERTED';
+    await saveQuote(quote);
+    updateClientiUI();
+    if (typeof showNotification === 'function') {
+        showNotification("Preventivo Convertito", `Il preventivo ${quote.number} è stato registrato nello Storico Cessioni!`, "success");
+    }
 };
 
 // ═══════════════════════════════════════════════════
@@ -778,30 +1296,1208 @@ const updateClientiUI = (filterClientId = null) => {
 
     if (cessioniToShow.length === 0) {
         tbody.innerHTML = `<tr><td colspan="7" class="table-empty">Nessuna cessione registrata.</td></tr>`;
+    } else {
+        tbody.innerHTML = cessioniToShow.map(c => {
+            const cliente = clients.find(cl => cl.id === c.cliente_id);
+            const nomeCliente = cliente ? `${cliente.nome} ${cliente.cognome}` : '—';
+            const blattaType = BLATTA_TYPES.find(b => b.value === c.tipo_blatta);
+            const blattaLabel = blattaType ? blattaType.label : c.tipo_blatta || '—';
+            const nIndividui = blattaType && c.quantita_g ? Math.round(c.quantita_g / blattaType.mass) : '—';
+            return `
+            <tr>
+                <td>${c.data}</td>
+                <td><strong>${nomeCliente}</strong></td>
+                <td>${blattaLabel}</td>
+                <td>${parseFloat(c.quantita_g || 0).toFixed(1)} g
+                    ${nIndividui !== '—' ? `<br><small style="color:var(--text-muted)">≈ ${nIndividui} ind.</small>` : ''}
+                </td>
+                <td style="color: var(--accent-green);">€ ${parseFloat(c.totale_euro || 0).toFixed(2)}</td>
+                <td style="max-width:150px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${c.note || ''}">${c.note || '—'}</td>
+                <td>
+                    <button class="btn-standard btn-danger btn-delete-cessione" data-id="${c.id}" style="padding:0.2rem 0.5rem;font-size:0.8rem;">🗑️</button>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    // ── Aggiorna Preventivi e Grafico Prezzi ───────────────────────────────────
+    updatePreventiviUI();
+    renderPrezziChart();
+};
+
+/**
+ * Renderizza o aggiorna il Grafico dei Prezzi Ufficiali (Chart.js)
+ */
+let _currentPriceChartMode = 'kg'; // 'kg', '100pz', 'log'
+
+const renderPrezziChart = (mode = _currentPriceChartMode) => {
+    _currentPriceChartMode = mode;
+    const canvas = document.getElementById('prezziChart');
+    if (!canvas) return;
+
+    if (appState.charts.prezziChart) {
+        appState.charts.prezziChart.destroy();
+    }
+
+    const categories = [
+        COMMERCIAL_CATALOG.ADULT.label,
+        COMMERCIAL_CATALOG.MIXED.label,
+        COMMERCIAL_CATALOG.MEDIUM.label,
+        COMMERCIAL_CATALOG.SMALL.label
+    ];
+
+    let datasetData = [];
+    let yAxisLabel = 'Prezzo (€ / kg)';
+    let isLog = false;
+
+    if (mode === 'kg') {
+        datasetData = [
+            COMMERCIAL_CATALOG.ADULT.pricePerKg,
+            COMMERCIAL_CATALOG.MIXED.pricePerKg,
+            COMMERCIAL_CATALOG.MEDIUM.pricePerKg,
+            COMMERCIAL_CATALOG.SMALL.pricePerKg
+        ];
+        yAxisLabel = 'Prezzo al Kg (€ / kg)';
+    } else if (mode === '100pz') {
+        datasetData = [
+            COMMERCIAL_CATALOG.ADULT.pricePer100, // 8.00
+            null,
+            COMMERCIAL_CATALOG.MEDIUM.pricePer100, // 14.00
+            COMMERCIAL_CATALOG.SMALL.pricePer100  // 12.50
+        ];
+        yAxisLabel = 'Prezzo per 100 Pezzi (€ / 100 pz)';
+    } else if (mode === 'log') {
+        datasetData = [
+            COMMERCIAL_CATALOG.ADULT.pricePerKg,
+            COMMERCIAL_CATALOG.MIXED.pricePerKg,
+            COMMERCIAL_CATALOG.MEDIUM.pricePerKg,
+            COMMERCIAL_CATALOG.SMALL.pricePerKg
+        ];
+        yAxisLabel = 'Prezzo al Kg (€ / kg) - Scala Logaritmica';
+        isLog = true;
+    }
+
+    const bgColors = [
+        'rgba(231, 76, 60, 0.85)',
+        'rgba(155, 89, 182, 0.85)',
+        'rgba(46, 204, 113, 0.85)',
+        'rgba(243, 156, 18, 0.85)'
+    ];
+
+    const borderColors = ['#e74c3c', '#9b59b6', '#2ecc71', '#f39c12'];
+
+    const ctx = canvas.getContext('2d');
+    appState.charts.prezziChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: categories,
+            datasets: [{
+                label: yAxisLabel,
+                data: datasetData,
+                backgroundColor: bgColors,
+                borderColor: borderColors,
+                borderWidth: 2,
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (context) => {
+                            const val = context.raw;
+                            if (val === null || val === undefined) return ' Solo vendita al kg';
+                            if (mode === '100pz') return ` € ${val.toFixed(2)} / 100 pezzi`;
+                            return ` € ${val.toFixed(2)} / kg`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    type: isLog ? 'logarithmic' : 'linear',
+                    beginAtZero: !isLog,
+                    grid: { color: 'rgba(255, 255, 255, 0.08)' },
+                    ticks: {
+                        color: '#95a5a6',
+                        callback: (v) => '€ ' + v
+                    },
+                    title: {
+                        display: true,
+                        text: yAxisLabel,
+                        color: '#bdc3c7',
+                        font: { size: 12, weight: 'bold' }
+                    }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#ecf0f1', font: { weight: '600' } }
+                }
+            }
+        }
+    });
+};
+
+/**
+ * Aggiorna la tabella dei Preventivi nella sezione Clienti.
+ */
+const updatePreventiviUI = () => {
+    const tbody = document.getElementById('preventiviTableBody');
+    if (!tbody) return;
+
+    const quotes = appState.quotes || [];
+    if (quotes.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="table-empty">Nessun preventivo registrato. Clicca su <strong>+ Nuovo Preventivo</strong> per crearne uno.</td></tr>`;
         return;
     }
 
-    tbody.innerHTML = cessioniToShow.map(c => {
-        const cliente = clients.find(cl => cl.id === c.cliente_id);
-        const nomeCliente = cliente ? `${cliente.nome} ${cliente.cognome}` : '—';
-        const blattaType = BLATTA_TYPES.find(b => b.value === c.tipo_blatta);
-        const blattaLabel = blattaType ? blattaType.label : c.tipo_blatta || '—';
-        const nIndividui = blattaType && c.quantita_g ? Math.round(c.quantita_g / blattaType.mass) : '—';
+    const STATUS_LABELS = {
+        DRAFT: { label: 'Bozza', class: 'quote-status-DRAFT' },
+        SENT: { label: 'Inviato', class: 'quote-status-SENT' },
+        ACCEPTED: { label: 'Accettato', class: 'quote-status-ACCEPTED' },
+        CONVERTED: { label: 'Convertito in Cessione', class: 'quote-status-CONVERTED' },
+        REJECTED: { label: 'Non Confermato', class: 'quote-status-REJECTED' }
+    };
+
+    tbody.innerHTML = quotes.map(q => {
+        const statusInfo = STATUS_LABELS[q.status] || STATUS_LABELS.SENT;
+        const clientName = q.client ? (q.client.nome ? `${q.client.nome} ${q.client.cognome || ''}` : (q.client.name || 'Cliente')) : '—';
+        const isMichael = (q.channel === 'MICHAEL') || (!q.channel && (!q.shipping || parseFloat(q.shipping) === 0));
+        const channelBadge = isMichael
+            ? `<span class="badge" style="background:rgba(39, 174, 96, 0.2); color:#2ecc71; border:1px solid rgba(39, 174, 96, 0.4); font-size:0.72rem; padding:0.15rem 0.5rem; border-radius:999px;">🤝 Michael</span>`
+            : `<span class="badge" style="background:rgba(52, 152, 219, 0.2); color:#3498db; border:1px solid rgba(52, 152, 219, 0.4); font-size:0.72rem; padding:0.15rem 0.5rem; border-radius:999px;">🛍️ Diretto</span>`;
+
+        const itemsSummary = (q.items || []).map(it => `${it.quantity} ${it.unit} ${it.categoryLabel || it.category}`).join(', ') || 'Nessun articolo';
+        const total = parseFloat(q.grandTotal || 0).toFixed(2);
+
         return `
         <tr>
-            <td>${c.data}</td>
-            <td><strong>${nomeCliente}</strong></td>
-            <td>${blattaLabel}</td>
-            <td>${parseFloat(c.quantita_g || 0).toFixed(1)} g
-                ${nIndividui !== '—' ? `<br><small style="color:var(--text-muted)">≈ ${nIndividui} ind.</small>` : ''}
-            </td>
-            <td style="color: var(--accent-green);">€ ${parseFloat(c.totale_euro || 0).toFixed(2)}</td>
-            <td style="max-width:150px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${c.note || ''}">${c.note || '—'}</td>
+            <td><strong>${q.number || 'PREV'}</strong></td>
+            <td>${q.date || '—'}</td>
             <td>
-                <button class="btn-standard btn-danger btn-delete-cessione" data-id="${c.id}" style="padding:0.2rem 0.5rem;font-size:0.8rem;">🗑️</button>
+                <strong>${clientName}</strong>
+                <div style="margin-top:0.25rem;">${channelBadge}</div>
+            </td>
+            <td style="max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${itemsSummary}">${itemsSummary}</td>
+            <td style="color: var(--accent-green); font-weight: 700;">€ ${total}</td>
+            <td><span class="quote-status-badge ${statusInfo.class}">${statusInfo.label}</span></td>
+            <td>
+                <div style="display:flex; gap:0.35rem; align-items:center;">
+                    <button class="btn-standard btn-quote-pdf" data-id="${q.id}" title="Scarica PDF" style="padding:0.25rem 0.5rem; font-size:0.8rem; background:linear-gradient(135deg,#e67e22,#d35400);">📥 PDF</button>
+                    <button class="btn-standard btn-quote-edit" data-id="${q.id}" title="Modifica preventivo" style="padding:0.25rem 0.5rem; font-size:0.8rem;">✏️</button>
+                    ${q.status !== 'CONVERTED' ? `<button class="btn-standard btn-quote-convert" data-id="${q.id}" title="Converti in Cessione" style="padding:0.25rem 0.5rem; font-size:0.8rem; background:rgba(142,68,173,0.3); border-color:var(--accent-purple);">📦</button>` : ''}
+                    <button class="btn-standard btn-danger btn-quote-delete" data-id="${q.id}" title="Elimina" style="padding:0.25rem 0.5rem; font-size:0.8rem;">🗑️</button>
+                </div>
             </td>
         </tr>`;
     }).join('');
+};
+
+/**
+ * Aggiunge o renderizza una riga articolo nel form del preventivo.
+ */
+const renderQuoteItemRow = (item = null) => {
+    const container = document.getElementById('quoteItemsContainer');
+    if (!container) return;
+
+    const rowId = 'quote_row_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+    const rowEl = document.createElement('div');
+    rowEl.className = 'quote-item-row';
+    rowEl.id = rowId;
+
+    const catValue = item?.category || 'ADULT';
+    const unitValue = item?.unit || (catValue === 'MEDIUM' || catValue === 'SMALL' ? '100pz' : 'kg');
+    const qtyValue = item?.quantity !== undefined ? item.quantity : 1;
+
+    let defaultPrice = 40.00;
+    if (COMMERCIAL_CATALOG[catValue]) {
+        defaultPrice = (unitValue === '100pz' && COMMERCIAL_CATALOG[catValue].pricePer100 !== null)
+            ? COMMERCIAL_CATALOG[catValue].pricePer100
+            : (unitValue === 'g' ? COMMERCIAL_CATALOG[catValue].pricePerKg / 1000 : COMMERCIAL_CATALOG[catValue].pricePerKg);
+    }
+    const priceValue = item?.unitPrice !== undefined ? item.unitPrice : defaultPrice;
+
+    rowEl.innerHTML = `
+        <div class="form-group" style="margin:0;">
+            <select class="input-standard quote-item-cat" style="width:100%;">
+                <option value="ADULT" ${catValue === 'ADULT' ? 'selected' : ''}>🔴 Blatte Adulte (2-2.5cm)</option>
+                <option value="MIXED" ${catValue === 'MIXED' ? 'selected' : ''}>🟣 Colonia Mista Avviata</option>
+                <option value="MEDIUM" ${catValue === 'MEDIUM' ? 'selected' : ''}>🟢 Neanidi Medie (1-1.5cm)</option>
+                <option value="SMALL" ${catValue === 'SMALL' ? 'selected' : ''}>🟡 Neanidi Small (1-8mm)</option>
+                <option value="CUSTOM" ${catValue === 'CUSTOM' ? 'selected' : ''}>⚪ Articolo Personalizzato</option>
+            </select>
+        </div>
+        <div class="form-group" style="margin:0;">
+            <select class="input-standard quote-item-unit" style="width:100%;">
+                <option value="kg" ${unitValue === 'kg' ? 'selected' : ''}>Kg</option>
+                <option value="g" ${unitValue === 'g' ? 'selected' : ''}>Grammi (g)</option>
+                <option value="100pz" ${unitValue === '100pz' ? 'selected' : ''}>100 Pezzi</option>
+                <option value="pz" ${unitValue === 'pz' ? 'selected' : ''}>Pezzi singoli</option>
+            </select>
+        </div>
+        <div class="form-group" style="margin:0;">
+            <input type="number" class="input-standard quote-item-qty" value="${qtyValue}" step="0.1" min="0.1" placeholder="Qtà" style="width:100%;">
+        </div>
+        <div class="form-group" style="margin:0;">
+            <input type="number" class="input-standard quote-item-price" value="${priceValue.toFixed(2)}" step="0.50" min="0" placeholder="€ Unit." style="width:100%;">
+        </div>
+        <div style="font-weight:700; color:var(--accent-green); text-align:right; font-size:0.9rem;" class="quote-item-subtotal">
+            € 0,00
+        </div>
+        <div>
+            <button type="button" class="btn-standard btn-danger btn-remove-quote-item" style="padding:0.35rem 0.6rem; font-size:0.8rem;" title="Rimuovi voce">✕</button>
+        </div>
+    `;
+
+    container.appendChild(rowEl);
+
+    // Gestione cambio categoria e unità
+    const catSelect = rowEl.querySelector('.quote-item-cat');
+    const unitSelect = rowEl.querySelector('.quote-item-unit');
+    const priceInput = rowEl.querySelector('.quote-item-price');
+    const qtyInput = rowEl.querySelector('.quote-item-qty');
+
+    const updateRowDefaultPrice = () => {
+        const cat = catSelect.value;
+        const u = unitSelect.value;
+        const catalogEntry = COMMERCIAL_CATALOG[cat];
+        if (catalogEntry) {
+            if (u === 'kg') priceInput.value = catalogEntry.pricePerKg.toFixed(2);
+            else if (u === 'g') priceInput.value = (catalogEntry.pricePerKg / 1000).toFixed(3);
+            else if (u === '100pz') priceInput.value = (catalogEntry.pricePer100 !== null ? catalogEntry.pricePer100 : (catalogEntry.pricePerKg * 0.2)).toFixed(2);
+            else if (u === 'pz') priceInput.value = (catalogEntry.pricePer100 !== null ? catalogEntry.pricePer100 / 100 : (catalogEntry.pricePerKg * 0.002)).toFixed(3);
+        }
+        recalculateQuoteTotals();
+    };
+
+    catSelect.addEventListener('change', () => {
+        const cat = catSelect.value;
+        if (cat === 'MEDIUM' || cat === 'SMALL') {
+            unitSelect.value = '100pz';
+        } else if (cat === 'ADULT' || cat === 'MIXED') {
+            unitSelect.value = 'kg';
+        }
+        updateRowDefaultPrice();
+    });
+
+    unitSelect.addEventListener('change', updateRowDefaultPrice);
+    priceInput.addEventListener('input', recalculateQuoteTotals);
+    qtyInput.addEventListener('input', recalculateQuoteTotals);
+
+    rowEl.querySelector('.btn-remove-quote-item').addEventListener('click', () => {
+        rowEl.remove();
+        recalculateQuoteTotals();
+    });
+
+    recalculateQuoteTotals();
+};
+
+/**
+ * Calcola i totali live del preventivo attualmente aperto nel modale.
+ */
+const recalculateQuoteTotals = () => {
+    const channel = document.getElementById('quoteChannel')?.value || 'MICHAEL';
+    const isMichael = channel === 'MICHAEL';
+
+    const shippingGroup = document.getElementById('quoteShippingGroup');
+    if (shippingGroup) {
+        shippingGroup.style.display = isMichael ? 'none' : 'block';
+    }
+
+    const rows = document.querySelectorAll('#quoteItemsContainer .quote-item-row');
+    let subtotal = 0;
+    let totalBiomassG = 0;
+    let totalInsectCount = 0;
+
+    rows.forEach(row => {
+        const cat = row.querySelector('.quote-item-cat')?.value || 'ADULT';
+        const unit = row.querySelector('.quote-item-unit')?.value || 'kg';
+        const qty = parseFloat(row.querySelector('.quote-item-qty')?.value) || 0;
+        const price = parseFloat(row.querySelector('.quote-item-price')?.value) || 0;
+
+        const rowTotal = qty * price;
+        subtotal += rowTotal;
+
+        const subtotalEl = row.querySelector('.quote-item-subtotal');
+        if (subtotalEl) {
+            subtotalEl.textContent = `€ ${rowTotal.toFixed(2)}`;
+        }
+
+        // Stima biomassa e conteggio
+        let massG = 0;
+        let count = 0;
+        if (unit === 'kg') {
+            massG = qty * 1000;
+            count = cat === 'ADULT' ? massG / 2.0 : (cat === 'MEDIUM' ? massG / 1.0 : (cat === 'SMALL' ? massG / 0.1 : massG / 0.8));
+        } else if (unit === 'g') {
+            massG = qty;
+            count = cat === 'ADULT' ? massG / 2.0 : (cat === 'MEDIUM' ? massG / 1.0 : (cat === 'SMALL' ? massG / 0.1 : massG / 0.8));
+        } else if (unit === '100pz') {
+            count = qty * 100;
+            massG = cat === 'ADULT' ? count * 2.0 : (cat === 'MEDIUM' ? count * 1.0 : (cat === 'SMALL' ? count * 0.1 : count * 0.8));
+        } else if (unit === 'pz') {
+            count = qty;
+            massG = cat === 'ADULT' ? count * 2.0 : (cat === 'MEDIUM' ? count * 1.0 : (cat === 'SMALL' ? count * 0.1 : count * 0.8));
+        }
+
+        totalBiomassG += massG;
+        totalInsectCount += count;
+    });
+
+    const shipping = isMichael ? 0 : (parseFloat(document.getElementById('quoteShipping')?.value) || 0);
+    const discount = parseFloat(document.getElementById('quoteDiscount')?.value) || 0;
+    const grandTotal = Math.max(0, subtotal + shipping - discount);
+
+    const elSubtotal = document.getElementById('quoteSubtotalText');
+    const elShipping = document.getElementById('quoteShippingText');
+    const elDiscount = document.getElementById('quoteDiscountText');
+    const elGrandTotal = document.getElementById('quoteGrandTotalText');
+    const elBiomass = document.getElementById('quoteBiomassSummary');
+
+    if (elSubtotal) elSubtotal.textContent = `€ ${subtotal.toFixed(2)}`;
+    if (elShipping) {
+        if (isMichael) {
+            elShipping.parentElement.style.display = 'inline';
+            elShipping.textContent = '€ 0,00 (Non applicata)';
+        } else {
+            elShipping.parentElement.style.display = 'inline';
+            elShipping.textContent = `€ ${shipping.toFixed(2)}`;
+        }
+    }
+    if (elDiscount) elDiscount.textContent = `€ ${discount.toFixed(2)}`;
+    if (elGrandTotal) elGrandTotal.textContent = `€ ${grandTotal.toFixed(2)}`;
+    if (elBiomass) {
+        elBiomass.textContent = `Biomassa totale: ~${totalBiomassG.toFixed(0)} g · Individui stimati: ~${Math.round(totalInsectCount)}`;
+    }
+
+    return { subtotal, shipping, discount, grandTotal, totalBiomassG, totalInsectCount, channel };
+};
+
+/**
+ * Apre il modale per la creazione o modifica di un preventivo.
+ */
+const openQuoteModal = (quote = null) => {
+    const modal = document.getElementById('quoteModal');
+    if (!modal) return;
+    const form = document.getElementById('quoteForm');
+    form.reset();
+
+    const itemsContainer = document.getElementById('quoteItemsContainer');
+    if (itemsContainer) itemsContainer.innerHTML = '';
+
+    // Popola select clienti
+    const clientSelect = document.getElementById('quoteClientSelect');
+    if (clientSelect) {
+        clientSelect.innerHTML = '<option value="">— Seleziona da Anagrafica Clienti —</option>' +
+            appState.clients.map(c => `<option value="${c.id}">${c.nome} ${c.cognome} (${c.citta || 'N/D'})</option>`).join('');
+    }
+
+    const titleEl = document.getElementById('quoteModalTitle');
+    const btnConvert = document.getElementById('btnConvertQuoteToCessione');
+    const quoteChannelSelect = document.getElementById('quoteChannel');
+
+    if (quote) {
+        if (titleEl) titleEl.innerHTML = `<span>📄</span> Modifica Preventivo <strong>${quote.number || ''}</strong>`;
+        document.getElementById('quoteId').value = quote.id || '';
+        if (quoteChannelSelect) quoteChannelSelect.value = quote.channel || 'MICHAEL';
+        document.getElementById('quoteNumber').value = quote.number || '';
+        document.getElementById('quoteDate').value = quote.date || new Date().toISOString().split('T')[0];
+        document.getElementById('quoteValidity').value = quote.validityDays || 15;
+        document.getElementById('quoteStatus').value = quote.status || 'SENT';
+        document.getElementById('quoteShipping').value = parseFloat(quote.shipping || 0).toFixed(2);
+        document.getElementById('quoteDiscount').value = parseFloat(quote.discount || 0).toFixed(2);
+        document.getElementById('quotePaymentTerms').value = quote.paymentTerms || 'Saldo a consegna / Bonifico';
+        document.getElementById('quoteNotes').value = quote.notes || '';
+
+        // Dati cliente
+        if (quote.clientId) {
+            document.getElementById('radioClientExisting').checked = true;
+            document.getElementById('quoteClientExistingBlock').style.display = 'block';
+            document.getElementById('quoteClientManualBlock').style.display = 'none';
+            if (clientSelect) clientSelect.value = quote.clientId;
+        } else if (quote.client) {
+            document.getElementById('radioClientManual').checked = true;
+            document.getElementById('quoteClientExistingBlock').style.display = 'none';
+            document.getElementById('quoteClientManualBlock').style.display = 'grid';
+            document.getElementById('quoteClientNome').value = quote.client.nome || quote.client.name || '';
+            document.getElementById('quoteClientCitta').value = quote.client.citta || '';
+            document.getElementById('quoteClientTelefono').value = quote.client.telefono || '';
+            document.getElementById('quoteClientEmail').value = quote.client.email || '';
+        }
+
+        // Righe articoli
+        if (quote.items && quote.items.length > 0) {
+            quote.items.forEach(it => renderQuoteItemRow(it));
+        } else {
+            renderQuoteItemRow(null);
+        }
+
+        if (btnConvert) {
+            btnConvert.style.display = quote.status !== 'CONVERTED' ? 'inline-block' : 'none';
+            btnConvert.onclick = () => convertQuoteToCessione(quote.id);
+        }
+    } else {
+        if (titleEl) titleEl.innerHTML = `<span>📄</span> Nuovo Preventivo di Vendita`;
+        document.getElementById('quoteId').value = '';
+        if (quoteChannelSelect) quoteChannelSelect.value = 'MICHAEL';
+        const currentYear = new Date().getFullYear();
+        const nextNum = (appState.quotes.length + 1).toString().padStart(3, '0');
+        document.getElementById('quoteNumber').value = `PREV-${currentYear}-${nextNum}`;
+        document.getElementById('quoteDate').value = new Date().toISOString().split('T')[0];
+        document.getElementById('quoteValidity').value = 15;
+        document.getElementById('quoteStatus').value = 'SENT';
+        document.getElementById('quoteShipping').value = '0.00';
+        document.getElementById('quoteDiscount').value = '0.00';
+        document.getElementById('quotePaymentTerms').value = 'Saldo a consegna / Bonifico';
+        document.getElementById('quoteNotes').value = 'Accordi di fornitura riservata intermediario Michael. Consegna diretta senza spese di spedizione.';
+
+        document.getElementById('radioClientManual').checked = true;
+        document.getElementById('quoteClientExistingBlock').style.display = 'none';
+        document.getElementById('quoteClientManualBlock').style.display = 'grid';
+        document.getElementById('quoteClientNome').value = 'Michael (Intermediario)';
+        document.getElementById('quoteClientCitta').value = '';
+
+        // Riga di default (1 kg Adulte)
+        renderQuoteItemRow({
+            category: 'ADULT',
+            unit: 'kg',
+            quantity: 1,
+            unitPrice: 40.00
+        });
+
+        if (btnConvert) btnConvert.style.display = 'none';
+    }
+
+    recalculateQuoteTotals();
+    modal.classList.add('active');
+};
+
+/**
+ * Esporta il preventivo in PDF ad alta qualità con jsPDF e autoTable.
+ */
+const exportQuotePDF = (quote) => {
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+        alert("Libreria jsPDF non disponibile al momento. Verifica la connessione.");
+        return;
+    }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+    const isMichael = (quote.channel === 'MICHAEL') || (!quote.shipping || parseFloat(quote.shipping) === 0);
+
+    const primaryColor = [24, 43, 73];    // #182B49
+    const goldColor = [242, 201, 76];     // #F2C94C
+    const darkGray = [44, 62, 80];
+    const lightGray = [245, 247, 250];
+
+    // ── HEADER BANNER ──
+    doc.setFillColor(...primaryColor);
+    doc.rect(0, 0, 210, 38, 'F');
+
+    // Title / Brand
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(22);
+    doc.text('D.U.B.I.A.', 15, 18);
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(200, 210, 225);
+    doc.text('Dynamic Updating Biomass Inference Algorithm', 15, 24);
+    doc.text('Allevamento Selezionato Blatta Lateralis & Blatta Dubia', 15, 29);
+
+    // Document Type on right
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(...goldColor);
+    const docTitle = isMichael ? 'PREVENTIVO RISERVATO INTERMEDIARIO' : 'PREVENTIVO COMMERCIALE';
+    doc.text(docTitle, 195, 18, { align: 'right' });
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(255, 255, 255);
+    doc.text(`Doc. N°: ${quote.number || 'PREV-001'}`, 195, 25, { align: 'right' });
+    doc.text(`Data: ${quote.date || new Date().toISOString().split('T')[0]}`, 195, 30, { align: 'right' });
+
+    // ── INFO BOXES (Fornitore & Cliente) ──
+    const startY = 46;
+
+    // Box Fornitore
+    doc.setFillColor(...lightGray);
+    doc.roundedRect(15, startY, 86, 32, 2, 2, 'F');
+    doc.setDrawColor(220, 225, 230);
+    doc.roundedRect(15, startY, 86, 32, 2, 2, 'S');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...primaryColor);
+    doc.text('EMESSO DA (Allevatore):', 19, startY + 6);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...darkGray);
+    doc.text('Allevamento D.U.B.I.A.', 19, startY + 12);
+    doc.text(isMichael ? 'Canale: Fornitura Riservata Intermediario' : 'Specializzato in Insetti da Pasto & Colonie', 19, startY + 17);
+    doc.text(isMichael ? 'Spedizione: Non applicata (Consegna Diretta)' : 'Termini: Box isotermico + Heat pack', 19, startY + 22);
+    doc.text('Validità offerta: ' + (quote.validityDays || 15) + ' giorni', 19, startY + 27);
+
+    // Box Cliente
+    doc.setFillColor(...lightGray);
+    doc.roundedRect(109, startY, 86, 32, 2, 2, 'F');
+    doc.roundedRect(109, startY, 86, 32, 2, 2, 'S');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...primaryColor);
+    doc.text(isMichael ? 'INTERMEDIARIO / DESTINATARIO:' : 'DESTINATARIO / CLIENTE:', 113, startY + 6);
+
+    const client = quote.client || {};
+    const clientName = client.nome ? `${client.nome} ${client.cognome || ''}` : (client.name || (isMichael ? 'Michael' : 'Gentile Cliente'));
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...darkGray);
+    doc.text(clientName, 113, startY + 12);
+
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Città: ${client.citta || client.citta_indirizzo || '—'}`, 113, startY + 17);
+    doc.text(`Tel: ${client.telefono || '—'}`, 113, startY + 22);
+    doc.text(`Email: ${client.email || '—'}`, 113, startY + 27);
+
+    // ── TABLE OF ITEMS (AutoTable) ──
+    const tableRows = (quote.items || []).map((it, index) => {
+        const itemTotal = parseFloat(it.total || (it.quantity * it.unitPrice) || 0).toFixed(2);
+        const itemUnitP = parseFloat(it.unitPrice || 0).toFixed(2);
+        let categoryLabel = it.categoryLabel || it.category;
+        if (COMMERCIAL_CATALOG[it.category]) {
+            categoryLabel = COMMERCIAL_CATALOG[it.category].label;
+        }
+        let sizeInfo = it.size || (COMMERCIAL_CATALOG[it.category]?.size || '—');
+        return [
+            index + 1,
+            categoryLabel,
+            sizeInfo,
+            `${it.quantity} ${it.unit}`,
+            `€ ${itemUnitP}`,
+            `€ ${itemTotal}`
+        ];
+    });
+
+    if (typeof doc.autoTable === 'function') {
+        doc.autoTable({
+            startY: 84,
+            head: [['#', 'Articolo / Descrizione', 'Taglia Indicativa', 'Quantità', 'Prezzo Unit.', 'Importo Totale']],
+            body: tableRows,
+            theme: 'striped',
+            headStyles: {
+                fillColor: primaryColor,
+                textColor: [255, 255, 255],
+                fontStyle: 'bold',
+                fontSize: 9,
+                halign: 'left'
+            },
+            columnStyles: {
+                0: { halign: 'center', cellWidth: 10 },
+                1: { halign: 'left', cellWidth: 60, fontStyle: 'bold' },
+                2: { halign: 'left', cellWidth: 40 },
+                3: { halign: 'center', cellWidth: 25 },
+                4: { halign: 'right', cellWidth: 25 },
+                5: { halign: 'right', cellWidth: 25, fontStyle: 'bold' }
+            },
+            styles: {
+                fontSize: 8.5,
+                cellPadding: 3.5,
+                valign: 'middle'
+            },
+            alternateRowStyles: {
+                fillColor: [248, 249, 250]
+            }
+        });
+    }
+
+    let finalY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : 140) + 8;
+
+    if (finalY > 230) {
+        doc.addPage();
+        finalY = 20;
+    }
+
+    // ── TOTALS BOX ──
+    const totalsBoxX = 115;
+    const totalsBoxWidth = 80;
+    const totalsBoxHeight = isMichael ? 30 : 38;
+
+    doc.setFillColor(...lightGray);
+    doc.roundedRect(totalsBoxX, finalY, totalsBoxWidth, totalsBoxHeight, 2, 2, 'F');
+    doc.setDrawColor(220, 225, 230);
+    doc.roundedRect(totalsBoxX, finalY, totalsBoxWidth, totalsBoxHeight, 2, 2, 'S');
+
+    doc.setFontSize(8.5);
+    doc.setTextColor(...darkGray);
+    doc.text('Subtotale Articoli:', totalsBoxX + 4, finalY + 7);
+    doc.text(`€ ${parseFloat(quote.subtotal || 0).toFixed(2)}`, totalsBoxX + totalsBoxWidth - 4, finalY + 7, { align: 'right' });
+
+    let curOffset = 13;
+    if (!isMichael) {
+        doc.text('Spedizione & Box Termico:', totalsBoxX + 4, finalY + curOffset);
+        doc.text(`€ ${parseFloat(quote.shipping || 0).toFixed(2)}`, totalsBoxX + totalsBoxWidth - 4, finalY + curOffset, { align: 'right' });
+        curOffset += 6;
+    }
+
+    if (parseFloat(quote.discount || 0) > 0) {
+        doc.setTextColor(231, 76, 60);
+        doc.text('Sconto Applicato:', totalsBoxX + 4, finalY + curOffset);
+        doc.text(`- € ${parseFloat(quote.discount).toFixed(2)}`, totalsBoxX + totalsBoxWidth - 4, finalY + curOffset, { align: 'right' });
+        curOffset += 6;
+    }
+
+    doc.setDrawColor(200, 200, 200);
+    doc.line(totalsBoxX + 4, finalY + curOffset, totalsBoxX + totalsBoxWidth - 4, finalY + curOffset);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(39, 174, 96);
+    doc.text('TOTALE PREVENTIVO:', totalsBoxX + 4, finalY + curOffset + 7);
+    doc.text(`€ ${parseFloat(quote.grandTotal || 0).toFixed(2)}`, totalsBoxX + totalsBoxWidth - 4, finalY + curOffset + 7, { align: 'right' });
+
+    // ── NOTE & CONDIZIONI ──
+    const notesBoxWidth = 92;
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(15, finalY, notesBoxWidth, totalsBoxHeight, 2, 2, 'S');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(...primaryColor);
+    doc.text(isMichael ? 'ACCORDI FORNITURA & CONSEGNA:' : 'CONDIZIONI DI TRASPORTO & PAGAMENTO:', 19, finalY + 6);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(100, 110, 120);
+
+    const paymentText = `Metodo di Pagamento: ${quote.paymentTerms || (isMichael ? 'Saldo a consegna / Bonifico' : 'Bonifico / PayPal / Ritiro')}`;
+    doc.text(paymentText, 19, finalY + 12);
+
+    const defaultNotes = isMichael
+        ? 'Accordi di fornitura riservata intermediario Michael. Consegna e ritiro diretti senza spese di spedizione.'
+        : 'Spedizione con corriere espresso tracciato 24/48h. Imballaggio isotermico protetto con heat pack 72h stagionale.';
+
+    const notesText = doc.splitTextToSize(quote.notes || defaultNotes, notesBoxWidth - 8);
+    doc.text(notesText, 19, finalY + 18);
+
+    // ── FOOTER ──
+    doc.setFontSize(7.5);
+    doc.setTextColor(150, 150, 150);
+    doc.text('Documento generato automaticamente da D.U.B.I.A. Cervello Digitale · Preventivo commerciale', 105, 287, { align: 'center' });
+
+    // Download
+    const fileName = `${quote.number || 'Preventivo'}_DUBIA.pdf`;
+    doc.save(fileName);
+    if (typeof showNotification === 'function') {
+        showNotification("PDF Scaricato", `Preventivo ${fileName} generato con successo.`, "success");
+    }
+};
+
+// ══════════════════════════════════════════════════════════════════════
+// LISTINO PREZZI UFFICIALE — EXPORT PDF, WHATSAPP & UI RENDERING
+// ══════════════════════════════════════════════════════════════════════
+
+let listinoCurrentState = {
+    channel: 'DIRECT',
+    category: 'ALL',
+    searchTerm: ''
+};
+
+/**
+ * Genera il testo formattato del listino per WhatsApp o messaggistica.
+ * @param {string} channel - 'DIRECT' o 'MICHAEL'
+ * @returns {string} Testo pronto per la condivisione
+ */
+const generateWhatsAppPriceListText = (channel = 'DIRECT') => {
+    const isMichael = (channel === 'MICHAEL');
+    const headerTitle = isMichael ? 'LISTINO RISERVATO INGROSSO (MICHAEL)' : 'LISTINO PREZZI UFFICIALE 2026';
+    
+    let text = `🌿 *${headerTitle} — D.U.B.I.A.* 🌿\n`;
+    text += `_Allevamento Selezionato Blaptica Dubia & Sistemi IoT per Terrari_\n\n`;
+
+    PRICE_CATALOG_FULL.categories.forEach(cat => {
+        text += `${cat.icon} *${cat.title.toUpperCase()}*\n`;
+        cat.items.forEach(item => {
+            const tiers = item.tiers[channel] || item.tiers.DIRECT;
+            const tiersStr = tiers.map(t => `   • ${t.qty}: *€ ${t.price.toFixed(2)}* _(${t.note})_`).join('\n');
+            text += `🔹 *${item.title}* (${item.size})\n${tiersStr}\n`;
+        });
+        text += `\n`;
+    });
+
+    text += `🚚 *SPEDIZIONI & GARANZIA QUALITÀ*:\n`;
+    text += `✓ Partenze Lunedì-Mercoledì con Corriere Espresso 24/48h\n`;
+    text += `✓ Box termico con Heat Pack 40h incluso nei mesi invernali\n`;
+    text += `✓ Garanzia 100% vivi all'arrivo e supporto post-vendita\n\n`;
+    text += `📍 *Per preventivi personalizzati o ordini:* scrivimi direttamente qui!`;
+
+    return text;
+};
+
+/**
+ * Copia il listino prezzi negli appunti per WhatsApp / Telegram.
+ * @param {string} channel - 'DIRECT' o 'MICHAEL'
+ */
+const copyPriceListToWhatsApp = async (channel = 'DIRECT') => {
+    const text = generateWhatsAppPriceListText(channel);
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(text);
+        } else {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+        }
+        if (typeof showNotification === 'function') {
+            showNotification("Listino Copiato", "📋 Testo pronto per WhatsApp / Telegram copiato negli appunti!", "success");
+        }
+    } catch (err) {
+        console.error("Errore durante la copia del listino:", err);
+        if (typeof showNotification === 'function') {
+            showNotification("Errore Copia", "Non è stato possibile copiare il testo negli appunti.", "error");
+        }
+    }
+};
+
+/**
+ * Genera ed esporta il PDF completo del Listino Prezzi D.U.B.I.A.
+ * @param {string} channel - 'DIRECT' o 'MICHAEL'
+ */
+const exportFullCatalogPDF = (channel = 'DIRECT') => {
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+        alert("Libreria jsPDF non disponibile al momento. Verifica la connessione.");
+        return;
+    }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+    const primaryColor = [24, 43, 73];    // #182B49
+    const goldColor = [242, 201, 76];     // #F2C94C
+    const darkGray = [44, 62, 80];
+    const lightGray = [245, 247, 250];
+    const isMichael = (channel === 'MICHAEL');
+
+    // ── HEADER BANNER ──
+    doc.setFillColor(...primaryColor);
+    doc.rect(0, 0, 210, 36, 'F');
+
+    // Brand Title
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(22);
+    doc.text('D.U.B.I.A.', 15, 16);
+
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(200, 210, 225);
+    doc.text('Dynamic Updating Biomass Inference Algorithm', 15, 22);
+    doc.text('Allevamento Selezionato Insetti da Pasto & Sistemi IoT di Monitoraggio', 15, 27);
+
+    // Document Type Header on Right
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(...goldColor);
+    const listTitle = isMichael ? 'LISTINO RISERVATO INGROSSO' : 'LISTINO PREZZI COMMERCIALE';
+    doc.text(listTitle, 195, 16, { align: 'right' });
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(255, 255, 255);
+    const today = new Date().toLocaleDateString('it-IT');
+    doc.text(`Edizione: 2026 · Aggiornato: ${today}`, 195, 22, { align: 'right' });
+    doc.text(isMichael ? 'Canale: Fornitura Intermediario (Michael)' : 'Canale: Vendita Diretta & Privati', 195, 27, { align: 'right' });
+
+    let currentY = 44;
+
+    // Itera le categorie del catalogo
+    PRICE_CATALOG_FULL.categories.forEach((cat, index) => {
+        // Se non c'è abbastanza spazio per l'intestazione e almeno una riga, salta pagina
+        if (currentY > 230) {
+            doc.addPage();
+            currentY = 20;
+        }
+
+        // Barra intestazione categoria
+        doc.setFillColor(235, 240, 248);
+        doc.roundedRect(15, currentY, 180, 8, 1.5, 1.5, 'F');
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9.5);
+        doc.setTextColor(...primaryColor);
+        doc.text(cat.title, 18, currentY + 5.5);
+
+        currentY += 10;
+
+        const tableBody = [];
+        cat.items.forEach(item => {
+            const tiers = item.tiers[channel] || item.tiers.DIRECT;
+            const tiersStr = tiers.map(t => `${t.qty}: € ${t.price.toFixed(2)} (${t.note})`).join('\n');
+            tableBody.push([
+                item.title,
+                item.size,
+                item.desc,
+                tiersStr
+            ]);
+        });
+
+        doc.autoTable({
+            startY: currentY,
+            head: [['Articolo / Prodotto', 'Taglia / Specifiche', 'Descrizione / Utilizzo', 'Prezzi & Formati']],
+            body: tableBody,
+            theme: 'striped',
+            headStyles: {
+                fillColor: primaryColor,
+                textColor: [255, 255, 255],
+                fontSize: 8.5,
+                fontStyle: 'bold',
+                halign: 'left'
+            },
+            styles: {
+                fontSize: 8,
+                cellPadding: 2.5,
+                textColor: darkGray,
+                valign: 'middle'
+            },
+            columnStyles: {
+                0: { fontStyle: 'bold', cellWidth: 42 },
+                1: { cellWidth: 32, fontStyle: 'italic' },
+                2: { cellWidth: 62 },
+                3: { cellWidth: 44, fontStyle: 'bold', textColor: [20, 90, 50] }
+            },
+            margin: { left: 15, right: 15 },
+            didDrawPage: (data) => {
+                currentY = data.cursor.y + 6;
+            }
+        });
+
+        currentY = doc.lastAutoTable.finalY + 6;
+    });
+
+    // Box Garanzie e Condizioni
+    if (currentY > 230) {
+        doc.addPage();
+        currentY = 20;
+    }
+
+    doc.setFillColor(...lightGray);
+    doc.roundedRect(15, currentY, 180, 32, 2, 2, 'F');
+    doc.setDrawColor(210, 215, 220);
+    doc.roundedRect(15, currentY, 180, 32, 2, 2, 'S');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...primaryColor);
+    doc.text('GARANZIA, SPEDIZIONE & CONDIZIONI DI FORNITURA:', 19, currentY + 6);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.8);
+    doc.setTextColor(...darkGray);
+    doc.text('• SPEDIZIONI: Lunedì e Mercoledì con corriere espresso 24/48h per evitare fermi deposito durante il fine settimana.', 19, currentY + 12);
+    doc.text('• PACKAGING: Box isotermico con Heat Pack 40h incluso gratuitamente nei mesi invernali per proteggere gli insetti.', 19, currentY + 17);
+    doc.text('• GARANZIA 100% VIVI: Sostituzione immediata o rimborso in caso di mortalità documentata alla consegna entro 2h.', 19, currentY + 22);
+    doc.text('• CONTATTI & ORDINI: Per ordini personalizzati, preventivi su misura o supporto tecnico termoigrometri contattare D.U.B.I.A.', 19, currentY + 27);
+
+    // Footer con numero di pagina
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(7.5);
+        doc.setTextColor(150, 150, 150);
+        doc.text('Documento generato da D.U.B.I.A. Cervello Digitale · Listino Prezzi Ufficiale', 105, 290, { align: 'center' });
+        doc.text(`Pagina ${i} di ${pageCount}`, 195, 290, { align: 'right' });
+    }
+
+    const fileName = isMichael ? 'Listino_DUBIA_Ingrosso_Michael.pdf' : 'Listino_DUBIA_Ufficiale_2026.pdf';
+    doc.save(fileName);
+    if (typeof showNotification === 'function') {
+        showNotification("PDF Scaricato", `Il listino prezzi (${fileName}) è stato generato con successo!`, "success");
+    }
+};
+
+/**
+ * Renderizza l'intera interfaccia visiva del Listino Prezzi nella tab dedicata.
+ */
+const renderListinoPrezziUI = () => {
+    const container = document.getElementById('listinoProductsContainer');
+    if (!container) return;
+
+    const channel = listinoCurrentState.channel || 'DIRECT';
+    const categoryFilter = listinoCurrentState.category || 'ALL';
+    const searchFilter = (listinoCurrentState.searchTerm || '').trim().toLowerCase();
+
+    // Aggiorna conteggi pillole
+    let totalAll = 0, totalBlatte = 0, totalIot = 0, totalAccessori = 0;
+    PRICE_CATALOG_FULL.categories.forEach(cat => {
+        cat.items.forEach(item => {
+            totalAll++;
+            if (cat.id === 'BLATTE') totalBlatte++;
+            if (cat.id === 'IOT') totalIot++;
+            if (cat.id === 'ACCESSORI') totalAccessori++;
+        });
+    });
+
+    const elCountAll = document.getElementById('countAll');
+    const elCountBlatte = document.getElementById('countBlatte');
+    const elCountIot = document.getElementById('countIot');
+    const elCountAccessori = document.getElementById('countAccessori');
+    if (elCountAll) elCountAll.textContent = totalAll;
+    if (elCountBlatte) elCountBlatte.textContent = totalBlatte;
+    if (elCountIot) elCountIot.textContent = totalIot;
+    if (elCountAccessori) elCountAccessori.textContent = totalAccessori;
+
+    // Aggiorna testo anteprima WhatsApp
+    const whatsappEl = document.getElementById('whatsappMessageContent');
+    if (whatsappEl) {
+        whatsappEl.textContent = generateWhatsAppPriceListText(channel);
+    }
+
+    let html = '';
+
+    PRICE_CATALOG_FULL.categories.forEach(cat => {
+        if (categoryFilter !== 'ALL' && cat.id !== categoryFilter) {
+            return;
+        }
+
+        // Filtra per ricerca
+        const filteredItems = cat.items.filter(item => {
+            if (!searchFilter) return true;
+            return item.title.toLowerCase().includes(searchFilter) ||
+                   item.size.toLowerCase().includes(searchFilter) ||
+                   item.desc.toLowerCase().includes(searchFilter);
+        });
+
+        if (filteredItems.length === 0) return;
+
+        html += `
+            <div class="listino-section">
+                <div class="listino-section-header">
+                    <h3 class="listino-section-title">
+                        <span>${cat.icon}</span> ${cat.title}
+                    </h3>
+                    <span class="listino-badge listino-tag-${cat.tag}">${cat.tagLabel} (${filteredItems.length})</span>
+                </div>
+                <div class="listino-grid">
+        `;
+
+        filteredItems.forEach(item => {
+            const tiers = item.tiers[channel] || item.tiers.DIRECT;
+            const tiersRows = tiers.map(t => `
+                <div class="listino-tier-row">
+                    <span class="listino-tier-qty">${t.qty}</span>
+                    <div>
+                        <span class="listino-tier-price">€ ${t.price.toFixed(2)}</span>
+                        <span class="listino-tier-note">${t.note}</span>
+                    </div>
+                </div>
+            `).join('');
+
+            html += `
+                <div class="listino-product-card">
+                    <div>
+                        <div class="listino-card-top">
+                            <div class="listino-card-icon-title">
+                                <span class="listino-card-icon">${item.icon}</span>
+                                <div>
+                                    <h4 class="listino-card-title">${item.title}</h4>
+                                    <span class="listino-card-size">${item.size}</span>
+                                </div>
+                            </div>
+                            <span class="listino-tag listino-tag-${cat.tag}">${cat.tagLabel}</span>
+                        </div>
+                        <p class="listino-card-desc">${item.desc}</p>
+                        <div class="listino-tiers-box">
+                            ${tiersRows}
+                        </div>
+                    </div>
+                    <div class="listino-card-footer">
+                        <button type="button" class="listino-quick-btn btn-listino-copy-item" data-id="${item.id}" data-title="${item.title}" title="Copia prezzi di questo articolo">
+                            📋 Copia
+                        </button>
+                        <button type="button" class="listino-quick-btn btn-listino-add-quote" data-cat="${item.id}" data-unit="${item.unit}" data-price="${tiers[0]?.price || 0}" style="background: rgba(142,68,173,0.2); border-color: rgba(142,68,173,0.4); color: #fff;" title="Aggiungi a preventivo">
+                            📄 + Preventivo
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `
+                </div>
+            </div>
+        `;
+    });
+
+    if (!html) {
+        html = `
+            <div class="card" style="text-align:center; padding: 2.5rem 1rem;">
+                <span style="font-size:2.5rem; display:block; margin-bottom:0.5rem;">🔍</span>
+                <h3>Nessun prodotto trovato</h3>
+                <p class="subtitle-text">Nessun articolo corrisponde ai filtri o al termine di ricerca inserito.</p>
+            </div>
+        `;
+    }
+
+    container.innerHTML = html;
+
+    // Event listeners su card bottoni
+    container.querySelectorAll('.btn-listino-add-quote').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const cat = btn.dataset.cat;
+            const unit = btn.dataset.unit || '100pz';
+            const price = parseFloat(btn.dataset.price) || 0;
+            openQuoteModal({
+                initialItem: {
+                    category: cat,
+                    unit: unit,
+                    quantity: 1,
+                    unitPrice: price
+                }
+            });
+        });
+    });
+
+    container.querySelectorAll('.btn-listino-copy-item').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const itemId = btn.dataset.id;
+            let targetItem = null;
+            PRICE_CATALOG_FULL.categories.forEach(cat => {
+                const found = cat.items.find(it => it.id === itemId);
+                if (found) targetItem = found;
+            });
+
+            if (targetItem) {
+                const tiers = targetItem.tiers[channel] || targetItem.tiers.DIRECT;
+                let text = `🔹 *${targetItem.title}* (${targetItem.size})\n`;
+                tiers.forEach(t => {
+                    text += `   • ${t.qty}: *€ ${t.price.toFixed(2)}* _(${t.note})_\n`;
+                });
+                try {
+                    await navigator.clipboard.writeText(text);
+                    if (typeof showNotification === 'function') {
+                        showNotification("Prezzo Copiato", `Prezzo di "${targetItem.title}" copiato!`, "success");
+                    }
+                } catch (e) {
+                    console.error("Copia fallita:", e);
+                }
+            }
+        });
+    });
+};
+
+/**
+ * Inizializza gli event listener specifici del modulo Listino Prezzi.
+ */
+const initListinoEventListeners = () => {
+    // Scarica PDF
+    const btnDownloadPDF = document.getElementById('btnDownloadListinoPDF');
+    if (btnDownloadPDF) {
+        btnDownloadPDF.addEventListener('click', () => exportFullCatalogPDF(listinoCurrentState.channel));
+    }
+
+    // Copia WhatsApp
+    const btnCopyWA = document.getElementById('btnCopyListinoWhatsApp');
+    if (btnCopyWA) {
+        btnCopyWA.addEventListener('click', () => copyPriceListToWhatsApp(listinoCurrentState.channel));
+    }
+
+    const btnCopyWADirect = document.getElementById('btnCopyWhatsAppDirect');
+    if (btnCopyWADirect) {
+        btnCopyWADirect.addEventListener('click', () => copyPriceListToWhatsApp(listinoCurrentState.channel));
+    }
+
+    // Toggle Preview WhatsApp Box
+    const btnToggleWAPreview = document.getElementById('btnToggleWhatsAppPreview');
+    const waPreviewCard = document.getElementById('whatsappPreviewCard');
+    const btnCloseWAPreview = document.getElementById('btnCloseWhatsAppPreview');
+
+    if (btnToggleWAPreview && waPreviewCard) {
+        btnToggleWAPreview.addEventListener('click', () => {
+            const isHidden = waPreviewCard.style.display === 'none';
+            waPreviewCard.style.display = isHidden ? 'block' : 'none';
+            if (isHidden) {
+                const whatsappEl = document.getElementById('whatsappMessageContent');
+                if (whatsappEl) whatsappEl.textContent = generateWhatsAppPriceListText(listinoCurrentState.channel);
+            }
+        });
+    }
+    if (btnCloseWAPreview && waPreviewCard) {
+        btnCloseWAPreview.addEventListener('click', () => {
+            waPreviewCard.style.display = 'none';
+        });
+    }
+
+    // Nuovo Preventivo da Listino
+    const btnOpenQuoteFromListino = document.getElementById('btnOpenQuoteFromListino');
+    if (btnOpenQuoteFromListino) {
+        btnOpenQuoteFromListino.addEventListener('click', () => openQuoteModal(null));
+    }
+
+    // Channel Switcher (Direct vs Michael)
+    const btnDirect = document.getElementById('btnListinoDirect');
+    const btnMichael = document.getElementById('btnListinoMichael');
+
+    if (btnDirect && btnMichael) {
+        btnDirect.addEventListener('click', () => {
+            btnDirect.classList.add('active');
+            btnMichael.classList.remove('active');
+            listinoCurrentState.channel = 'DIRECT';
+            renderListinoPrezziUI();
+        });
+        btnMichael.addEventListener('click', () => {
+            btnMichael.classList.add('active');
+            btnDirect.classList.remove('active');
+            listinoCurrentState.channel = 'MICHAEL';
+            renderListinoPrezziUI();
+        });
+    }
+
+    // Category Filter Pills
+    const pills = document.querySelectorAll('.listino-pill');
+    pills.forEach(pill => {
+        pill.addEventListener('click', () => {
+            pills.forEach(p => p.classList.remove('active'));
+            pill.classList.add('active');
+            listinoCurrentState.category = pill.dataset.category || 'ALL';
+            renderListinoPrezziUI();
+        });
+    });
+
+    // Search Input
+    const searchInput = document.getElementById('listinoSearchInput');
+    if (searchInput) {
+        let timeout = null;
+        searchInput.addEventListener('input', (e) => {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => {
+                listinoCurrentState.searchTerm = e.target.value;
+                renderListinoPrezziUI();
+            }, 180);
+        });
+    }
+
+    // Header Button "📋 Listino Prezzi"
+    const btnOpenListinoPrezzi = document.getElementById('btnOpenListinoPrezzi');
+    if (btnOpenListinoPrezzi) {
+        btnOpenListinoPrezzi.addEventListener('click', () => {
+            const listinoTab = document.querySelector('.tab-btn[data-target="listino"]');
+            if (listinoTab) {
+                listinoTab.click();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
+    }
 };
 
 /**
@@ -1037,14 +2733,20 @@ const processNewMeasurement = async (date, realWeight, foodAmount, adultRatio, n
                     // Fallback: calcolo diretto con derivate parziali corrette
                     const E = predictedWeight - realWeight;
                     const W_t_prev = lastMeasurement.total_weight;
-                    const At_prev  = adultRatio;
+                    const safe_At = Math.max(0, Math.min(1, (adultRatio !== undefined && adultRatio !== null) ? Number(adultRatio) : 0.35));
                     // ∂E/∂θ₁ = C_t
-                    const newTheta1 = appState.params.theta1 - (ALPHA * E * foodAmount);
+                    const delta_theta1 = ALPHA * E * (foodAmount || 0);
+                    const clamped_delta1 = Math.max(-0.15, Math.min(0.15, delta_theta1));
+                    const newTheta1 = appState.params.theta1 - clamped_delta1;
+
                     // ∂E/∂θ₂ = W_t · (1 − A_t) · (Δg / 30)
-                    const grad2 = W_t_prev * (1 - At_prev) * (delta_g / 30);
-                    const newTheta2 = appState.params.theta2 - (ALPHA * E * grad2);
-                    appState.params.theta1 = Math.max(0.001, newTheta1);
-                    appState.params.theta2 = Math.max(0.001, newTheta2);
+                    const grad2 = Math.max(0, W_t_prev || 0) * (1 - safe_At) * (Math.max(0, delta_g || 0) / 30);
+                    const delta_theta2 = ALPHA * E * grad2;
+                    const clamped_delta2 = Math.max(-0.25, Math.min(0.25, delta_theta2));
+                    const newTheta2 = appState.params.theta2 - clamped_delta2;
+
+                    appState.params.theta1 = Math.max(0.05, Math.min(2.0, newTheta1));
+                    appState.params.theta2 = Math.max(0.20, Math.min(3.0, newTheta2));
                 }
                 saveParams(appState.params);
             }
@@ -1435,7 +3137,8 @@ const updateAlignmentStatus = () => {
     }
 
     const latest = appState.measurements[appState.measurements.length - 1];
-    const divergence = checkCensusDivergence(latest.total_weight, latest.adult_ratio || 0.35, appState.colonies);
+    const safeAdultRatio = (latest.adult_ratio !== undefined && latest.adult_ratio !== null) ? Number(latest.adult_ratio) : 0.35;
+    const divergence = checkCensusDivergence(latest.total_weight, safeAdultRatio, appState.colonies);
 
     if (divergence.isOverweight) {
         container.style.backgroundColor = "rgba(255, 71, 87, 0.1)";
@@ -1731,7 +3434,7 @@ const _updateUIWithWeight = (globalWeight) => {
     // For future projection, use the latest real weight and average recent food amount (or assume 0 if not provided), and recent adult ratio. We'll just use a proxy of 0 food for natural growth prediction, or maybe assume linear food consumption. Let's assume natural growth for future projection (C_t = 0), or same as last.
     // The prompt says: riproporzionando il numero stimato di individui in base alla crescita volumetrica attesa.
     // We will use the last adult ratio.
-    const lastAdultRatio = latest.adult_ratio || 0.35;
+    const lastAdultRatio = (latest.adult_ratio !== undefined && latest.adult_ratio !== null) ? Number(latest.adult_ratio) : 0.35;
     const futurePred = calculatePrediction(effectiveWeight, 0, lastAdultRatio, deltaGValue, appState.params);
 
     // Dashboard — usa effectiveWeight (bottom-up se ci sono colonie)
@@ -2137,11 +3840,12 @@ const _updateUIWithWeight = (globalWeight) => {
     const latestForCensus = appState.measurements[appState.measurements.length - 1];
     if (latestForCensus) {
         // ── Tabella Censimento (usa metrics già calcolate — zero ricalcoli) ──────
-    updateCensusTable(
-        latestForCensus.total_weight,
-        latestForCensus.adult_ratio || 0.35,
-        metrics
-    );
+        const safeCensusAdultRatio = (latestForCensus.adult_ratio !== undefined && latestForCensus.adult_ratio !== null) ? Number(latestForCensus.adult_ratio) : 0.35;
+        updateCensusTable(
+            latestForCensus.total_weight,
+            safeCensusAdultRatio,
+            metrics
+        );
     
     // Aggiorna lo stato di allineamento
     updateAlignmentStatus();
@@ -2315,7 +4019,7 @@ const updateCharts = () => {
     if (uniqueMeasurements.length > 0) {
         const latest = uniqueMeasurements[uniqueMeasurements.length - 1];
         const deltaGValue = parseInt(document.getElementById('deltaGSlider').value) || 30;
-        const lastAdultRatio = latest.adult_ratio || 0.35;
+        const lastAdultRatio = (latest.adult_ratio !== undefined && latest.adult_ratio !== null) ? Number(latest.adult_ratio) : 0.35;
         const futurePred = calculatePrediction(latest.total_weight, 0, lastAdultRatio, deltaGValue, appState.params);
 
         // Add future projected point
@@ -2631,6 +4335,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 updateColoniesUI();
             } else if (target === 'clienti') {
                 updateClientiUI();
+            } else if (target === 'listino') {
+                renderListinoPrezziUI();
             } else if (target === 'clima') {
                 ClimateModule.init();
             }
@@ -2823,14 +4529,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (colony) {
                 const oldWeight = colony.current_weight || 0;
                 
-                if (eventType === 'pesata') {
-                    colony.current_weight = weight;
-                } else if (eventType === 'prelievo') {
-                    colony.current_weight = Math.max(0, oldWeight - harvestAmount);
-                } else if (eventType === 'cibo') {
-                    colony.current_weight = calculatePrediction(oldWeight, foodAmount, adultRatio, 0, appState.params, harvestAmount);
-                }
-                
                 const males_count = Number(document.getElementById('inputColonyMales').value) || 0;
                 const females_count = Number(document.getElementById('inputColonyFemales').value) || 0;
                 let adultUpdated = false;
@@ -2840,30 +4538,68 @@ document.addEventListener('DOMContentLoaded', async () => {
                     adultUpdated = true;
                 }
 
-                // Se aggiungiamo una pesata ma non aggiorniamo manualmente il conteggio degli adulti,
-                // assorbiamo la differenza di peso (surplus) facendola nascere in "baby"
-                if (eventType === 'pesata' && !adultUpdated && colony.current_weight !== oldWeight) {
-                    const wAdults = (colony.males_count || 0) * MASS.MALE + (colony.females_count || 0) * MASS.FEMALE;
-                    const wNinfe = (colony.subadults_count || 0) * MASS.SUBADULT + (colony.medium_count || 0) * MASS.MEDIUM + (colony.small_count || 0) * MASS.SMALL;
-                    const remainingForBaby = colony.current_weight - (wAdults + wNinfe);
-                    
-                    if (remainingForBaby > 0) {
-                        colony.baby_count = Math.round(remainingForBaby / MASS.BABY);
-                    } else {
-                        colony.baby_count = 0;
+                if (eventType === 'pesata') {
+                    colony.current_weight = weight;
+                    // Se non sono stati aggiornati manualmente gli adulti, riallinea coerentemente la demografia neanidi
+                    if (!adultUpdated) {
+                        const wAdults = (colony.males_count || 0) * MASS.MALE + (colony.females_count || 0) * MASS.FEMALE;
+                        const wNinfeKnown = (colony.subadults_count || 0) * MASS.SUBADULT + (colony.medium_count || 0) * MASS.MEDIUM + (colony.small_count || 0) * MASS.SMALL;
+                        const remainingWeight = colony.current_weight - wAdults;
+
+                        if (remainingWeight > wNinfeKnown) {
+                            // Surplus di biomassa neanidi assorbito da baby/piccole
+                            const remainingForBaby = remainingWeight - wNinfeKnown;
+                            colony.baby_count = Math.round(remainingForBaby / MASS.BABY);
+                        } else if (remainingWeight > 0) {
+                            // Se il peso è inferiore ma positivo, riscala proporzionalmente le neanidi
+                            const currentNymphWeight = wNinfeKnown + ((colony.baby_count || 0) * MASS.BABY);
+                            if (currentNymphWeight > 0) {
+                                const nymphRatio = remainingWeight / currentNymphWeight;
+                                colony.subadults_count = Math.round((colony.subadults_count || 0) * nymphRatio);
+                                colony.medium_count = Math.round((colony.medium_count || 0) * nymphRatio);
+                                colony.small_count = Math.round((colony.small_count || 0) * nymphRatio);
+                                colony.baby_count = Math.round((colony.baby_count || 0) * nymphRatio);
+                            } else {
+                                colony.medium_count = Math.round((remainingWeight * 0.70) / MASS.MEDIUM);
+                                colony.baby_count = Math.round((remainingWeight * 0.30) / MASS.BABY);
+                            }
+                        } else {
+                            colony.baby_count = 0;
+                            colony.small_count = 0;
+                            colony.medium_count = 0;
+                            colony.subadults_count = 0;
+                        }
                     }
+                } else if (eventType === 'prelievo') {
+                    colony.current_weight = Math.max(0, oldWeight - harvestAmount);
+                } else if (eventType === 'cibo') {
+                    colony.current_weight = calculatePrediction(oldWeight, foodAmount, adultRatio, 0, appState.params, harvestAmount);
                 }
 
                 await saveColony(colony);
                 
-                // Usa computeGlobalWeight() come fonte di verità: somma REALE di tutte le
-                // colonie dopo l'aggiornamento. Questo evita la deriva tra Timeline e colonie
-                // che si accumulava usando l'approccio delta (globalOldWeight + deltaWeight).
+                // Calcola il peso globale effettivo (somma reale di tutte le colonie attive)
                 const newGlobalWeight = computeGlobalWeight().weight;
+
+                // Calcola il rapporto adulti effettivo A_t
+                const isDeletedNorm = (c) => c.is_deleted === true || c.is_deleted === 'true' || c.is_deleted === 1;
+                const activeCols = appState.colonies.filter(c => !isDeletedNorm(c) && (parseFloat(c.current_weight) || 0) > 0);
+                let totalColonyBiomass = 0;
+                let totalAdultBiomass = 0;
+                activeCols.forEach(c => {
+                    totalColonyBiomass += (parseFloat(c.current_weight) || 0);
+                    totalAdultBiomass += ((c.males_count || 0) * MASS.MALE + (c.females_count || 0) * MASS.FEMALE);
+                });
+
+                const effectiveColonyAdultRatio = totalColonyBiomass > 0
+                    ? Math.max(0, Math.min(1, totalAdultBiomass / totalColonyBiomass))
+                    : ((colony.current_weight || 0) > 0 
+                        ? Math.max(0, Math.min(1, ((colony.males_count || 0) * MASS.MALE + (colony.females_count || 0) * MASS.FEMALE) / colony.current_weight))
+                        : (adultRatio !== undefined && adultRatio !== null ? adultRatio : 0.35));
                 
                 const globalNotes = `[${colony.name}] ${notes}`;
-                // Registra l'evento a livello globale con il nuovo peso calcolato
-                await processNewMeasurement(date, newGlobalWeight, foodAmount, adultRatio, globalNotes, harvestAmount, false, true, eventType, colonyId, colony.current_weight);
+                // Registra l'evento a livello globale con il nuovo peso calcolato e A_t coerente
+                await processNewMeasurement(date, newGlobalWeight, foodAmount, effectiveColonyAdultRatio, globalNotes, harvestAmount, false, true, eventType, colonyId, colony.current_weight);
             }
         } else {
             // Pesata Globale: distribuisce proporzionalmente tra le colonie attive
@@ -3037,7 +4773,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 btn.disabled = true;
 
                 const latestM = appState.measurements.length > 0 ? appState.measurements[appState.measurements.length - 1] : null;
-                const adultRatioToUse = latestM ? (latestM.adult_ratio || 0.35) : 0.35;
+                const adultRatioToUse = latestM ? ((latestM.adult_ratio !== undefined && latestM.adult_ratio !== null) ? Number(latestM.adult_ratio) : 0.35) : 0.35;
 
                 await processNewMeasurement(
                     today,
@@ -3068,6 +4804,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Aggiorna UI clienti al caricamento (dopo loadInitialData)
     updateClientiUI();
+
+    // Inizializza Listino Prezzi Completo
+    initListinoEventListeners();
+    renderListinoPrezziUI();
 
     // ── Nuovo Cliente ─────────────────────────────────────────
     const btnNuovoCliente = document.getElementById('btnNuovoCliente');
@@ -3263,6 +5003,300 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    // ── CONTROLLI GRAFICO PREZZI ─────────────────────────────────
+    const btnPrezziPerKg = document.getElementById('btnPrezziPerKg');
+    const btnPrezziPer100pz = document.getElementById('btnPrezziPer100pz');
+    const btnPrezziLog = document.getElementById('btnPrezziLog');
+
+    const updateChartToggleButtons = (activeBtn) => {
+        [btnPrezziPerKg, btnPrezziPer100pz, btnPrezziLog].forEach(b => {
+            if (b) b.classList.remove('active');
+        });
+        if (activeBtn) activeBtn.classList.add('active');
+    };
+
+    if (btnPrezziPerKg) {
+        btnPrezziPerKg.addEventListener('click', () => {
+            updateChartToggleButtons(btnPrezziPerKg);
+            renderPrezziChart('kg');
+        });
+    }
+    if (btnPrezziPer100pz) {
+        btnPrezziPer100pz.addEventListener('click', () => {
+            updateChartToggleButtons(btnPrezziPer100pz);
+            renderPrezziChart('100pz');
+        });
+    }
+    if (btnPrezziLog) {
+        btnPrezziLog.addEventListener('click', () => {
+            updateChartToggleButtons(btnPrezziLog);
+            renderPrezziChart('log');
+        });
+    }
+
+    // ── PREVENTIVI & QUOTE BUILDER LISTENERS ──────────────────────
+    const btnNuovoPreventivo = document.getElementById('btnNuovoPreventivo');
+    if (btnNuovoPreventivo) {
+        btnNuovoPreventivo.addEventListener('click', () => openQuoteModal(null));
+    }
+
+    const btnCloseQuoteModal = document.getElementById('btnCloseQuoteModal');
+    const btnCancelQuote = document.getElementById('btnCancelQuote');
+    const closeQuote = () => {
+        const modal = document.getElementById('quoteModal');
+        if (modal) modal.classList.remove('active');
+    };
+    if (btnCloseQuoteModal) btnCloseQuoteModal.addEventListener('click', closeQuote);
+    if (btnCancelQuote) btnCancelQuote.addEventListener('click', closeQuote);
+
+    const btnAddQuoteItem = document.getElementById('btnAddQuoteItem');
+    if (btnAddQuoteItem) {
+        btnAddQuoteItem.addEventListener('click', () => renderQuoteItemRow(null));
+    }
+
+    // Toggle radio cliente registrato / manuale nel preventivo
+    document.querySelectorAll('input[name="quoteClientType"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            const isExisting = e.target.value === 'existing';
+            const existBlock = document.getElementById('quoteClientExistingBlock');
+            const manBlock = document.getElementById('quoteClientManualBlock');
+            if (existBlock) existBlock.style.display = isExisting ? 'block' : 'none';
+            if (manBlock) manBlock.style.display = isExisting ? 'none' : 'grid';
+        });
+    });
+
+    // Selettore Canale (Michael vs Diretto)
+    const quoteChannelSelect = document.getElementById('quoteChannel');
+    if (quoteChannelSelect) {
+        quoteChannelSelect.addEventListener('change', (e) => {
+            const isMichael = e.target.value === 'MICHAEL';
+            const shippingGroup = document.getElementById('quoteShippingGroup');
+            if (shippingGroup) shippingGroup.style.display = isMichael ? 'none' : 'block';
+            
+            const shippingInput = document.getElementById('quoteShipping');
+            if (isMichael && shippingInput) shippingInput.value = '0.00';
+
+            const notesArea = document.getElementById('quoteNotes');
+            if (notesArea) {
+                if (isMichael) {
+                    notesArea.value = 'Accordi di fornitura riservata intermediario Michael. Consegna diretta senza spese di spedizione.';
+                } else {
+                    notesArea.value = 'Spedizione in box termico isotermico protetto con heat pack 72h stagionale. Consegna tracciata express 24/48h.';
+                }
+            }
+
+            recalculateQuoteTotals();
+        });
+    }
+
+    const quoteShipping = document.getElementById('quoteShipping');
+    const quoteDiscount = document.getElementById('quoteDiscount');
+    if (quoteShipping) quoteShipping.addEventListener('input', recalculateQuoteTotals);
+    if (quoteDiscount) quoteDiscount.addEventListener('input', recalculateQuoteTotals);
+
+    // Esporta PDF direttamente dal modal preventivo
+    const btnExportQuotePDFModal = document.getElementById('btnExportQuotePDF');
+    if (btnExportQuotePDFModal) {
+        btnExportQuotePDFModal.addEventListener('click', () => {
+            const totals = recalculateQuoteTotals();
+            const channel = document.getElementById('quoteChannel')?.value || 'MICHAEL';
+            const isMichael = channel === 'MICHAEL';
+            const items = [];
+            document.querySelectorAll('#quoteItemsContainer .quote-item-row').forEach(row => {
+                const cat = row.querySelector('.quote-item-cat')?.value || 'ADULT';
+                const unit = row.querySelector('.quote-item-unit')?.value || 'kg';
+                const qty = parseFloat(row.querySelector('.quote-item-qty')?.value) || 0;
+                const price = parseFloat(row.querySelector('.quote-item-price')?.value) || 0;
+                items.push({
+                    category: cat,
+                    categoryLabel: COMMERCIAL_CATALOG[cat]?.label || cat,
+                    size: COMMERCIAL_CATALOG[cat]?.size || '—',
+                    unit: unit,
+                    quantity: qty,
+                    unitPrice: price,
+                    total: qty * price
+                });
+            });
+
+            let clientData = {};
+            const isExisting = document.getElementById('radioClientExisting')?.checked;
+            if (isExisting) {
+                const cId = Number(document.getElementById('quoteClientSelect')?.value);
+                const found = appState.clients.find(c => c.id === cId);
+                if (found) {
+                    clientData = { nome: found.nome, cognome: found.cognome, citta: found.citta, telefono: found.telefono, email: found.email };
+                }
+            } else {
+                clientData = {
+                    nome: document.getElementById('quoteClientNome')?.value.trim() || (isMichael ? 'Michael' : 'Cliente'),
+                    citta: document.getElementById('quoteClientCitta')?.value.trim(),
+                    telefono: document.getElementById('quoteClientTelefono')?.value.trim(),
+                    email: document.getElementById('quoteClientEmail')?.value.trim()
+                };
+            }
+
+            const tempQuote = {
+                id: document.getElementById('quoteId')?.value ? Number(document.getElementById('quoteId').value) : Date.now(),
+                channel: channel,
+                number: document.getElementById('quoteNumber')?.value.trim() || 'PREV-001',
+                date: document.getElementById('quoteDate')?.value || new Date().toISOString().split('T')[0],
+                validityDays: parseInt(document.getElementById('quoteValidity')?.value) || 15,
+                status: document.getElementById('quoteStatus')?.value || 'SENT',
+                client: clientData,
+                clientId: isExisting ? Number(document.getElementById('quoteClientSelect')?.value) : null,
+                items: items,
+                subtotal: totals.subtotal,
+                shipping: isMichael ? 0 : totals.shipping,
+                discount: totals.discount,
+                grandTotal: totals.grandTotal,
+                paymentTerms: document.getElementById('quotePaymentTerms')?.value.trim() || (isMichael ? 'Saldo a consegna / Bonifico' : 'Bonifico / PayPal / Ritiro'),
+                notes: document.getElementById('quoteNotes')?.value.trim() || ''
+            };
+
+            exportQuotePDF(tempQuote);
+        });
+    }
+
+    // Submit form preventivo
+    const quoteForm = document.getElementById('quoteForm');
+    if (quoteForm) {
+        quoteForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const totals = recalculateQuoteTotals();
+            const channel = document.getElementById('quoteChannel')?.value || 'MICHAEL';
+            const isMichael = channel === 'MICHAEL';
+            const items = [];
+            document.querySelectorAll('#quoteItemsContainer .quote-item-row').forEach(row => {
+                const cat = row.querySelector('.quote-item-cat')?.value || 'ADULT';
+                const unit = row.querySelector('.quote-item-unit')?.value || 'kg';
+                const qty = parseFloat(row.querySelector('.quote-item-qty')?.value) || 0;
+                const price = parseFloat(row.querySelector('.quote-item-price')?.value) || 0;
+                items.push({
+                    category: cat,
+                    categoryLabel: COMMERCIAL_CATALOG[cat]?.label || cat,
+                    size: COMMERCIAL_CATALOG[cat]?.size || '—',
+                    unit: unit,
+                    quantity: qty,
+                    unitPrice: price,
+                    total: qty * price
+                });
+            });
+
+            if (items.length === 0) {
+                showNotification('Attenzione', 'Aggiungi almeno una voce al preventivo.', 'warning');
+                return;
+            }
+
+            let clientData = {};
+            const isExisting = document.getElementById('radioClientExisting')?.checked;
+            let clientId = null;
+            if (isExisting) {
+                clientId = Number(document.getElementById('quoteClientSelect')?.value) || null;
+                const found = appState.clients.find(c => c.id === clientId);
+                if (found) {
+                    clientData = { nome: found.nome, cognome: found.cognome, citta: found.citta, telefono: found.telefono, email: found.email };
+                }
+            } else {
+                clientData = {
+                    nome: document.getElementById('quoteClientNome')?.value.trim() || (isMichael ? 'Michael' : 'Cliente Estemporaneo'),
+                    citta: document.getElementById('quoteClientCitta')?.value.trim(),
+                    telefono: document.getElementById('quoteClientTelefono')?.value.trim(),
+                    email: document.getElementById('quoteClientEmail')?.value.trim()
+                };
+            }
+
+            const idVal = document.getElementById('quoteId')?.value;
+            const quoteObj = {
+                channel: channel,
+                number: document.getElementById('quoteNumber')?.value.trim() || `PREV-${Date.now()}`,
+                date: document.getElementById('quoteDate')?.value || new Date().toISOString().split('T')[0],
+                validityDays: parseInt(document.getElementById('quoteValidity')?.value) || 15,
+                status: document.getElementById('quoteStatus')?.value || 'SENT',
+                client: clientData,
+                clientId: clientId,
+                items: items,
+                subtotal: totals.subtotal,
+                shipping: isMichael ? 0 : totals.shipping,
+                discount: totals.discount,
+                grandTotal: totals.grandTotal,
+                biomassG: totals.totalBiomassG,
+                insectCount: totals.totalInsectCount,
+                paymentTerms: document.getElementById('quotePaymentTerms')?.value.trim() || (isMichael ? 'Saldo a consegna / Bonifico' : 'Bonifico / PayPal / Ritiro'),
+                notes: document.getElementById('quoteNotes')?.value.trim() || ''
+            };
+            if (idVal) quoteObj.id = Number(idVal);
+
+            await saveQuote(quoteObj);
+            document.getElementById('quoteModal').classList.remove('active');
+            updatePreventiviUI();
+            showNotification('Preventivo Salvato', `Preventivo ${quoteObj.number} (${isMichael ? 'Michael' : 'Diretto'}) salvato nello storico.`, 'success');
+        });
+    }
+
+    // ── Delegazione click per tabella preventivi ──────────────────
+    document.addEventListener('click', async (e) => {
+        // Scarica PDF
+        const pdfBtn = e.target.closest('.btn-quote-pdf');
+        if (pdfBtn) {
+            const id = Number(pdfBtn.dataset.id);
+            const q = appState.quotes.find(item => item.id === id);
+            if (q) exportQuotePDF(q);
+            return;
+        }
+
+        // Modifica preventivo
+        const editQuoteBtn = e.target.closest('.btn-quote-edit');
+        if (editQuoteBtn) {
+            const id = Number(editQuoteBtn.dataset.id);
+            const q = appState.quotes.find(item => item.id === id);
+            if (q) openQuoteModal(q);
+            return;
+        }
+
+        // Converti in Cessione
+        const convertBtn = e.target.closest('.btn-quote-convert');
+        if (convertBtn) {
+            const id = Number(convertBtn.dataset.id);
+            convertQuoteToCessione(id);
+            return;
+        }
+
+        // Elimina preventivo
+        const deleteQuoteBtn = e.target.closest('.btn-quote-delete');
+        if (deleteQuoteBtn) {
+            const id = Number(deleteQuoteBtn.dataset.id);
+            const q = appState.quotes.find(item => item.id === id);
+            const name = q ? (q.number || 'questo preventivo') : 'questo preventivo';
+            const confirmModal = document.createElement('div');
+            confirmModal.className = 'modal-overlay active';
+            confirmModal.innerHTML = `
+                <div class="modal">
+                    <h2 style="color: var(--alert-red);">Elimina Preventivo</h2>
+                    <p>Rimuovere <strong>${name}</strong> dallo storico preventivi?</p>
+                    <div class="modal-actions">
+                        <button class="btn-standard btn-cancel" id="btnCancelDelQuote">Annulla</button>
+                        <button class="btn-standard btn-danger" id="btnConfirmDelQuote">Sì, Elimina</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(confirmModal);
+            document.getElementById('btnCancelDelQuote').addEventListener('click', () => document.body.removeChild(confirmModal));
+            document.getElementById('btnConfirmDelQuote').addEventListener('click', async () => {
+                document.body.removeChild(confirmModal);
+                await deleteQuote(id);
+                updatePreventiviUI();
+                showNotification('Preventivo Eliminato', `${name} rimosso con successo.`, 'success');
+            });
+            return;
+        }
+    });
+
+    const btnResetParams = document.getElementById('btnResetParams');
+    if (btnResetParams) {
+        btnResetParams.addEventListener('click', () => {
+            resetDubiaParams();
+        });
+    }
+
     const btnResetDB = document.getElementById('btnResetDB');
     if (btnResetDB) {
         btnResetDB.addEventListener('click', () => {
@@ -3324,6 +5358,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 const showNotification = (title, message, type = "success") => {
     const area = document.getElementById('notificationArea');
+    if (!area) return;
     const notif = document.createElement('div');
     notif.className = `notification ${type}`;
     notif.innerHTML = `
@@ -3794,11 +5829,47 @@ const generatePrescriptiveInsights = (metrics) => {
     return insights;
 };
 
+const resetDubiaParams = () => {
+    appState.params.theta1 = DEFAULT_PARAMS.theta1;
+    appState.params.theta2 = DEFAULT_PARAMS.theta2;
+    appState.params.mortalityRate = DEFAULT_PARAMS.mortalityRate;
+    delete appState.params.manualCalibrations;
+    saveParams(appState.params);
+    updateUI();
+    if (typeof updateColoniesUI === 'function') updateColoniesUI();
+    if (typeof showNotification === 'function') {
+        showNotification('Parametri D.U.B.I.A. Ripristinati', `θ₁ = ${DEFAULT_PARAMS.theta1.toFixed(2)}, θ₂ = ${DEFAULT_PARAMS.theta2.toFixed(2)} (Standard Certificato).`, 'success');
+    }
+};
+
+if (typeof window !== 'undefined') {
+    window.resetDubiaParams = resetDubiaParams;
+    window.PRICE_CATALOG_FULL = PRICE_CATALOG_FULL;
+    window.generateWhatsAppPriceListText = generateWhatsAppPriceListText;
+    window.copyPriceListToWhatsApp = copyPriceListToWhatsApp;
+    window.exportFullCatalogPDF = exportFullCatalogPDF;
+    window.renderListinoPrezziUI = renderListinoPrezziUI;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         calculatePrediction,
         appState,
-        DEFAULT_PARAMS
+        DEFAULT_PARAMS,
+        resetDubiaParams,
+        validateAndMigrateParams,
+        rebuildParamsFromMeasurements,
+        COMMERCIAL_CATALOG,
+        saveQuote,
+        deleteQuote,
+        convertQuoteToCessione,
+        exportQuotePDF,
+        recalculateQuoteTotals,
+        PRICE_CATALOG_FULL,
+        generateWhatsAppPriceListText,
+        copyPriceListToWhatsApp,
+        exportFullCatalogPDF,
+        renderListinoPrezziUI
     };
 }
 
@@ -4121,7 +6192,7 @@ const renderColonyPredictionChart = (colony, days) => {
     let W_totale_calcolato = W_adulti + W_ninfe;
     
     const latestForAt = appState.measurements && appState.measurements.length > 0 ? appState.measurements[appState.measurements.length - 1] : null;
-    let A_t = latestForAt ? (latestForAt.adult_ratio || 0.35) : 0.35;
+    let A_t = latestForAt ? ((latestForAt.adult_ratio !== undefined && latestForAt.adult_ratio !== null) ? Number(latestForAt.adult_ratio) : 0.35) : 0.35;
 
     if (W_totale_calcolato > 0) {
         A_t = W_adulti / W_totale_calcolato;
@@ -4660,9 +6731,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (idVal) {
                 colony.id = Number(idVal);
-                // Preserve existing metrics
                 const existing = appState.colonies.find(c => c.id === colony.id);
-                if (existing) {
+                colony.creation_date = existing ? existing.creation_date : new Date().toISOString().split('T')[0];
+
+                if (totalIndividuals > 0) {
+                    colony.current_weight = estimatedWeight;
+                    colony.males_count = mCount;
+                    colony.females_count = fCount;
+                    colony.subadults_count = subCount;
+                    colony.medium_count = medCount;
+                    colony.small_count = smCount;
+                    colony.baby_count = bCount;
+                } else if (existing) {
                     colony.current_weight = existing.current_weight;
                     colony.males_count = existing.males_count;
                     colony.females_count = existing.females_count;
@@ -4670,7 +6750,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     colony.medium_count = existing.medium_count;
                     colony.small_count = existing.small_count;
                     colony.baby_count = existing.baby_count;
-                    colony.creation_date = existing.creation_date;
                 }
             } else {
                 colony.creation_date = new Date().toISOString().split('T')[0];

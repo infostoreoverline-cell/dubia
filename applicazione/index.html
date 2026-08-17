@@ -15,6 +15,9 @@
     <!-- QR Code Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <!-- jsPDF & AutoTable for Quotes / Preventivi PDF Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.autotable.min.js"></script>
     <link rel="stylesheet" href="style.css">
 
 </head>
@@ -26,7 +29,7 @@
             <span class="subtitle">Dynamic Updating Biomass Inference Algorithm</span>
         </div>
         <div class="header-right">
-            <button id="btnOpenPrezzi" class="btn-prezzi" title="Personalizza prezzi per tipologia">💰 Prezzi</button>
+            <button id="btnOpenListinoPrezzi" class="btn-prezzi" title="Visualizza ed esporta il Listino Prezzi completo">📋 Listino Prezzi</button>
             <div class="health-indicator" id="healthIndicator">
                 <span class="health-value" id="healthValue">--%</span>
                 <span class="health-label">Indice Salute (H)</span>
@@ -41,6 +44,7 @@
         <button class="tab-btn" data-target="census">Censimento</button>
         <button class="tab-btn" data-target="diagnostics">Diagnostica</button>
         <button class="tab-btn" data-target="clienti">👥 Clienti</button>
+        <button class="tab-btn" data-target="listino">📋 Listino Prezzi</button>
         <button class="tab-btn" data-target="clima">🌡️ Clima</button>
     </nav>
 
@@ -99,7 +103,7 @@
                         </div>
                         <div class="param">
                             <span class="param-label">θ₂ (Crescita Naturale)</span>
-                            <span class="param-value" id="theta2Value">0.10</span>
+                            <span class="param-value" id="theta2Value">1.05</span>
                         </div>
                         <div class="param" style="grid-column: span 2;">
                             <span class="param-label">Fattore di Mortalità Fisiologica (Mensile)</span>
@@ -352,6 +356,7 @@
                     <h3 style="margin: 0;">Log Manutenzione & Pesate</h3>
                     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                         <button id="btnNewBlood" class="btn-standard btn-primary" style="background-color: var(--accent-purple);">+ Nuovo Sangue</button>
+                        <button id="btnResetParams" class="btn-standard" style="background-color: #374151; color: #f9fafb;" title="Ripristina θ₁=0.30 e θ₂=1.05 ai valori standard">🔄 Reset Parametri D.U.B.I.A.</button>
                         <button id="btnExportCSV" class="btn-standard btn-primary">Esporta CSV</button>
                         <button id="btnResetDB" class="btn-standard btn-danger">Reset Dati</button>
                     </div>
@@ -551,12 +556,149 @@
                     <div class="value" id="cessioniTotali" style="color: var(--accent-purple);">0</div>
                 </div>
                 <div class="card stat-card clienti-stat-card" style="border-color: #3498db;">
-                    <h3>Grammi Ceduti</h3>
-                    <div class="value" id="grammiCeduti" style="color: #3498db;">0 g</div>
-                </div>
                 <div class="card stat-card clienti-stat-card" style="border-color: #f39c12;">
                     <h3>Incassato Totale</h3>
                     <div class="value" id="euroTotale" style="color: #f39c12;">€ 0,00</div>
+                </div>
+            </div>
+
+            <!-- Listino Prezzi Ufficiale & Grafico Comparativa -->
+            <div class="card">
+                <div class="clienti-card-header" style="flex-wrap: wrap; gap: 0.75rem;">
+                    <div>
+                        <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                            <h3>📊 Listino Prezzi & Analisi Comparativa</h3>
+                            <span class="badge" style="background: rgba(39, 174, 96, 0.2); color: #2ecc71; border: 1px solid rgba(39, 174, 96, 0.4); font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 999px;">🤝 Riservato Intermediario (Michael)</span>
+                        </div>
+                        <p class="subtitle-text" style="margin-bottom:0;">Listino prezzi di cessione all'ingrosso concordato con Michael (intermediario commerciale). Nessuna spesa di spedizione applicata.</p>
+                    </div>
+                    <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                        <div class="chart-btn-group" id="prezziChartControls">
+                            <button type="button" class="btn-standard btn-toggle active" data-mode="kg" id="btnPrezziPerKg">€ / Kg</button>
+                            <button type="button" class="btn-standard btn-toggle" data-mode="100pz" id="btnPrezziPer100pz">€ / 100 Pz</button>
+                            <button type="button" class="btn-standard btn-toggle" data-mode="log" id="btnPrezziLog">Scala Logaritmica</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4 Categorie Commerciali Cards -->
+                <div class="catalog-grid">
+                    <!-- ADULTE -->
+                    <div class="catalog-card" style="border-top: 3px solid #e74c3c;">
+                        <div class="catalog-card-header">
+                            <span class="catalog-icon">🔴</span>
+                            <div>
+                                <h4 class="catalog-title">Blatte Adulte (M/F)</h4>
+                                <span class="catalog-size">Taglia: 2.0 – 2.5 cm</span>
+                            </div>
+                        </div>
+                        <div class="catalog-price-row">
+                            <div class="catalog-main-price">
+                                <span class="price-val">40,00 €</span>
+                                <span class="price-unit">/ kg</span>
+                            </div>
+                            <div class="catalog-sub-price">≈ 0,04 €/g · ~500 ind./kg</div>
+                        </div>
+                        <div class="catalog-desc">Adulti riproduttori o feeder per sauri di taglia grande. Mix maschi e femmine per Michael.</div>
+                    </div>
+
+                    <!-- MISTO -->
+                    <div class="catalog-card" style="border-top: 3px solid #9b59b6;">
+                        <div class="catalog-card-header">
+                            <span class="catalog-icon">🟣</span>
+                            <div>
+                                <h4 class="catalog-title">Colonia Mista Avviata</h4>
+                                <span class="catalog-size">Taglia: Tutte le misure</span>
+                            </div>
+                        </div>
+                        <div class="catalog-price-row">
+                            <div class="catalog-main-price">
+                                <span class="price-val">60,00 €</span>
+                                <span class="price-unit">/ kg</span>
+                            </div>
+                            <div class="catalog-sub-price">≈ 0,06 €/g · Mix bilanciato</div>
+                        </div>
+                        <div class="catalog-desc">Colonia di avvio con neanidi di varie taglie, sub-adulti e adulti per colonie d'allevamento.</div>
+                    </div>
+
+                    <!-- MEDIE -->
+                    <div class="catalog-card" style="border-top: 3px solid #2ecc71;">
+                        <div class="catalog-card-header">
+                            <span class="catalog-icon">🟢</span>
+                            <div>
+                                <h4 class="catalog-title">Neanidi Medie</h4>
+                                <span class="catalog-size">Taglia: 1.0 – 1.5 cm</span>
+                            </div>
+                        </div>
+                        <div class="catalog-price-row">
+                            <div class="catalog-main-price">
+                                <span class="price-val">14,00 €</span>
+                                <span class="price-unit">/ 100 pz</span>
+                            </div>
+                            <div class="catalog-sub-price">Pari a 140,00 € / kg · ~1.000 pz/kg</div>
+                        </div>
+                        <div class="catalog-desc">Dimensione ideale per gechi leopardini, pogone sub-adulte e camaleonti. Ottimo rapporto chitina/proteine.</div>
+                    </div>
+
+                    <!-- SMALL -->
+                    <div class="catalog-card" style="border-top: 3px solid #f39c12;">
+                        <div class="catalog-card-header">
+                            <span class="catalog-icon">🟡</span>
+                            <div>
+                                <h4 class="catalog-title">Neanidi Small (Baby)</h4>
+                                <span class="catalog-size">Taglia: 1 mm – 8 mm</span>
+                            </div>
+                        </div>
+                        <div class="catalog-price-row">
+                            <div class="catalog-main-price">
+                                <span class="price-val">12,50 €</span>
+                                <span class="price-unit">/ 100 pz</span>
+                            </div>
+                            <div class="catalog-sub-price">Pari a 1.250,00 € / kg · ~10.000 pz/kg</div>
+                        </div>
+                        <div class="catalog-desc">Appena nate, guscio morbidissimo e altissima digeribilità. Ideali per baby gechi, rane e piccoli insettivori.</div>
+                    </div>
+                </div>
+
+                <!-- Grafico Prezzi Canvas -->
+                <div class="chart-container" style="position: relative; height: 320px; margin-top: 1.5rem;">
+                    <canvas id="prezziChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Preventivi & Offerte PDF -->
+            <div class="card">
+                <div class="clienti-card-header" style="flex-wrap: wrap; gap: 0.5rem;">
+                    <div>
+                        <div style="display:flex; align-items:center; gap:0.5rem;">
+                            <h3>📄 Preventivi & Offerte Commerciali</h3>
+                            <span class="badge" style="background: rgba(52, 152, 219, 0.2); color: #3498db; border: 1px solid rgba(52, 152, 219, 0.4); font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 999px;">Export PDF</span>
+                        </div>
+                        <p class="subtitle-text" style="margin-bottom:0;">Crea preventivi per Michael o clienti diretti con calcolo automatico ed esportazione in PDF professionale</p>
+                    </div>
+                    <button id="btnNuovoPreventivo" class="btn-standard btn-primary" style="background: linear-gradient(135deg, #8e44ad, #3498db);">
+                        + Nuovo Preventivo
+                    </button>
+                </div>
+
+                <!-- Tabella Preventivi -->
+                <div class="table-container" style="margin-top: 1rem;">
+                    <table class="data-table" id="preventiviTable">
+                        <thead>
+                            <tr>
+                                <th>N° Prev.</th>
+                                <th>Data</th>
+                                <th>Canale / Destinatario</th>
+                                <th>Dettaglio Voci</th>
+                                <th>Totale</th>
+                                <th>Stato</th>
+                                <th>Azioni</th>
+                            </tr>
+                        </thead>
+                        <tbody id="preventiviTableBody">
+                            <tr><td colspan="7" class="table-empty">Nessun preventivo registrato.</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -617,6 +759,142 @@
                             <tr><td colspan="7" class="table-empty">Nessuna cessione registrata.</td></tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            <div style="height: 4rem;"></div>
+        </section>
+
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <!-- LISTINO PREZZI TAB — Catalogo Ufficiale & Export PDF / WhatsApp -->
+        <!-- ═══════════════════════════════════════════════════════ -->
+        <section id="listino" class="tab-content">
+            <!-- Header & Presentazione Listino -->
+            <div class="card listino-hero-card">
+                <div class="listino-hero-content">
+                    <div class="listino-hero-text">
+                        <div class="listino-badge-row">
+                            <span class="listino-badge badge-primary">📋 Catalogo Ufficiale 2026</span>
+                            <span class="listino-badge badge-success">🛡️ Garanzia 100% Vivi all'Arrivo</span>
+                            <span class="listino-badge badge-info">🚚 Spedizioni Lun-Mer 24/48h</span>
+                        </div>
+                        <h2 class="listino-hero-title">Listino Prezzi & Catalogo Prodotti</h2>
+                        <p class="subtitle-text" style="margin: 0.35rem 0 0 0; font-size: 0.92rem; max-width: 780px;">
+                            Consulta, personalizza ed esporta il listino prezzi completo per insetti da pasto (<strong>Blaptica Dubia</strong>), colonie avviate, <strong>termoigrometri Wi-Fi IoT</strong>, sensori e accessori per allevamento. Condividi all'istante via <strong>PDF</strong> o <strong>messaggio WhatsApp</strong>.
+                        </p>
+                    </div>
+                    <div class="listino-hero-actions">
+                        <button type="button" class="btn-standard btn-primary btn-listino-action" id="btnDownloadListinoPDF">
+                            <span class="btn-icon">📥</span> Scarica PDF Ufficiale
+                        </button>
+                        <button type="button" class="btn-standard btn-whatsapp btn-listino-action" id="btnCopyListinoWhatsApp">
+                            <span class="btn-icon">💬</span> Copia per WhatsApp
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Toolbar di Controllo, Filtri & Canale Commerciale -->
+            <div class="card listino-controls-card">
+                <div class="listino-controls-top">
+                    <!-- Switch Canale Commerciale -->
+                    <div class="listino-channel-selector">
+                        <label class="listino-label">Profilo Listino:</label>
+                        <div class="chart-btn-group" id="listinoChannelGroup">
+                            <button type="button" class="btn-standard btn-toggle active" data-channel="DIRECT" id="btnListinoDirect">
+                                🛍️ Dettaglio / Privati
+                            </button>
+                            <button type="button" class="btn-standard btn-toggle" data-channel="MICHAEL" id="btnListinoMichael">
+                                🤝 Ingrosso / Intermediario (Michael)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Azioni Secondarie -->
+                    <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                        <button type="button" class="btn-standard btn-secondary" id="btnOpenQuoteFromListino" style="font-size:0.85rem; padding:0.45rem 0.85rem;">
+                            📄 + Nuovo Preventivo
+                        </button>
+                        <button type="button" class="btn-standard btn-secondary" id="btnToggleWhatsAppPreview" style="font-size:0.85rem; padding:0.45rem 0.85rem;">
+                            👁️ Anteprima Testo Chat
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filtri Categoria & Barra di Ricerca -->
+                <div class="listino-filters-row">
+                    <div class="listino-category-pills" id="listinoCategoryPills">
+                        <button type="button" class="listino-pill active" data-category="ALL">🏷️ Tutti i Prodotti (<span id="countAll">14</span>)</button>
+                        <button type="button" class="listino-pill" data-category="BLATTE">🪳 Blatte da Pasto & Colonie (<span id="countBlatte">6</span>)</button>
+                        <button type="button" class="listino-pill" data-category="IOT">📡 Termoigrometri Wi-Fi & Sonde (<span id="countIot">4</span>)</button>
+                        <button type="button" class="listino-pill" data-category="ACCESSORI">🌾 Nutrizione & Accessori (<span id="countAccessori">4</span>)</button>
+                    </div>
+
+                    <div class="listino-search-wrapper">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="listinoSearchInput" class="listino-search-input" placeholder="Cerca prodotto, taglia, sensore...">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Box Anteprima WhatsApp Collassabile -->
+            <div class="card whatsapp-preview-card" id="whatsappPreviewCard" style="display: none;">
+                <div class="whatsapp-card-header">
+                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                        <span style="font-size:1.3rem;">📱</span>
+                        <h4 style="margin:0; font-size:0.95rem; color:#25D366;">Anteprima Messaggio WhatsApp / Telegram</h4>
+                    </div>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <button type="button" class="btn-standard btn-whatsapp" id="btnCopyWhatsAppDirect" style="font-size:0.8rem; padding:0.35rem 0.75rem;">
+                            📋 Copia Testo
+                        </button>
+                        <button type="button" class="btn-standard btn-cancel" id="btnCloseWhatsAppPreview" style="padding:0.35rem 0.6rem; font-size:0.8rem;">✕</button>
+                    </div>
+                </div>
+                <div class="whatsapp-bubble" id="whatsappMessageContent">
+                    <!-- Generato dinamicamente -->
+                </div>
+            </div>
+
+            <!-- Griglia Prodotti & Prezzi (Dinamica) -->
+            <div id="listinoProductsContainer" class="listino-products-container">
+                <!-- Sezioni generate dinamicamente da app.js -->
+            </div>
+
+            <!-- Banner Garanzie & Termini di Consegna -->
+            <div class="card listino-terms-card">
+                <h3 style="margin-top:0; font-size:1.1rem; display:flex; align-items:center; gap:0.5rem;">
+                    <span>🛡️</span> Garanzia di Qualità & Modalità di Spedizione
+                </h3>
+                <div class="terms-grid">
+                    <div class="term-item">
+                        <span class="term-icon">📦</span>
+                        <div>
+                            <strong>Imballaggio Professionale</strong>
+                            <p>Scatole ventilate con supporti in cartone rigido traspirante. Nessun rischio di schiacciamento.</p>
+                        </div>
+                    </div>
+                    <div class="term-item">
+                        <span class="term-icon">🌡️</span>
+                        <div>
+                            <strong>Spedizione Climatizzata</strong>
+                            <p>Box termico isotermico con Heat Pack 40h incluso gratuitamente nei mesi invernali per proteggere gli insetti dal freddo.</p>
+                        </div>
+                    </div>
+                    <div class="term-item">
+                        <span class="term-icon">🚚</span>
+                        <div>
+                            <strong>Partenze Sicure Lunedì-Mercoledì</strong>
+                            <p>Spedizioni solo nei primi giorni della settimana con corriere espresso 24/48h per evitare fermi deposito nel weekend.</p>
+                        </div>
+                    </div>
+                    <div class="term-item">
+                        <span class="term-icon">✨</span>
+                        <div>
+                            <strong>Alimentazione Controllata</strong>
+                            <p>Colonie nutrite esclusivamente con cereali nobili, crusca biologica, frutta fresca e idrogel senza cloro.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1243,6 +1521,165 @@
             <p id="qrScanError" style="color: var(--alert-red); font-size: 0.85rem; margin-top: 0.5rem; text-align: center; display: none;">
                 ⚠️ QR Code non riconosciuto o non valido per D.U.B.I.A.
             </p>
+        </div>
+    </div>
+
+    <!-- MODAL PREVENTIVO / QUOTE BUILDER -->
+    <div class="modal-overlay" id="quoteModal">
+        <div class="modal modal-xl" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+                <div>
+                    <h2 id="quoteModalTitle" style="margin: 0; color: var(--accent-purple); display: flex; align-items: center; gap: 0.5rem;">
+                        <span>📄</span> Preventivo di Vendita
+                    </h2>
+                    <p class="subtitle-text" style="margin: 0.25rem 0 0 0;">Compila i dettagli e le quantità desiderate per generare la fattura pro-forma o preventivo PDF</p>
+                </div>
+                <button type="button" class="btn-standard btn-cancel" id="btnCloseQuoteModal" style="padding: 0.35rem 0.7rem; font-size: 1.1rem;">✕</button>
+            </div>
+
+            <form id="quoteForm">
+                <input type="hidden" id="quoteId">
+
+                <!-- Intestazione e Dati Generali Preventivo -->
+                <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; margin-bottom: 1rem; background: rgba(255,255,255,0.02); padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <div class="form-group">
+                        <label for="quoteChannel" style="font-size: 0.8rem; font-weight:700; color: #2ecc71;">Canale / Profilo Commerciale</label>
+                        <select id="quoteChannel" class="input-standard" style="background: rgba(39, 174, 96, 0.1); border-color: #27ae60; font-weight: 600;">
+                            <option value="MICHAEL" selected>🤝 Intermediario: Michael (No Spedizione · Prezzi Concordati)</option>
+                            <option value="DIRECT">🛍️ Cliente Diretto / Standard (Con Spedizione)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="quoteNumber" style="font-size: 0.8rem;">Numero Preventivo</label>
+                        <input type="text" id="quoteNumber" class="input-standard" placeholder="es. PREV-2026-001" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="quoteDate" style="font-size: 0.8rem;">Data Emissione</label>
+                        <input type="date" id="quoteDate" class="input-standard" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="quoteValidity" style="font-size: 0.8rem;">Validità Offerta (giorni)</label>
+                        <input type="number" id="quoteValidity" class="input-standard" value="15" min="1" max="90">
+                    </div>
+                    <div class="form-group">
+                        <label for="quoteStatus" style="font-size: 0.8rem;">Stato Preventivo</label>
+                        <select id="quoteStatus" class="input-standard">
+                            <option value="DRAFT">🟡 Bozza</option>
+                            <option value="SENT" selected>🔵 Inviato</option>
+                            <option value="ACCEPTED">🟢 Accettato</option>
+                            <option value="CONVERTED">🟣 Convertito in Cessione</option>
+                            <option value="REJECTED">⚪ Non Confermato</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Dati Acquirente / Cliente -->
+                <div class="quote-client-section" style="background: rgba(255,255,255,0.02); padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <h4 style="margin: 0; font-size: 0.95rem; color: var(--text-color);">👤 Dati Acquirente / Destinatario</h4>
+                        <div style="display: flex; gap: 0.5rem; font-size: 0.8rem;">
+                            <label style="display:flex; align-items:center; gap:0.3rem; cursor:pointer;">
+                                <input type="radio" name="quoteClientType" value="existing" id="radioClientExisting" checked> Cliente Registrato
+                            </label>
+                            <label style="display:flex; align-items:center; gap:0.3rem; cursor:pointer;">
+                                <input type="radio" name="quoteClientType" value="manual" id="radioClientManual"> Nuovo / Manuale
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="quoteClientExistingBlock" class="form-group">
+                        <select id="quoteClientSelect" class="input-standard">
+                            <option value="">— Seleziona da Anagrafica Clienti —</option>
+                        </select>
+                    </div>
+
+                    <div id="quoteClientManualBlock" class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; display: none;">
+                        <div class="form-group">
+                            <input type="text" id="quoteClientNome" class="input-standard" placeholder="Nome / Ragione Sociale (es. Michael)">
+                        </div>
+                        <div class="form-group">
+                            <input type="text" id="quoteClientCitta" class="input-standard" placeholder="Città / Indirizzo">
+                        </div>
+                        <div class="form-group">
+                            <input type="tel" id="quoteClientTelefono" class="input-standard" placeholder="Telefono / WhatsApp">
+                        </div>
+                        <div class="form-group">
+                            <input type="email" id="quoteClientEmail" class="input-standard" placeholder="Email">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Voci del Preventivo (Righe Dinamiche) -->
+                <div class="quote-items-section" style="margin-bottom: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <h4 style="margin: 0; font-size: 0.95rem; color: var(--text-color);">📦 Articoli & Quantità</h4>
+                        <button type="button" class="btn-standard btn-secondary" id="btnAddQuoteItem" style="font-size: 0.8rem; padding: 0.35rem 0.7rem;">+ Aggiungi Voce</button>
+                    </div>
+
+                    <div id="quoteItemsContainer" class="quote-items-list" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <!-- Le righe verranno generate dinamicamente da JS -->
+                    </div>
+                </div>
+
+                <!-- Spese, Sconto e Note -->
+                <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; margin-bottom: 1rem;">
+                    <div class="form-group" id="quoteShippingGroup" style="display: none;">
+                        <label for="quoteShipping" style="font-size: 0.8rem;">Spedizione & Box Termico (€)</label>
+                        <input type="number" id="quoteShipping" class="input-standard" value="0.00" step="0.50" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="quoteDiscount" style="font-size: 0.8rem;">Sconto / Ribasso (€)</label>
+                        <input type="number" id="quoteDiscount" class="input-standard" value="0.00" step="0.50" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="quotePaymentTerms" style="font-size: 0.8rem;">Metodo di Pagamento</label>
+                        <input type="text" id="quotePaymentTerms" class="input-standard" placeholder="es. Bonifico / PayPal / Saldo a consegna" value="Saldo a consegna / Bonifico">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="quoteNotes" style="font-size: 0.8rem;">Note Aggiuntive & Accordi di Consegna</label>
+                    <textarea id="quoteNotes" class="input-standard" rows="2" placeholder="Accordi fornitura..." style="font-size: 0.85rem;">Accordi di fornitura riservata intermediario Michael. Consegna diretta senza spese di spedizione.</textarea>
+                </div>
+
+                <!-- Riepilogo Finanziario Live -->
+                <div class="quote-summary-box" style="background: linear-gradient(135deg, rgba(142, 68, 173, 0.15), rgba(41, 128, 185, 0.15)); border: 1px solid rgba(142, 68, 173, 0.3); border-radius: 8px; padding: 1rem; margin-bottom: 1.25rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                        <div>
+                            <div style="font-size: 0.85rem; color: var(--text-muted);">
+                                Subtotale Articoli: <strong id="quoteSubtotalText" style="color: var(--text-color);">€ 0,00</strong>
+                                <span style="margin: 0 0.5rem;">·</span>
+                                Spedizione: <strong id="quoteShippingText" style="color: var(--text-color);">€ 0,00</strong>
+                                <span style="margin: 0 0.5rem;">·</span>
+                                Sconto: <strong id="quoteDiscountText" style="color: #e74c3c;">€ 0,00</strong>
+                            </div>
+                            <div style="font-size: 0.8rem; color: var(--accent-green); margin-top: 0.25rem;" id="quoteBiomassSummary">
+                                Biomassa totale: ~0 g · Individui stimati: ~0
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <span style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); display: block;">Totale Preventivo</span>
+                            <span id="quoteGrandTotalText" style="font-size: 1.75rem; font-weight: 800; color: var(--accent-green);">€ 0,00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Azioni Modale -->
+                <div class="modal-actions" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <button type="button" class="btn-standard btn-primary" id="btnExportQuotePDF" style="background: linear-gradient(135deg, #e67e22, #d35400); border-color: #d35400; font-weight:600;">
+                            📥 Scarica PDF
+                        </button>
+                        <button type="button" class="btn-standard btn-secondary" id="btnConvertQuoteToCessione" style="display:none; background: rgba(142,68,173,0.3); border-color: var(--accent-purple);">
+                            📦 Converti in Cessione
+                        </button>
+                    </div>
+                    <div style="display:flex; gap:0.5rem; align-items:center;">
+                        <button type="button" class="btn-standard btn-cancel" id="btnCancelQuote">Chiudi</button>
+                        <button type="submit" class="btn-standard btn-primary" id="btnSubmitQuote">💾 Salva Preventivo</button>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
 

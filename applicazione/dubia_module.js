@@ -122,19 +122,28 @@ function dubiaBackpropagate(theta1_old, theta2_old, W_pred, W_reale, W_t, C_t, A
     const E = W_pred - W_reale;
 
     // Gradiente rispetto a θ₁: ∂E/∂θ₁ = C_t
-    const grad_theta1 = C_t;
+    const grad_theta1 = Math.max(0, C_t || 0);
 
     // Gradiente rispetto a θ₂: ∂E/∂θ₂ = W_t · (1 − A_t) · (Δg / 30)
-    const grad_theta2 = W_t * (1 - A_t) * (delta_g / 30);
+    const safe_At = Math.max(0, Math.min(1, (A_t !== undefined && A_t !== null) ? A_t : DUBIA_AT_DEFAULT));
+    const safe_delta_g = Math.max(0, delta_g || 0);
+    const grad_theta2 = Math.max(0, W_t || 0) * (1 - safe_At) * (safe_delta_g / 30);
 
-    // Aggiornamento parametri
-    const theta1_new = theta1_old - (alpha * E * grad_theta1);
-    const theta2_new = theta2_old - (alpha * E * grad_theta2);
+    // Aggiornamento parametri con learning rate e gradient clipping per stabilità numerica
+    const delta_theta1 = alpha * E * grad_theta1;
+    const delta_theta2 = alpha * E * grad_theta2;
 
-    // Floor a 0.001 per evitare parametri negativi o nulli
+    // Max delta step per singola pesata (max 20% variazione per step)
+    const clamped_delta1 = Math.max(-0.15, Math.min(0.15, delta_theta1));
+    const clamped_delta2 = Math.max(-0.25, Math.min(0.25, delta_theta2));
+
+    const theta1_new = theta1_old - clamped_delta1;
+    const theta2_new = theta2_old - clamped_delta2;
+
+    // Limiti fisiologici protetti per prevenire il collasso a zero del modello di crescita
     return {
-        theta1: Math.max(0.001, theta1_new),
-        theta2: Math.max(0.001, theta2_new),
+        theta1: Math.max(0.05, Math.min(2.0, theta1_new)),
+        theta2: Math.max(0.20, Math.min(3.0, theta2_new)),
         error: E
     };
 }

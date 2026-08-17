@@ -1,0 +1,1533 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Termoigrometro ESP8266 - Simulatore e Anteprima</title>
+  
+  <!-- Font da Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #090d16 0%, #111827 100%);
+      --card-bg: rgba(17, 24, 39, 0.7);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      
+      --cyan-neon: #06b6d4;
+      --cyan-glow: rgba(6, 182, 212, 0.4);
+      --blue-neon: #3b82f6;
+      --blue-glow: rgba(59, 130, 246, 0.3);
+      --green-neon: #10b981;
+      --green-glow: rgba(16, 185, 129, 0.3);
+      --orange-neon: #f59e0b;
+      --orange-glow: rgba(245, 158, 11, 0.3);
+      --red-neon: #ef4444;
+      --red-glow: rgba(239, 68, 68, 0.3);
+      
+      --oled-bg: #030712;
+      --oled-fg: #38bdf8;
+      --oled-glow: rgba(56, 189, 248, 0.2);
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      font-family: 'Outfit', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+    
+    header {
+      background: rgba(17, 24, 39, 0.5);
+      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--card-border);
+      padding: 1.5rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    
+    .logo-badge {
+      background: linear-gradient(135deg, var(--cyan-neon), var(--blue-neon));
+      width: 2.25rem;
+      height: 2.25rem;
+      border-radius: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: #030712;
+      box-shadow: 0 0 15px var(--cyan-glow);
+    }
+    
+    header h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      letter-spacing: -0.025em;
+    }
+    
+    .subtitle {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    
+    .badge-mode {
+      background: rgba(6, 182, 212, 0.1);
+      border: 1px solid rgba(6, 182, 212, 0.2);
+      color: var(--cyan-neon);
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      box-shadow: 0 0 10px rgba(6, 182, 212, 0.05);
+    }
+    
+    main {
+      flex: 1;
+      max-width: 1400px;
+      width: 100%;
+      margin: 2rem auto;
+      padding: 0 2rem;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+    
+    @media (min-width: 1024px) {
+      main {
+        grid-template-columns: 450px 1fr;
+      }
+    }
+    
+    /* Pannelli di Controllo (Sinistra) */
+    .controls-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    
+    .card {
+      background: var(--card-bg);
+      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: 1.25rem;
+      padding: 1.5rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      transition: border-color 0.3s ease;
+    }
+    
+    .card:hover {
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+    
+    .card-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 0.75rem;
+    }
+    
+    .card-title svg {
+      width: 1.25rem;
+      height: 1.25rem;
+      color: var(--cyan-neon);
+    }
+    
+    /* Gruppi di form e controlli */
+    .control-group {
+      margin-bottom: 1.25rem;
+    }
+    
+    .control-group:last-child {
+      margin-bottom: 0;
+    }
+    
+    .control-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+    
+    .control-value {
+      font-weight: 600;
+      color: var(--cyan-neon);
+    }
+    
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 9999px;
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--cyan-neon);
+      cursor: pointer;
+      box-shadow: 0 0 10px var(--cyan-glow);
+      transition: transform 0.1s ease;
+    }
+    
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+    
+    .input-text {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: rgba(17, 24, 39, 0.8);
+      border: 1px solid var(--card-border);
+      border-radius: 0.75rem;
+      color: var(--text-main);
+      font-family: inherit;
+      font-size: 0.9rem;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+    
+    .input-text:focus {
+      border-color: var(--cyan-neon);
+      box-shadow: 0 0 10px rgba(6, 182, 212, 0.15);
+    }
+    
+    /* Interruttori (Toggle) */
+    .switch-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(255, 255, 255, 0.02);
+      padding: 0.75rem 1rem;
+      border-radius: 0.75rem;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+    
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.1);
+      transition: .4s;
+      border-radius: 24px;
+    }
+    
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 4px;
+      bottom: 4px;
+      background-color: var(--text-main);
+      transition: .4s;
+      border-radius: 50%;
+    }
+    
+    input:checked + .slider {
+      background-color: var(--cyan-neon);
+    }
+    
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+    
+    /* Pulsanti */
+    .btn {
+      width: 100%;
+      padding: 0.85rem 1.25rem;
+      border-radius: 0.75rem;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, var(--cyan-neon), var(--blue-neon));
+      color: #030712;
+      box-shadow: 0 4px 15px var(--cyan-glow);
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(6, 182, 212, 0.6);
+    }
+    
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+    }
+    
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    
+    .btn-action-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+    
+    /* Workspace Principale (Destra) */
+    .workspace {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+    
+    /* Mock Device ESP8266 */
+    .device-showcase {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      perspective: 1000px;
+    }
+    
+    .esp8266-board {
+      background: #1e293b;
+      border: 6px solid #0f172a;
+      border-radius: 1.5rem;
+      width: 100%;
+      max-width: 500px;
+      padding: 2rem;
+      position: relative;
+      box-shadow: 
+        0 25px 50px -12px rgba(0,0,0,0.5),
+        inset 0 2px 4px rgba(255,255,255,0.05);
+      border-bottom: 12px solid #020617; /* Effetto 3D */
+    }
+    
+    /* Dettagli della scheda elettronica */
+    .esp8266-board::before {
+      content: '';
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      bottom: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.03);
+      border-radius: 1rem;
+      pointer-events: none;
+    }
+    
+    .board-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.15);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    
+    /* LED Integrato */
+    .board-led {
+      width: 8px;
+      height: 8px;
+      background-color: #3f3f46;
+      border-radius: 50%;
+      transition: all 0.2s ease;
+    }
+    
+    .board-led.active-blue {
+      background-color: #60a5fa;
+      box-shadow: 0 0 10px #3b82f6, 0 0 20px #3b82f6;
+    }
+    
+    /* Schermo OLED */
+    .oled-container {
+      background: var(--oled-bg);
+      border: 8px solid #111827;
+      border-radius: 0.75rem;
+      padding: 1rem;
+      height: 160px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      box-shadow: 
+        inset 0 4px 15px rgba(0,0,0,0.9),
+        0 0 0 1px rgba(255,255,255,0.05);
+    }
+    
+    .oled-screen {
+      font-family: 'Fira Code', monospace;
+      font-weight: 500;
+      color: var(--oled-fg);
+      text-shadow: 0 0 5px var(--oled-glow);
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      font-size: 0.8rem;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    
+    /* Stili schermate OLED virtuali */
+    .oled-header-bar {
+      background: var(--oled-fg);
+      color: var(--oled-bg);
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 0.7rem;
+      text-align: center;
+      padding: 2px 0;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    
+    .oled-data-value {
+      font-size: 1.6rem;
+      font-weight: 600;
+      text-align: center;
+      font-family: 'Outfit', sans-serif;
+      margin: 2px 0;
+    }
+    
+    .oled-data-sub {
+      font-size: 1rem;
+      font-weight: 500;
+      text-align: center;
+      font-family: 'Outfit', sans-serif;
+    }
+    
+    .oled-footer {
+      font-size: 0.6rem;
+      text-align: center;
+      margin-top: 6px;
+      opacity: 0.8;
+      border-top: 1px dashed rgba(56, 189, 248, 0.4);
+      padding-top: 4px;
+    }
+    
+    /* Connessioni esterne fittizie */
+    .board-pins {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 1.5rem;
+      padding: 0 0.5rem;
+    }
+    
+    .pin-group {
+      display: flex;
+      gap: 0.25rem;
+    }
+    
+    .board-pin {
+      width: 6px;
+      height: 12px;
+      background: #e2e8f0;
+      border-radius: 1px;
+      opacity: 0.3;
+    }
+    
+    .board-pin.active-i2c {
+      background: var(--cyan-neon);
+      opacity: 0.9;
+      box-shadow: 0 0 6px var(--cyan-glow);
+    }
+    
+    .rst-wire-badge {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px dashed var(--red-neon);
+      color: var(--red-neon);
+      font-size: 0.7rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-family: 'Fira Code', monospace;
+      position: absolute;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    
+    /* Pulsanti fisici sulla scheda */
+    .physical-buttons {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+    
+    .phys-btn {
+      background: #475569;
+      color: #cbd5e1;
+      border: none;
+      padding: 0.35rem 0.75rem;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.65rem;
+      font-weight: 500;
+      border-radius: 4px;
+      cursor: pointer;
+      box-shadow: 0 2px 0 #334155;
+      transition: all 0.1s ease;
+    }
+    
+    .phys-btn:active {
+      transform: translateY(2px);
+      box-shadow: none;
+    }
+    
+    /* Monitor Seriale Virtuale */
+    .serial-card {
+      display: flex;
+      flex-direction: column;
+      height: 250px;
+    }
+    
+    .serial-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+    
+    .serial-status {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.75rem;
+      color: var(--green-neon);
+    }
+    
+    .serial-status-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--green-neon);
+      border-radius: 50%;
+      box-shadow: 0 0 6px var(--green-glow);
+      animation: pulse 1.5s infinite;
+    }
+    
+    .serial-console {
+      flex: 1;
+      background: #020617;
+      border: 1px solid var(--card-border);
+      border-radius: 0.75rem;
+      padding: 0.75rem;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.8rem;
+      line-height: 1.4;
+      overflow-y: auto;
+      color: #cbd5e1;
+      white-space: pre-wrap;
+    }
+    
+    .log-time { color: var(--text-muted); }
+    .log-boot { color: var(--orange-neon); }
+    .log-wifi { color: var(--blue-neon); }
+    .log-fs { color: #a855f7; }
+    .log-err { color: var(--red-neon); }
+    .log-ok { color: var(--green-neon); }
+    
+    /* Database LittleFS Virtuale */
+    .db-card {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .fs-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    
+    .fs-usage-bar-container {
+      width: 120px;
+      height: 6px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 9999px;
+      overflow: hidden;
+    }
+    
+    .fs-usage-bar {
+      height: 100%;
+      background: var(--cyan-neon);
+      width: 0%;
+      transition: width 0.3s ease, background-color 0.3s ease;
+    }
+    
+    .fs-table-container {
+      max-height: 150px;
+      overflow-y: auto;
+      border: 1px solid var(--card-border);
+      border-radius: 0.75rem;
+      background: rgba(0,0,0,0.15);
+    }
+    
+    .fs-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.8rem;
+      text-align: left;
+    }
+    
+    .fs-table th {
+      background: rgba(255,255,255,0.02);
+      color: var(--text-muted);
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid var(--card-border);
+      font-weight: 500;
+    }
+    
+    .fs-table td {
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    }
+    
+    .fs-table tr:last-child td {
+      border-bottom: none;
+    }
+    
+    .fs-empty {
+      padding: 1.5rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    
+    /* Animazioni */
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 2rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--card-border);
+      margin-top: auto;
+    }
+    
+    /* Classi di utilità per rimuovere stili inline */
+    .initially-hidden {
+      display: none;
+    }
+    .card-title-clean {
+      margin-bottom: 0 !important;
+      border-bottom: none !important;
+      padding-bottom: 0 !important;
+    }
+    .flex-center-gap {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .flex-center-gap-sm {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .fs-size-text-style {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .margin-top-sm {
+      margin-top: 0.5rem;
+    }
+    .text-description {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+      line-height: 1.3;
+    }
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-container">
+      <div class="logo-badge">T</div>
+      <div>
+        <h1>Termoigrometro Simulator</h1>
+        <div class="subtitle">Banco di Prova Hardware Virtuale (basato su test_senza_sensore.ino)</div>
+      </div>
+    </div>
+    <div class="badge-mode">Preview Mode</div>
+  </header>
+
+  <main>
+    
+    <!-- PANNELLO DI CONTROLLO -->
+    <div class="controls-panel">
+      
+      <!-- CONTROLLI SENSORE SIMULATO -->
+      <div class="card">
+        <h2 class="card-title">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+          SHT40 - Parametri Ambiente
+        </h2>
+        
+        <div class="control-group">
+          <div class="switch-container">
+            <span>Dati Generati in Automatico</span>
+            <label class="switch">
+              <input type="checkbox" id="auto-generate" checked aria-label="Generazione Automatica Dati">
+              <span class="slider"></span>
+            </label>
+          </div>
+          <p class="text-description">
+            In modalità automatica, il sensore simula fluttuazioni realistiche basate sul tempo, replicando la funzione <code>readSensor()</code> firmware.
+          </p>
+        </div>
+        
+        <div class="control-group initially-hidden" id="manual-sliders">
+          <div class="control-group">
+            <div class="control-label">
+              <span>Temperatura Manuale</span>
+              <span class="control-value" id="temp-val">24.5 °C</span>
+            </div>
+            <label for="temp-slider" class="sr-only">Temperatura Manuale</label>
+            <input type="range" id="temp-slider" min="-15" max="50" step="0.1" value="24.5">
+          </div>
+          
+          <div class="control-group">
+            <div class="control-label">
+              <span>Umidità Manuale</span>
+              <span class="control-value" id="hum-val">65.0 % RH</span>
+            </div>
+            <label for="hum-slider" class="sr-only">Umidità Manuale</label>
+            <input type="range" id="hum-slider" min="0" max="100" step="0.5" value="65.0">
+          </div>
+        </div>
+      </div>
+      
+      <!-- CONFIGURAZIONE WIFI & ENDPOINT -->
+      <div class="card">
+        <h2 class="card-title">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+          Configurazione WiFi / API
+        </h2>
+        
+        <div class="control-group">
+          <label class="control-label" for="cfg-ssid">SSID Virtuale</label>
+          <input type="text" class="input-text" id="cfg-ssid" value="ASUS">
+        </div>
+        
+        <div class="control-group">
+          <label class="control-label" for="cfg-pass">Password WiFi</label>
+          <input type="password" class="input-text" id="cfg-pass" value="24no1998">
+        </div>
+        
+        <div class="control-group">
+          <label class="control-label" for="cfg-endpoint">Endpoint Ingest Vercel</label>
+          <input type="text" class="input-text" id="cfg-endpoint" value="https://okopipo-junglelab-vg32.vercel.app/api/ingest">
+        </div>
+      </div>
+
+      <!-- IMPOSTAZIONI SIMULAZIONE -->
+      <div class="card">
+        <h2 class="card-title">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+          Velocità di Esecuzione
+        </h2>
+        <div class="control-group">
+          <div class="control-label">
+            <span>Intervallo di sleep simulato</span>
+            <span class="control-value">10 secondi</span>
+          </div>
+          <div class="control-label margin-top-sm">
+            <span>Moltiplicatore Velocità</span>
+            <span class="control-value" id="speed-val">1x (Tempo Reale)</span>
+          </div>
+          <label for="speed-slider" class="sr-only">Moltiplicatore Velocità</label>
+          <input type="range" id="speed-slider" min="1" max="15" step="1" value="1">
+        </div>
+      </div>
+      
+    </div>
+    
+    <!-- WORKSPACE BOARD & MONITOR -->
+    <div class="workspace">
+      
+      <!-- SCHEDA ELETTRONICA ESP8266 + OLED -->
+      <div class="device-showcase">
+        <div class="esp8266-board">
+          
+          <div class="board-header">
+            <span>ESP8266 NodeMCU</span>
+            <div class="flex-center-gap-sm">
+              <span>Blue LED</span>
+              <div class="board-led" id="board-led"></div>
+            </div>
+          </div>
+          
+          <!-- Schermo OLED -->
+          <div class="oled-container">
+            <div class="oled-screen" id="oled-screen">
+              <!-- Renderizzato via JavaScript -->
+            </div>
+          </div>
+          
+          <div class="board-pins">
+            <div class="pin-group">
+              <div class="board-pin active-i2c" title="D5 - SDA OLED"></div>
+              <div class="board-pin active-i2c" title="D6 - SCL OLED"></div>
+              <div class="board-pin" title="D1 - SDA SHT (N.C.)"></div>
+              <div class="board-pin" title="D2 - SCL SHT (N.C.)"></div>
+            </div>
+            <div class="pin-group">
+              <div class="board-pin" title="GND"></div>
+              <div class="board-pin" title="3V3"></div>
+              <div class="board-pin active-i2c" title="D0 - GPIO16"></div>
+              <div class="board-pin active-i2c" title="RST"></div>
+            </div>
+          </div>
+          
+          <div class="rst-wire-badge">GPIO16 (D0) &harr; RST Connected</div>
+          
+          <div class="physical-buttons">
+            <button class="phys-btn" id="btn-reset">RST (Reset)</button>
+            <button class="phys-btn" id="btn-flash">FLASH (GPIO0)</button>
+          </div>
+          
+        </div>
+      </div>
+      
+      <!-- MONITOR SERIALE -->
+      <div class="card serial-card">
+        <div class="serial-header">
+          <h2 class="card-title card-title-clean">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+            Monitor Seriale Virtuale (115200 baud)
+          </h2>
+          <div class="serial-status">
+            <div class="serial-status-dot"></div>
+            <span>Connesso via UART</span>
+          </div>
+        </div>
+        <div class="serial-console" id="serial-console"></div>
+      </div>
+      
+      <!-- DATABASE/FILE SYSTEM -->
+      <div class="card db-card">
+        <div class="fs-header">
+          <h2 class="card-title card-title-clean">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
+            File /dati.txt (LittleFS Virtuale)
+          </h2>
+          <div class="flex-center-gap">
+            <span id="fs-size-text" class="fs-size-text-style">0 / 65536 byte</span>
+            <div class="fs-usage-bar-container">
+              <div class="fs-usage-bar" id="fs-usage-bar"></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="fs-table-container">
+          <table class="fs-table initially-hidden" id="fs-table">
+            <thead>
+              <tr>
+                <th>Indice</th>
+                <th>Temp x10</th>
+                <th>Hum x10</th>
+                <th>Rilevamento Leggibile</th>
+              </tr>
+            </thead>
+            <tbody id="fs-table-body">
+              <!-- Elementi LittleFS -->
+            </tbody>
+          </table>
+          <div class="fs-empty" id="fs-empty">Il file /dati.txt è vuoto. La scheda accumulerà letture qui fino alla soglia (3).</div>
+        </div>
+        
+        <div class="btn-action-group">
+          <button class="btn btn-secondary" id="btn-clear-fs">Formatta LittleFS</button>
+          <button class="btn btn-primary" id="btn-force-upload">Forza Invio WiFi</button>
+        </div>
+      </div>
+      
+    </div>
+    
+  </main>
+
+  <footer>
+    Termoigrometro ESP8266 Mock Bench Sandbox &bull; Progettato per il debug locale
+  </footer>
+
+  <script>
+    // Configurazione e variabili globali
+    const OLED = document.getElementById('oled-screen');
+    const LED = document.getElementById('board-led');
+    const CONSOLE = document.getElementById('serial-console');
+    const FS_TABLE = document.getElementById('fs-table');
+    const FS_TABLE_BODY = document.getElementById('fs-table-body');
+    const FS_EMPTY = document.getElementById('fs-empty');
+    const FS_SIZE_TEXT = document.getElementById('fs-size-text');
+    const FS_USAGE_BAR = document.getElementById('fs-usage-bar');
+    
+    // Sliders
+    const AUTO_GENERATE = document.getElementById('auto-generate');
+    const MANUAL_SLIDERS = document.getElementById('manual-sliders');
+    const TEMP_SLIDER = document.getElementById('temp-slider');
+    const HUM_SLIDER = document.getElementById('hum-slider');
+    const TEMP_VAL = document.getElementById('temp-val');
+    const HUM_VAL = document.getElementById('hum-val');
+    
+    // Velocità
+    const SPEED_SLIDER = document.getElementById('speed-slider');
+    const SPEED_VAL = document.getElementById('speed-val');
+    
+    // Costanti mock
+    let READINGS_PER_SEND = 3;
+    const SLEEP_MS_BASE = 10000; // 10 secondi
+    
+    // Stato del dispositivo virtuale
+    let bootCount = 0;
+    let localDB = []; // array di {t10, h10}
+    let rtcFlag = 0;
+    let rtcRfPrepared = 0;
+    let rtcWifiCache = null;
+    let wakeReason = "RESET"; // RESET o DEEP_SLEEP_AWAKE
+    let stateTimeout = null;
+    let currentSessionId = 0;
+    let simulatedSecondsElapsed = 0;
+    let enterConfigPortal = false;
+    
+    // Carica dati da localStorage se presenti
+    if (localStorage.getItem('virtual_fs')) {
+      try {
+        localDB = JSON.parse(localStorage.getItem('virtual_fs'));
+      } catch(e) {
+        localDB = [];
+      }
+    }
+    
+    if (localStorage.getItem('virtual_rtc_counter')) {
+      bootCount = parseInt(localStorage.getItem('virtual_rtc_counter'), 10) || 0;
+    }
+    if (localStorage.getItem('virtual_readings_per_send')) {
+      READINGS_PER_SEND = parseInt(localStorage.getItem('virtual_readings_per_send'), 10) || 3;
+    }
+    
+    // Inizializzazione controlli
+    AUTO_GENERATE.addEventListener('change', () => {
+      MANUAL_SLIDERS.style.display = AUTO_GENERATE.checked ? 'none' : 'block';
+    });
+    
+    TEMP_SLIDER.addEventListener('input', () => {
+      TEMP_VAL.textContent = parseFloat(TEMP_SLIDER.value).toFixed(1) + ' °C';
+    });
+    
+    HUM_SLIDER.addEventListener('input', () => {
+      HUM_VAL.textContent = parseFloat(HUM_SLIDER.value).toFixed(1) + ' % RH';
+    });
+    
+    SPEED_SLIDER.addEventListener('input', () => {
+      let v = parseInt(SPEED_SLIDER.value, 10);
+      SPEED_VAL.textContent = v + 'x (Accelerato)';
+      if (v === 1) SPEED_VAL.textContent = '1x (Tempo Reale)';
+    });
+    
+    // Helpers Log Console
+    function clearLog() {
+      CONSOLE.innerHTML = '';
+    }
+    
+    function log(message, type = '') {
+      const now = new Date();
+      const timeStr = now.toTimeString().split(' ')[0] + '.' + String(now.getMilliseconds()).padStart(3, '0');
+      
+      let classType = '';
+      if (type === 'boot') classType = 'log-boot';
+      else if (type === 'wifi') classType = 'log-wifi';
+      else if (type === 'fs') classType = 'log-fs';
+      else if (type === 'err') classType = 'log-err';
+      else if (type === 'ok') classType = 'log-ok';
+      
+      const span = document.createElement('span');
+      span.innerHTML = `<span class="log-time">[${timeStr}]</span> <span class="${classType}">${escapeHTML(message)}</span>\n`;
+      CONSOLE.appendChild(span);
+      CONSOLE.scrollTop = CONSOLE.scrollHeight;
+    }
+    
+    function escapeHTML(str) {
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+    
+    // Aggiornamento interfaccia LittleFS virtuale
+    function updateFSUI() {
+      if (localDB.length === 0) {
+        FS_TABLE.style.display = 'none';
+        FS_EMPTY.style.display = 'block';
+        FS_SIZE_TEXT.textContent = '0 / 65536 byte';
+        FS_USAGE_BAR.style.width = '0%';
+      } else {
+        FS_TABLE.style.display = 'table';
+        FS_EMPTY.style.display = 'none';
+        FS_TABLE_BODY.innerHTML = '';
+        
+        localDB.forEach((item, index) => {
+          const tr = document.createElement('tr');
+          const tDec = (item.t10 / 10).toFixed(1);
+          const hDec = (item.h10 / 10).toFixed(1);
+          tr.innerHTML = `
+            <td>#${index + 1}</td>
+            <td>${item.t10}</td>
+            <td>${item.h10}</td>
+            <td>${tDec} °C, ${hDec}% RH</td>
+          `;
+          FS_TABLE_BODY.appendChild(tr);
+        });
+        
+        // Calcolo approssimativo dimensioni: ~10 byte per record in CSV ("245,650\n")
+        let totalBytes = localDB.length * 8; 
+        FS_SIZE_TEXT.textContent = `${totalBytes} / 65536 byte`;
+        let pct = (totalBytes / 65536) * 100;
+        FS_USAGE_BAR.style.width = `${Math.max(pct, 2)}%`;
+      }
+      
+      // Salva stato
+      localStorage.setItem('virtual_fs', JSON.stringify(localDB));
+      localStorage.setItem('virtual_rtc_counter', bootCount);
+    }
+    
+    // Funzione Lettura Sensore (simulata / manuale)
+    function readSensor() {
+      let t10, h10;
+      
+      if (AUTO_GENERATE.checked) {
+        // Logica finta da test_senza_sensore.ino basata su contatore RTC
+        let seed = bootCount;
+        t10 = 200 + (seed * 17) % 81; // Varia in base al contatore RTC (20.0 - 28.0 C)
+        h10 = 400 + (seed * 31) % 301; // Varia in base al contatore RTC (40.0 - 70.0% RH)
+      } else {
+        // Dati dagli slider manuali
+        t10 = Math.round(parseFloat(TEMP_SLIDER.value) * 10);
+        h10 = Math.round(parseFloat(HUM_SLIDER.value) * 10);
+      }
+      
+      // Clamp
+      t10 = Math.max(-400, Math.min(850, t10));
+      h10 = Math.max(0, Math.min(1000, h10));
+      
+      const sign = t10 < 0 ? "-" : "";
+      log(`[FAKE SHT40] T=${sign}${Math.abs(t10)/10}.${Math.abs(t10)%10} C  H=${Math.floor(h10/10)}.${h10%10}% (SIMULATO)`, 'ok');
+      return { t10, h10 };
+    }
+    
+    // Rendering Schermo OLED
+    function drawOLED(view, data = {}) {
+      OLED.innerHTML = '';
+      
+      if (view === 'off') {
+        OLED.style.backgroundColor = 'var(--oled-bg)';
+        return;
+      }
+      
+      if (view === 'config_welcome') {
+        OLED.innerHTML = `
+          <div class="oled-header-bar">CONFIGURAZIONE</div>
+          <div style="font-size: 0.75rem; text-align: center; margin-top: 10px;">Scansione reti...</div>
+        `;
+      } 
+      else if (view === 'config_portal') {
+        OLED.innerHTML = `
+          <div class="oled-header-bar">CONFIGURAZIONE</div>
+          <div style="font-size: 0.65rem; margin-left: 4px; margin-top: 4px;">Connettiti al Wi-Fi:</div>
+          <div style="font-size: 0.75rem; font-weight: bold; text-align: center; color: #fff; margin: 4px 0;">${data.apName}</div>
+          <div style="font-size: 0.65rem; margin-left: 4px;">Apri nel browser:</div>
+          <div style="font-size: 0.75rem; font-weight: bold; text-align: center; color: #fff;">192.168.4.1</div>
+        `;
+      }
+      else if (view === 'config_confirm') {
+        OLED.innerHTML = `
+          <div class="oled-header-bar">CONFIGURAZIONE</div>
+          <div style="font-size: 0.75rem; font-weight: bold; text-align: center; margin-top: 8px; color: #fff;">Premi RESET ora</div>
+          <div style="font-size: 0.75rem; text-align: center; margin-top: 4px;">per confermare</div>
+          <div style="width: 100px; height: 1px; background: var(--oled-fg); margin: 8px auto 0 auto;"></div>
+        `;
+      }
+      else if (view === 'live_data') {
+        const sign = data.t10 < 0 ? "-" : "";
+        const tempStr = `${sign}${Math.abs(data.t10)/10}.${Math.abs(data.t10)%10}°C`;
+        const humStr = `${Math.floor(data.h10/10)}.${data.h10%10}% RH`;
+        
+        OLED.innerHTML = `
+          <div class="oled-header-bar">CLIMA AMBIENTE</div>
+          <div class="oled-data-value">${tempStr}</div>
+          <div class="oled-data-sub">${humStr}</div>
+          <div class="oled-footer">Tieni FLASH per Menu</div>
+        `;
+      }
+      else if (view === 'error') {
+        OLED.innerHTML = `
+          <div class="oled-header-bar" style="background:#ef4444; color:#000;">[  ERRORE  ]</div>
+          <div style="font-size: 1.4rem; font-weight: bold; text-align: center; color: #ef4444; margin-top: 15px;">ERRORE</div>
+        `;
+      }
+      else if (view === 'flash_hold_5s') {
+        OLED.innerHTML = `
+          <div class="oled-header-bar">TASTO FLASH</div>
+          <div style="font-size: 0.7rem; text-align: center; margin-top: 6px;">RILASCIA ORA per</div>
+          <div style="font-size: 0.9rem; font-weight: bold; text-align: center; color: #fff; margin-top: 4px;">IMPOSTARE TEMPI</div>
+        `;
+      }
+      else if (view === 'flash_hold_10s') {
+        OLED.innerHTML = `
+          <div class="oled-header-bar">TASTO FLASH</div>
+          <div style="font-size: 0.7rem; text-align: center; margin-top: 6px;">RILASCIA ORA per</div>
+          <div style="font-size: 0.9rem; font-weight: bold; text-align: center; color: #fff; margin-top: 4px;">PORTALE WIFI</div>
+        `;
+      }
+      else if (view === 'flash_menu_step1') {
+        const cur = FLASH_SLEEP_OPTS[data.sleepIdx];
+        OLED.innerHTML = `
+          <div class="oled-header-bar">1. INTERVALLO MISURA</div>
+          <div style="font-size: 0.6rem; margin-top: 4px;">Click: cambia valore</div>
+          <div style="font-size: 0.6rem;">Attesa 3s: avanti</div>
+          <div style="font-size: 0.9rem; font-weight: bold; text-align: center; margin-top: 6px; color: #fff;">&gt; ${cur} min &lt;</div>
+        `;
+      }
+      else if (view === 'flash_menu_step2') {
+        const curVal = FLASH_SEND_OPTS[data.sendIdx];
+        const text = curVal === 1 ? "Ogni lettura" : `Ogni ${curVal} letture`;
+        OLED.innerHTML = `
+          <div class="oled-header-bar">2. SOGLIA INVIO WIFI</div>
+          <div style="font-size: 0.6rem; margin-top: 4px;">Click: cambia valore</div>
+          <div style="font-size: 0.6rem;">Attesa 3s: salva</div>
+          <div style="font-size: 0.8rem; font-weight: bold; text-align: center; margin-top: 8px; color: #fff;">&gt; ${text} &lt;</div>
+        `;
+      }
+      else if (view === 'flash_saved') {
+        OLED.innerHTML = `
+          <div class="oled-header-bar" style="background: var(--oled-fg); color: #000;">SALVATO!</div>
+          <div style="font-size: 0.65rem; text-align: center; margin-top: 6px;">Misura: ${data.minutes} min</div>
+          <div style="font-size: 0.65rem; text-align: center; margin-top: 2px;">Invio: ${data.readings === 1 ? 'Ogni lettura' : 'Ogni ' + data.readings + ' letture'}</div>
+          <div style="font-size: 0.55rem; text-align: center; margin-top: 4px;">Riavvio in corso...</div>
+        `;
+      }
+    }
+    
+    // LED Control
+    function setLED(state) {
+      LED.className = 'board-led';
+      if (state === 'active') {
+        LED.classList.add('active-blue');
+      }
+    }
+    
+    // WiFi POST virtuale verso l'endpoint di ingest reale
+    async function sendWiFiData() {
+      log("[WiFi] Connessione...", "wifi");
+      setLED('active');
+      
+      // Simula attesa di connessione
+      await delay(1200);
+      
+      const ssid = document.getElementById('cfg-ssid').value;
+      const endpoint = document.getElementById('cfg-endpoint').value;
+      const macAddress = "E8:DB:84:DE:FA:01"; // Mock MAC
+      
+      log(`[WiFi] Connesso a ${ssid}. Segnale: -54 dBm`, "wifi");
+      
+      if (localDB.length === 0) {
+        log("[FS] Nessun dato da inviare.", "fs");
+        setLED('off');
+        return;
+      }
+      
+      log(`[WiFi] Avvio invio ${localDB.length * 8} byte all'endpoint...`, "fs");
+      
+      // Costruisci il CSV mock
+      let csvContent = "";
+      localDB.forEach(item => {
+        csvContent += `${item.t10},${item.h10}\n`;
+      });
+      
+      try {
+        log(`[HTTP] POST verso ${endpoint}...`, "wifi");
+        
+        // Esegui la vera chiamata di rete verso Vercel!
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'text/csv',
+            'X-Device-ID': macAddress,
+            'X-Reading-Interval': '10'
+          },
+          body: csvContent
+        });
+        
+        log(`[HTTP] Risposta: ${response.status}`, response.ok ? "ok" : "err");
+        
+        if (response.ok) {
+          log("[WiFi] OK - file /dati.txt eliminato, counter azzerato", "ok");
+          localDB = [];
+          bootCount = 0;
+          rtcRfPrepared = 0;
+          updateFSUI();
+        } else {
+          log("[WiFi] FALLITO - Dati conservati in LittleFS", "err");
+        }
+      } catch(e) {
+        log(`[HTTP] Errore di rete: ${e.message}`, "err");
+        log("[WiFi] FALLITO - Dati conservati in LittleFS", "err");
+      }
+      
+      setLED('off');
+    }
+    
+    // Sleep function helper basata sul moltiplicatore di velocità
+    function getSleepDelay() {
+      let speed = parseInt(SPEED_SLIDER.value, 10);
+      return (3000) / speed; // 3 secondi divisi per la velocità
+    }
+    
+    function delay(ms) {
+      let speed = parseInt(SPEED_SLIDER.value, 10);
+      return new Promise(resolve => setTimeout(resolve, ms / speed));
+    }
+    
+    // Macchina a stati firmware del microcontrollore
+    async function runMicrocontrollerLoop() {
+      if (stateTimeout) clearTimeout(stateTimeout);
+      const sessionId = ++currentSessionId;
+      const isAborted = () => sessionId !== currentSessionId;
+      
+      // 1. BOOT SEQUENCE
+      log("[BOOT] Termoigrometro ESP8266 v2.0 - MODALITA' TEST (Sensore Simulato)", "boot");
+      log(`[RTC] Contatore: ${bootCount} / ${READINGS_PER_SEND}`, "fs");
+      log(`[BOOT] Modalita: ${wakeReason} | SDK: 2.2.2-dev(38a443e)`, "boot");
+      
+      // Se è un risveglio manuale
+      if (wakeReason === "RESET") {
+        if (enterConfigPortal) {
+          enterConfigPortal = false; // reset flag
+          let apName = "Termoigrometro_D8_E2";
+          drawOLED('config_portal', { apName });
+          log(`[PORTAL] Portale avviato su SSID: ${apName}`, "wifi");
+          log("[PORTAL] In attesa di configurazione dall'utente (Timeout 5 minuti)...", "wifi");
+          
+          // In modalità simulatore, facciamo finta che il portale termini dopo 15 secondi
+          await delay(15000);
+          if (isAborted()) return;
+          log("[PORTAL] Timeout - deepSleep...", "boot");
+          drawOLED('off');
+          wakeReason = "DEEP_SLEEP_AWAKE";
+          stateTimeout = setTimeout(runMicrocontrollerLoop, getSleepDelay());
+          return;
+        } else {
+          if (rtcFlag === 0) {
+            // Primo reset manuale: Standby di 2 secondi
+            log("[BOOT] Primo Reset. Standby 2s...", "boot");
+            rtcFlag = 1; // MAGIC_AWAIT
+            await delay(2000);
+            if (isAborted()) return;
+            
+            // Se nessun secondo reset, va in deep sleep
+            rtcFlag = 0;
+            log("[BOOT] Timeout - deepSleep...", "boot");
+            drawOLED('off');
+            wakeReason = "DEEP_SLEEP_AWAKE";
+            stateTimeout = setTimeout(runMicrocontrollerLoop, getSleepDelay());
+            return;
+          } else {
+            // Secondo reset manuale: Avvia display cycle
+            rtcFlag = 0;
+            log("[BOOT] *** Secondo Reset: attivo display! ***", "ok");
+            log("[BOOT] Ciclo Display 10s (dati simulati - SOLO VISUALIZZAZIONE)", "boot");
+            drawOLED('live_data', readSensor());
+            
+            await delay(10000);
+            if (isAborted()) return;
+            
+            log("[OLED] Display spento", "boot");
+            drawOLED('off');
+            
+            wakeReason = "DEEP_SLEEP_AWAKE";
+            stateTimeout = setTimeout(runMicrocontrollerLoop, getSleepDelay());
+            return;
+          }
+        }
+      }
+      
+      // Se risveglio automatico da Deep Sleep
+      if (wakeReason === "DEEP_SLEEP_AWAKE") {
+        if (rtcRfPrepared === 1) {
+          // Se la soglia delle letture è stata raggiunta, invia dati con RF attiva
+          log("[AUTO] Risveglio RF_DEFAULT per invio dati...", "boot");
+          await sendWiFiData();
+          if (isAborted()) return;
+          wakeReason = "DEEP_SLEEP_AWAKE";
+          stateTimeout = setTimeout(runMicrocontrollerLoop, getSleepDelay());
+          return;
+        }
+        
+        // Esegue il campionamento
+        const sensorData = readSensor();
+        
+        // Salva in LittleFS virtuale
+        localDB.push(sensorData);
+        bootCount++;
+        log(`[FS] Dato accodato (LittleFS)`, "fs");
+        updateFSUI();
+        
+        if (bootCount >= READINGS_PER_SEND) {
+          log("[AUTO] Soglia 3 letture raggiunta - predispongo invio RF_DEFAULT al prossimo boot...", "orange");
+          rtcRfPrepared = 1;
+          // Esegue deep sleep immediato di 10ms per svegliarsi con RF attiva
+          wakeReason = "DEEP_SLEEP_AWAKE";
+          stateTimeout = setTimeout(runMicrocontrollerLoop, 200); 
+          return;
+        } else {
+          rtcRfPrepared = 0;
+          log(`[AUTO] ${bootCount}/${READINGS_PER_SEND} - sleep RF_OFF per 10 secondi...`, "boot");
+          drawOLED('off');
+          
+          wakeReason = "DEEP_SLEEP_AWAKE";
+          stateTimeout = setTimeout(runMicrocontrollerLoop, getSleepDelay());
+        }
+      }
+    }
+    
+    // Controlli fisici dell'ESP8266 virtuale
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      log("[HARDWARE] Bottone RESET premuto fisicamente", "err");
+      wakeReason = "RESET";
+      runMicrocontrollerLoop();
+    });
+    
+    // Simulazione pressione prolungata tasto FLASH
+    let flashHoldTimeout5s = null;
+    let flashHoldTimeout10s = null;
+    let flashMenuActive = false;
+    let flashMenuStep = 1; // 1: Measure Interval, 2: Send Threshold
+    let flashMenuSleepIdx = 0;
+    let flashMenuSendIdx = 3; // Default 12 (soglia di default)
+    const FLASH_SLEEP_OPTS = [5, 15, 30, 60];
+    const FLASH_SEND_OPTS = [1, 3, 6, 12, 24];
+    let flashMenuSaveTimeout = null;
+    let pressStart = 0;
+    let isPressing = false;
+
+    function flashMenuShow() {
+      if (flashMenuStep === 1) {
+        drawOLED('flash_menu_step1', { sleepIdx: flashMenuSleepIdx });
+      } else {
+        drawOLED('flash_menu_step2', { sendIdx: flashMenuSendIdx });
+      }
+    }
+
+    function flashMenuResetSaveTimer() {
+      if (flashMenuSaveTimeout) clearTimeout(flashMenuSaveTimeout);
+      flashMenuSaveTimeout = setTimeout(() => {
+        if (flashMenuStep === 1) {
+          // Passa allo step 2
+          flashMenuStep = 2;
+          log('[FLASH] Step 1 completato. Passaggio a Step 2: Soglia Invio WiFi', 'ok');
+          flashMenuShow();
+          flashMenuResetSaveTimer();
+        } else {
+          // Salva ed esegue il reset simulato
+          const minutes = FLASH_SLEEP_OPTS[flashMenuSleepIdx];
+          const readings = FLASH_SEND_OPTS[flashMenuSendIdx];
+          log(`[FLASH] Salvato: Misura = ${minutes} min, Invio = Ogni ${readings} letture. Riavvio...`, 'ok');
+          
+          // Applica soglia dinamica al simulatore
+          READINGS_PER_SEND = readings;
+          localStorage.setItem('virtual_readings_per_send', readings);
+          
+          drawOLED('flash_saved', { minutes, readings });
+          flashMenuActive = false;
+          currentSessionId++;
+          if (stateTimeout) clearTimeout(stateTimeout);
+          // Simula il riavvio dopo 2.5 secondi
+          setTimeout(() => {
+            drawOLED('off');
+            wakeReason = "RESET";
+            runMicrocontrollerLoop();
+          }, 2500);
+        }
+      }, 3000); // 3 secondi di attesa per ogni passaggio
+    }
+
+    const btnFlash = document.getElementById('btn-flash');
+
+    btnFlash.addEventListener('mousedown', () => {
+      isPressing = true;
+      pressStart = Date.now();
+      // Avvia i timer per feedback visivo progressivo
+      flashHoldTimeout5s = setTimeout(() => {
+        if (!isPressing) return;
+        drawOLED('flash_hold_5s');
+        log('[FLASH] Tasto premuto 5s - rilascia per menu tempi', 'orange');
+      }, 5000);
+      flashHoldTimeout10s = setTimeout(() => {
+        if (!isPressing) return;
+        drawOLED('flash_hold_10s');
+        log('[FLASH] Tasto premuto 10s - rilascia per portale WiFi', 'orange');
+      }, 10000);
+    });
+
+    btnFlash.addEventListener('mouseup', () => {
+      if (!isPressing) return;
+      isPressing = false;
+      const held = Date.now() - pressStart;
+      const clearTimers = () => {
+        if (flashHoldTimeout5s) { clearTimeout(flashHoldTimeout5s); flashHoldTimeout5s = null; }
+        if (flashHoldTimeout10s) { clearTimeout(flashHoldTimeout10s); flashHoldTimeout10s = null; }
+      };
+      clearTimers();
+
+      if (held < 5000) {
+        // Meno di 5 secondi: click corto
+        if (!flashMenuActive) {
+          log('[HARDWARE] Bottone FLASH premuto (GPIO0 a GND) - UART Mode', 'orange');
+          drawOLED('off');
+          currentSessionId++;
+          if (stateTimeout) clearTimeout(stateTimeout);
+          setLED('off');
+        } else {
+          // Nel menu: click corto cicla i valori dello step corrente
+          if (flashMenuStep === 1) {
+            flashMenuSleepIdx = (flashMenuSleepIdx + 1) % FLASH_SLEEP_OPTS.length;
+            log(`[FLASH] Intervallo: ${FLASH_SLEEP_OPTS[flashMenuSleepIdx]} min`, 'ok');
+          } else {
+            flashMenuSendIdx = (flashMenuSendIdx + 1) % FLASH_SEND_OPTS.length;
+            const curVal = FLASH_SEND_OPTS[flashMenuSendIdx];
+            log(`[FLASH] Invio: ${curVal === 1 ? 'Ogni lettura' : 'Ogni ' + curVal + ' letture'}`, 'ok');
+          }
+          flashMenuShow();
+          flashMenuResetSaveTimer();
+        }
+      } else if (held < 10000) {
+        // Tra 5s e 10s: entrata nel menu tempi
+        if (!flashMenuActive) {
+          log('[FLASH] Hold 5s -> Menu impostazione tempi', 'ok');
+          flashMenuActive = true;
+          flashMenuStep = 1; // Resetta a step 1
+          currentSessionId++;
+          if (stateTimeout) clearTimeout(stateTimeout);
+          flashMenuShow();
+          flashMenuResetSaveTimer();
+        }
+      } else {
+        // 10s o più: portale WiFi
+        log('[FLASH] Hold 10s -> Portale WiFi', 'ok');
+        flashMenuActive = false;
+        if (flashMenuSaveTimeout) { clearTimeout(flashMenuSaveTimeout); flashMenuSaveTimeout = null; }
+        currentSessionId++;
+        if (stateTimeout) clearTimeout(stateTimeout);
+        // Simula il portale WiFi
+        wakeReason = "RESET";
+        enterConfigPortal = true;
+        runMicrocontrollerLoop();
+      }
+    });
+
+    // Previeni il mouse-leave per ignorare rilasci fuori dal pulsante
+    btnFlash.addEventListener('mouseleave', () => {
+      if (isPressing) {
+        isPressing = false;
+        if (flashHoldTimeout5s) { clearTimeout(flashHoldTimeout5s); flashHoldTimeout5s = null; }
+        if (flashHoldTimeout10s) { clearTimeout(flashHoldTimeout10s); flashHoldTimeout10s = null; }
+        if (!flashMenuActive) {
+          drawOLED('off');
+        }
+      }
+    });
+    
+    document.getElementById('btn-clear-fs').addEventListener('click', () => {
+      localDB = [];
+      bootCount = 0;
+      rtcRfPrepared = 0;
+      updateFSUI();
+      log("[FS] LittleFS formattato correttamente. /dati.txt eliminato.", "fs");
+    });
+    
+    document.getElementById('btn-force-upload').addEventListener('click', () => {
+      log("[MANUALE] Richiesta forzatura trasmissione WiFi", "orange");
+      sendWiFiData();
+    });
+    
+    // Avvio immediato al caricamento pagina
+    updateFSUI();
+    runMicrocontrollerLoop();
+  </script>
+</body>
+</html>
